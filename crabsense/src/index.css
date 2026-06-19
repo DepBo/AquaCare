@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* ─── Custom Properties ─── */
+:root {
+  --color-primary: #1B4F72;
+  --color-primary-light: #0F8B8B;
+  --color-secondary: #1565C0;
+  --color-accent: #00A896;
+  --color-dark: #0a1628;
+  --color-dark-card: #111d33;
+  --color-dark-border: #1a2d4a;
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+}
+
+/* ─── Reset ─── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-dark);
+  color: var(--color-text);
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 3px;
+}
+
+/* ─── Section transitions ─── */
+.section-fade-in {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.section-fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Glow effects ─── */
+.glow-teal {
+  box-shadow: 0 0 30px rgba(11, 110, 110, 0.3), 0 0 60px rgba(11, 110, 110, 0.1);
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px rgba(0, 229, 160, 0.2), 0 0 40px rgba(0, 229, 160, 0.1);
+}
+
+/* ─── Glassmorphism cards ─── */
+.glass-card {
+  background: rgba(17, 29, 51, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(26, 45, 74, 0.6);
+  border-radius: 16px;
+}
+
+.glass-card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.glass-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 229, 160, 0.08);
+  border-color: rgba(0, 229, 160, 0.3);
+}
+
+/* ─── Gradient text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #00A896, #0F8B8B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Animated gradient border ─── */
+@keyframes gradient-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-border {
+  background: linear-gradient(90deg, #1B4F72, #00A896, #1565C0, #1B4F72);
+  background-size: 300% 300%;
+  animation: gradient-border 4s ease infinite;
+}
+
+/* ─── Pulse dot ─── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ─── Float animation ─── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ─── Page transition ─── */
+@keyframes pageSlideIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1200px) translateZ(-80px) rotateX(-3deg) translateY(40px);
+    filter: blur(3px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1200px) translateZ(0) rotateX(0) translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* ─── Glass card hover glow with 3D ─── */
+.glass-card-hover {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease, border-color 300ms ease;
+  transform-style: preserve-3d;
+}
+.glass-card-hover:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 12px 40px rgba(0, 229, 160, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 229, 160, 0.2);
+}
+
+/* ─── 3D Section parallax on scroll ─── */
+.parallax-section {
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+/* ─── 3D float animation ─── */
+@keyframes float3d {
+  0%, 100% {
+    transform: perspective(800px) translateY(0) rotateX(0) rotateY(0);
+  }
+  25% {
+    transform: perspective(800px) translateY(-8px) rotateX(1deg) rotateY(-0.5deg);
+  }
+  50% {
+    transform: perspective(800px) translateY(-12px) rotateX(0) rotateY(0.5deg);
+  }
+  75% {
+    transform: perspective(800px) translateY(-6px) rotateX(-0.5deg) rotateY(0);
+  }
+}
+.float-3d {
+  animation: float3d 6s ease-in-out infinite;
+}
+
+/* ─── Subtle depth layers ─── */
+.depth-layer-1 { transform: translateZ(20px); }
+.depth-layer-2 { transform: translateZ(40px); }
+.depth-layer-3 { transform: translateZ(60px); }
