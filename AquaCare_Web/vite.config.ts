@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/aquacare/',  // Thêm dòng này
+  // base: '/aquacare/',  // Thêm dòng này
   plugins: [
     react(),
     tailwindcss(),
