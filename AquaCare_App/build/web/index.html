@@ -98,6 +98,37 @@
             display: block;
         }
 
+        /* Thanh trạng thái (Status Bar) */
+        .status-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 12px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 20;
+            pointer-events: none; /* Không cản trở thao tác click vào iframe */
+        }
+
+        /* Thanh điều hướng vuốt đáy (Home Bar) */
+        .home-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            z-index: 20;
+            pointer-events: none; /* Không cản trở thao tác click vào iframe */
+        }
+
         /* Tự động thu nhỏ khung nếu màn hình máy tính nhỏ */
         @media (max-height: 900px) {
             .android-frame {
@@ -113,11 +144,34 @@
         <div class="power-button"></div>
 
         <div class="screen">
+            <div class="status-bar">
+                <span id="clock">12:00</span>
+                <span>📶 🛜 🔋</span>
+            </div>
+            
             <div class="punch-hole"></div>
 
             <iframe src="app.html"></iframe>
+            
+            <div class="home-bar"></div>
         </div>
     </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            
+            hours = hours < 10 ? '0' + hours : hours;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            
+            document.getElementById('clock').innerText = hours + ':' + minutes;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
 </body>
 
 </html>
