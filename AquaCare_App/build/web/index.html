@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaCare App Demo</title>
+    <style>
+        /* Nền Gradient dốc màu xanh biển sâu cực kỳ sang trọng và hợp với AquaCare */
+        body {
+            margin: 0;
+            background-color: #eef2f6;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+                linear-gradient(rgba(203, 213, 225, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(203, 213, 225, 0.4) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        /* Khung viền phong cách Android (Samsung/Xiaomi) */
+        .android-frame {
+            position: relative;
+            width: 380px;
+            height: 820px;
+            border: 10px solid #1c1c1c;
+            /* Viền xám đen kim loại */
+            border-radius: 36px;
+            /* Bo góc ít hơn iPhone */
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 0 0 2px #333;
+            background-color: #060E1A;
+            /* overflow: visible để hiển thị nút bấm vật lý bên ngoài */
+        }
+
+        /* Nút tăng giảm âm lượng (Cạnh phải) */
+        .volume-button {
+            position: absolute;
+            right: -13px;
+            top: 140px;
+            width: 3px;
+            height: 70px;
+            background: linear-gradient(to right, #444, #222);
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            box-shadow: 1px 0 3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Nút nguồn (Cạnh phải, dưới nút âm lượng) */
+        .power-button {
+            position: absolute;
+            right: -13px;
+            top: 240px;
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to right, #444, #222);
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            box-shadow: 1px 0 3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Màn hình hiển thị bên trong (cắt góc để không tràn viền) */
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 26px;
+            /* Bo góc màn hình bên trong */
+            overflow: hidden;
+            background-color: #060E1A;
+        }
+
+        /* Camera nốt ruồi (Punch-hole) đặc trưng của Android */
+        .punch-hole {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 18px;
+            background-color: #050505;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.1), 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Iframe nhúng App Flutter của bạn vào giữa */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* Tự động thu nhỏ khung nếu màn hình máy tính nhỏ */
+        @media (max-height: 900px) {
+            .android-frame {
+                transform: scale(0.85);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="android-frame">
+        <div class="volume-button"></div>
+        <div class="power-button"></div>
+
+        <div class="screen">
+            <div class="punch-hole"></div>
+
+            <iframe src="app.html"></iframe>
+        </div>
+    </div>
+</body>
+
+</html>
