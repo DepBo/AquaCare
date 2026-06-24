@@ -5,6 +5,11 @@ import {
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
   Pencil, Trash2, Plus, ChevronDown, X, Check
 } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:5000'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
 
@@ -14,31 +19,23 @@ interface SensorData {
   ph: SensorReading[]
   tds: SensorReading[]
   temp: SensorReading[]
-  do: SensorReading[]
-  turbidity: SensorReading[]
-  salinity: SensorReading[]
+  waterLevel: SensorReading[]
 }
-interface Pond { id: string; name: string }
+interface Pond {
+  id: number
+  name: string
+  volume?: number
+  species_id?: number
+  species_name?: string
+  mac_address?: string
+}
+interface FishSpecies {
+  id: number
+  species_name: string
+}
 
 // ── Sinh dữ liệu giả ─────────────────────────────────────────
-function generateHistory(base: number, range: number, count = 24): SensorReading[] {
-  const now = Date.now()
-  return Array.from({ length: count }, (_, i) => ({
-    time: new Date(now - (count - 1 - i) * 3600_000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-    value: +(base + (Math.random() - 0.5) * range * 2).toFixed(2),
-  }))
-}
-
-function initSensor(): SensorData {
-  return {
-    ph: generateHistory(7.0, 0.3),
-    tds: generateHistory(250, 30),
-    temp: generateHistory(26.0, 1.0),
-    do: generateHistory(6.5, 0.5),
-    turbidity: generateHistory(2.0, 1.0),
-    salinity: generateHistory(0.1, 0.1),
-  }
-}
+const emptySensor = (): SensorData => ({ ph: [], tds: [], temp: [], waterLevel: [] })
 
 // ── SVG Sparkline ─────────────────────────────────────────────
 function Sparkline({ data, color, height = 60, width = 280 }: { data: number[]; color: string; height?: number; width?: number }) {
@@ -97,37 +94,33 @@ function BarChart({ data, color, labels, height = 120 }: { data: number[]; color
 
 // ── Cấu hình cảm biến ─────────────────────────────────────────
 const SENSOR_CFG = [
-  { key: 'ph' as const, label: 'pH', unit: '', icon: Droplets, color: '#00A896', good: [6.5, 7.5], warn: [6.0, 8.0] },
+  { key: 'ph' as const, label: 'pH', unit: '', icon: Activity, color: '#00A896', good: [6.5, 7.5], warn: [6.0, 8.0] },
   { key: 'temp' as const, label: 'Nhiệt độ', unit: '°C', icon: Thermometer, color: '#FF8C42', good: [24, 28], warn: [22, 30] },
-  { key: 'do' as const, label: 'Oxy hòa tan', unit: 'mg/L', icon: Wind, color: '#4DA6FF', good: [5, 8], warn: [4, 10] },
   { key: 'tds' as const, label: 'TDS', unit: 'ppm', icon: Zap, color: '#C77DFF', good: [150, 300], warn: [100, 400] },
-  { key: 'turbidity' as const, label: 'Độ đục', unit: 'NTU', icon: Activity, color: '#FFD166', good: [0, 5], warn: [0, 10] },
-  { key: 'salinity' as const, label: 'Độ mặn', unit: 'ppt', icon: Fish, color: '#00A896', good: [0, 0.5], warn: [0, 1.0] },
+  { key: 'waterLevel' as const, label: 'Mực nước', unit: '', icon: Droplets, color: '#4DA6FF', good: [1, 1], warn: [0, 1] },
 ]
 
-function statusColor(val: number, good: number[], warn: number[]) {
+function statusColor(val: number, good: number[], warn: number[], key?: string) {
+  if (key === 'waterLevel') return val === 1 ? '#00A896' : '#FF6B6B'
   if (val >= good[0] && val <= good[1]) return '#00A896'
   if (val >= warn[0] && val <= warn[1]) return '#FFB347'
   return '#FF6B6B'
 }
-function statusLabel(val: number, good: number[], warn: number[]) {
+function statusLabel(val: number, good: number[], warn: number[], key?: string) {
+  if (key === 'waterLevel') return val === 1 ? 'Ổn định' : 'Cạn nước'
   if (val >= good[0] && val <= good[1]) return 'Tốt'
   if (val >= warn[0] && val <= warn[1]) return 'Cảnh báo'
   return 'Nguy hiểm'
 }
 
-const INITIAL_PONDS: Pond[] = [
-  { id: 'dev_01', name: 'Hồ Cá Koi Ngoài Sân' },
-  { id: 'dev_02', name: 'Bể Thủy Sinh Phòng Khách' },
-  { id: 'dev_03', name: 'Bể Ươm Cá Giống' },
-]
+const INITIAL_PONDS: Pond[] = []
 
 // ── Custom Dialog ────────────────────────────────────────────
 function Dialog({
-  title, message, confirmText = 'Xác nhận', cancelText = 'Hủy',
+  title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
   confirmColor = '#00A896', onConfirm, onCancel, children
 }: {
-  title: string; message?: string; confirmText?: string; cancelText?: string
+  title: string; message?: string; error?: string; confirmText?: string; cancelText?: string
   confirmColor?: string; onConfirm: () => void; onCancel: () => void; children?: React.ReactNode
 }) {
   return (
@@ -153,7 +146,10 @@ function Dialog({
           <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{message}</p>
         )}
         {children}
-        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+        {error && (
+          <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>
+        )}
+        <div style={{ display: 'flex', gap: 10, marginTop: error ? 16 : 24 }}>
           <button onClick={onCancel} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.10)',
             background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', fontFamily: F,
@@ -178,11 +174,11 @@ function Dialog({
 
 // ── Pond Dropdown ────────────────────────────────────────────
 function PondDropdown({
-  ponds, activeDevice, onSelect, onRename, onDelete, onAdd
+  ponds, activeDevice, onSelect, onEdit, onDelete, onAdd
 }: {
-  ponds: Pond[]; activeDevice: string
-  onSelect: (id: string) => void
-  onRename: (pond: Pond) => void
+  ponds: Pond[]; activeDevice: number | null
+  onSelect: (id: number) => void
+  onEdit: (pond: Pond) => void
   onDelete: (pond: Pond) => void
   onAdd: () => void
 }) {
@@ -257,13 +253,13 @@ function PondDropdown({
                 </button>
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                  <button onClick={e => { e.stopPropagation(); onRename(pond); setOpen(false) }} style={{
+                  <button onClick={e => { e.stopPropagation(); onEdit(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
                     color: 'rgba(255,255,255,0.3)', transition: 'all 140ms',
                   }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#4DA6FF' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}
-                    title="Đổi tên"
+                    title="Cấu hình"
                   ><Pencil size={11} /></button>
                   <button onClick={e => { e.stopPropagation(); onDelete(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
@@ -304,76 +300,120 @@ function PondDropdown({
 // ── Component chính ───────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const [sensorData, setSensorData] = useState<SensorData>(initSensor)
+  const [sensorData, setSensorData] = useState<SensorData>(emptySensor())
   const [selectedSensor, setSelectedSensor] = useState<keyof SensorData>('ph')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [alerts, setAlerts] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'sensors' | 'alerts'>('overview')
-  const [ponds, setPonds] = useState<Pond[]>(INITIAL_PONDS)
-  const [activeDevice, setActiveDevice] = useState(INITIAL_PONDS[0].id)
+  const [ponds, setPonds] = useState<Pond[]>([])
+  const [fishSpecies, setFishSpecies] = useState<FishSpecies[]>([])
+  const [activeDevice, setActiveDevice] = useState<number | null>(null)
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
 
   // Dialog states
   const [addDialog, setAddDialog] = useState(false)
   const [addName, setAddName] = useState('')
-  const [renameDialog, setRenameDialog] = useState<Pond | null>(null)
-  const [renameName, setRenameName] = useState('')
+  const [addVolume, setAddVolume] = useState<number | string>('')
+  const [addSpeciesId, setAddSpeciesId] = useState<number>(0)
+  const [addMacAddress, setAddMacAddress] = useState('')
+  const [editDialog, setEditDialog] = useState<Pond | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editVolume, setEditVolume] = useState<number | string>('')
+  const [editSpeciesId, setEditSpeciesId] = useState<number>(0)
+  const [editMacAddress, setEditMacAddress] = useState('')
   const [deleteDialog, setDeleteDialog] = useState<Pond | null>(null)
-
-  // ── Simulate reload on device switch ─────────────────────────
-  const reloadSensor = () => {
-    setLoading(true)
-    setTimeout(() => {
-      setSensorData({
-        ph: generateHistory(7.0 + (Math.random() - 0.5) * 0.4, 0.3),
-        tds: generateHistory(250 + (Math.random() - 0.5) * 100, 30),
-        temp: generateHistory(26.0 + (Math.random() - 0.5) * 3, 1.0),
-        do: generateHistory(6.5 + (Math.random() - 0.5) * 1.5, 0.5),
-        turbidity: generateHistory(2.0 + (Math.random() - 0.5) * 2, 1.0),
-        salinity: generateHistory(0.1 + (Math.random() - 0.5) * 0.1, 0.1),
-      })
-      setAlerts([])
-      setLoading(false)
-    }, 150)
-  }
-
-  // Đổi thiết bị → làm mới data
-  useEffect(() => { reloadSensor() }, [activeDevice])
+  const [dialogError, setDialogError] = useState('')
 
   // Bảo vệ route
   useEffect(() => {
     if (!localStorage.getItem('cs_auth')) navigate('/login')
   }, [navigate])
 
-  // Cập nhật sensor mỗi 3 giây
+  // ── Load Initial Data ─────────────────────────
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSensorData(prev => {
-        const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-        const append = (arr: SensorReading[], base: number, range: number) =>
-          [...arr.slice(-23), { time: now, value: +(base + (Math.random() - 0.5) * range * 2).toFixed(2) }]
-        return {
-          ph: append(prev.ph, 7.0, 0.3),
-          tds: append(prev.tds, 250, 30),
-          temp: append(prev.temp, 26.0, 1.0),
-          do: append(prev.do, 6.5, 0.5),
-          turbidity: append(prev.turbidity, 2.0, 1.0),
-          salinity: append(prev.salinity, 0.1, 0.1),
+    supabase.from('fish_species').select('*').then(({ data }) => {
+      if (data) setFishSpecies(data as FishSpecies[])
+    })
+
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+    if (userInfo?.id) {
+      supabase.from('tanks').select('*, fish_species(*), devices(mac_address)').eq('user_id', userInfo.id).then(({ data }) => {
+        if (data) {
+          const mapped = data.map((t: any) => ({
+            id: t.id,
+            name: t.tank_name,
+            volume: t.water_volume_liter,
+            species_id: t.species_id,
+            species_name: t.fish_species?.species_name,
+            mac_address: t.devices?.[0]?.mac_address || ''
+          }))
+          setPonds(mapped)
+          if (mapped.length > 0) setActiveDevice(mapped[0].id)
         }
       })
-      setTick(t => t + 1)
-    }, 3000)
-    return () => clearInterval(interval)
+    }
   }, [])
+
+  // ── Fetch Sensor Data ─────────────────────────
+  const fetchSensorData = async () => {
+    if (!activeDevice) return
+    // setLoading(true)
+
+    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice)
+    if (!devices || devices.length === 0) {
+      setSensorData(emptySensor())
+      setAlerts([])
+      // setLoading(false)
+      return
+    }
+
+    const { data: telemetries } = await supabase.from('telemetry_logs')
+      .select('*')
+      .eq('device_id', devices[0].id)
+      .order('recorded_at', { ascending: false })
+      .limit(24)
+
+    if (telemetries) {
+      const rev = telemetries.reverse()
+      const mapData = (parseFn: (d: any) => number) => rev.map(d => ({
+        time: new Date(d.recorded_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        value: parseFn(d)
+      }))
+
+      setSensorData({
+        ph: mapData(d => Number(d.ph) || 0),
+        tds: mapData(d => Number(d.tds) || 0),
+        temp: mapData(d => Number(d.temp) || 0),
+        waterLevel: mapData(d => d.water_level_ok ? 1 : 0),
+      })
+    }
+    setTick(t => t + 1)
+    setLoading(false)
+  }
+
+  // Đổi thiết bị → làm mới data
+  useEffect(() => { fetchSensorData() }, [activeDevice])
+
+  // Cập nhật định kỳ 10 giây
+  useEffect(() => {
+    if (!activeDevice) return
+    // const interval = setInterval(fetchSensorData, 10000)
+    // return () => clearInterval(interval)
+  }, [activeDevice])
 
   // Tạo cảnh báo
   useEffect(() => {
+    if (!sensorData.ph.length) return
     const newAlerts: string[] = []
     SENSOR_CFG.forEach(cfg => {
       const latest = sensorData[cfg.key].at(-1)?.value ?? 0
-      if (latest < cfg.warn[0] || latest > cfg.warn[1]) {
-        newAlerts.push(`⚠️ ${cfg.label} = ${latest}${cfg.unit} — ngoài ngưỡng cho phép!`)
+      if (cfg.key === 'waterLevel') {
+        if (latest === 0) newAlerts.push(`⚠️ Mực nước bể cá đang ở mức thấp, vui lòng châm thêm nước!`)
+      } else {
+        if (latest < cfg.warn[0] || latest > cfg.warn[1]) {
+          newAlerts.push(`⚠️ ${cfg.label} = ${latest}${cfg.unit} — ngoài ngưỡng cho phép!`)
+        }
       }
     })
     setAlerts(newAlerts)
@@ -385,34 +425,98 @@ export default function DashboardPage() {
   }
 
   // ── CRUD handlers ─────────────────────────────────────────────
-  const handleSelectPond = (id: string) => {
+  const handleSelectPond = (id: number) => {
     setActiveDevice(id)
   }
 
-  const handleAddConfirm = () => {
+  const handleAddConfirm = async () => {
+    setDialogError('')
     const name = addName.trim()
     if (!name) return
-    const newPond: Pond = { id: `dev_${Date.now()}`, name }
-    setPonds(prev => [...prev, newPond])
-    setActiveDevice(newPond.id)
+
+    const mac = addMacAddress.trim()
+    if (mac) {
+      const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
+      if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
+      if (dev.tank_id) return setDialogError('Thiết bị này đã được sử dụng cho bể khác!')
+    }
+
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+
+    const { data } = await supabase.from('tanks').insert({
+      user_id: userInfo.id,
+      tank_name: name,
+      water_volume_liter: Number(addVolume) || null,
+      species_id: addSpeciesId || null
+    }).select('*, fish_species(*)')
+
+    if (data && data.length > 0) {
+      if (mac) await supabase.from('devices').update({ tank_id: data[0].id }).eq('mac_address', mac)
+
+      const t = data[0]
+      const newPond: Pond = {
+        id: t.id,
+        name: t.tank_name,
+        volume: t.water_volume_liter,
+        species_id: t.species_id,
+        species_name: t.fish_species?.species_name,
+        mac_address: mac
+      }
+      setPonds(prev => [...prev, newPond])
+      setActiveDevice(newPond.id)
+    }
+
     setAddName('')
+    setAddVolume('')
+    setAddSpeciesId(0)
+    setAddMacAddress('')
     setAddDialog(false)
   }
 
-  const handleRenameConfirm = () => {
-    const name = renameName.trim()
-    if (!name || !renameDialog) return
-    setPonds(prev => prev.map(p => p.id === renameDialog.id ? { ...p, name } : p))
-    setRenameDialog(null)
-    setRenameName('')
+  const handleEditConfirm = async () => {
+    setDialogError('')
+    const name = editName.trim()
+    if (!name || !editDialog) return
+
+    const mac = editMacAddress.trim()
+    if (mac && mac !== editDialog?.mac_address) {
+      const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
+      if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
+      if (dev.tank_id && dev.tank_id !== editDialog?.id) return setDialogError('Thiết bị này đã thuộc về bể khác!')
+    }
+
+    const { data } = await supabase.from('tanks').update({
+      tank_name: name,
+      water_volume_liter: Number(editVolume) || null,
+      species_id: editSpeciesId || null
+    }).eq('id', editDialog.id).select('*, fish_species(*)')
+
+    if (data && data.length > 0) {
+      if (mac !== editDialog?.mac_address) {
+        if (editDialog?.mac_address) await supabase.from('devices').update({ tank_id: null }).eq('mac_address', editDialog.mac_address)
+        if (mac) await supabase.from('devices').update({ tank_id: editDialog.id }).eq('mac_address', mac)
+      }
+
+      const updatedPond = {
+        id: data[0].id,
+        name: data[0].tank_name,
+        volume: data[0].water_volume_liter,
+        species_id: data[0].species_id,
+        species_name: data[0].fish_species?.species_name,
+        mac_address: mac
+      }
+      setPonds(prev => prev.map(p => p.id === editDialog.id ? updatedPond : p))
+    }
+    setEditDialog(null)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteDialog) return
+    await supabase.from('tanks').delete().eq('id', deleteDialog.id)
     const remaining = ponds.filter(p => p.id !== deleteDialog.id)
     setPonds(remaining)
     if (activeDevice === deleteDialog.id) {
-      setActiveDevice(remaining[0]?.id ?? '')
+      setActiveDevice(remaining[0]?.id ?? null)
     }
     setDeleteDialog(null)
   }
@@ -509,9 +613,16 @@ export default function DashboardPage() {
                 ponds={ponds}
                 activeDevice={activeDevice}
                 onSelect={handleSelectPond}
-                onRename={pond => { setRenameDialog(pond); setRenameName(pond.name) }}
+                onEdit={pond => {
+                  setEditDialog(pond);
+                  setEditName(pond.name);
+                  setEditVolume(pond.volume ?? '');
+                  setEditSpeciesId(pond.species_id ?? 0);
+                  setEditMacAddress(pond.mac_address || '');
+                  setDialogError('');
+                }}
                 onDelete={pond => setDeleteDialog(pond)}
-                onAdd={() => { setAddName(''); setAddDialog(true) }}
+                onAdd={() => { setAddName(''); setAddVolume(''); setAddSpeciesId(0); setAddMacAddress(''); setDialogError(''); setAddDialog(true) }}
               />
             </div>
 
@@ -539,12 +650,12 @@ export default function DashboardPage() {
           {/* ═══ TAB: OVERVIEW ═══ */}
           {activeTab === 'overview' && (
             <>
-              {/* 6 Sensor Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, marginBottom: 24 }}>
+              {/* 4 Sensor Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
                 {SENSOR_CFG.map(cfg => {
                   const val = latest[cfg.key]
-                  const sc = statusColor(val, cfg.good, cfg.warn)
-                  const sl = statusLabel(val, cfg.good, cfg.warn)
+                  const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
+                  const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
                   const hist = sensorData[cfg.key].map(d => d.value)
                   const prev = hist.at(-2) ?? val
                   const delta = val - prev
@@ -572,15 +683,28 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div style={{ fontSize: 32, fontWeight: 700, color: sc, marginBottom: 12, letterSpacing: '-0.02em' }}>
-                        {val}{cfg.unit}
+                        {cfg.key === 'waterLevel' ? '' : `${val}${cfg.unit}`}
                       </div>
-                      <Sparkline data={hist.slice(-16)} color={cfg.color} height={48} width={220} />
-                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
+                      {cfg.key === 'waterLevel' ? (
+                        <div style={{ marginTop: 20, height: 48, display: 'flex', alignItems: 'center' }}>
+                          <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: val === 1 ? '100%' : '10%', background: sc, borderRadius: 4, transition: 'width 600ms ease' }} />
+                          </div>
+                          <span style={{ marginLeft: 12, fontSize: 13, fontWeight: 600, color: sc }}>
+                            {val === 1 ? 'Ổn định' : 'Cạn nước'}
+                          </span>
                         </div>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
-                      </div>
+                      ) : (
+                        <>
+                          <Sparkline data={hist.slice(-16)} color={cfg.color} height={48} width={220} />
+                          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
+                            </div>
+                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )
                 })}
@@ -600,8 +724,8 @@ export default function DashboardPage() {
                   <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
                   {SENSOR_CFG.map(cfg => {
                     const val = latest[cfg.key]
-                    const sc = statusColor(val, cfg.good, cfg.warn)
-                    const sl = statusLabel(val, cfg.good, cfg.warn)
+                    const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
+                    const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
                     return (
                       <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -636,72 +760,85 @@ export default function DashboardPage() {
               </div>
 
               <div style={{ padding: 24, borderRadius: 20, background: 'rgba(15,26,48,0.9)', border: `1px solid ${selectedCfg.color}20`, marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                      <selectedCfg.icon size={18} color={selectedCfg.color} />
-                      <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{selectedCfg.label}</h2>
-                    </div>
-                    <div style={{ fontSize: 38, fontWeight: 800, color: selectedCfg.color, letterSpacing: '-0.03em' }}>
-                      {latest[selectedSensor]}{selectedCfg.unit}
-                    </div>
+                {selectedSensor === 'waterLevel' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, flexDirection: 'column' }}>
+                    <selectedCfg.icon size={64} color={latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B'} style={{ marginBottom: 16 }} />
+                    <h2 style={{ fontSize: 24, fontWeight: 700, color: latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B' }}>
+                      {latest[selectedSensor] === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
+                    </h2>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Khoảng an toàn</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: selectedCfg.color }}>{selectedCfg.good[0]}–{selectedCfg.good[1]}{selectedCfg.unit}</div>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                          <selectedCfg.icon size={18} color={selectedCfg.color} />
+                          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{selectedCfg.label}</h2>
+                        </div>
+                        <div style={{ fontSize: 38, fontWeight: 800, color: selectedCfg.color, letterSpacing: '-0.03em' }}>
+                          {latest[selectedSensor]}{selectedCfg.unit}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Khoảng an toàn</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: selectedCfg.color }}>{selectedCfg.good[0]}–{selectedCfg.good[1]}{selectedCfg.unit}</div>
+                      </div>
+                    </div>
 
-                <div style={{ width: '100%', overflowX: 'hidden' }}>
-                  <svg width="100%" viewBox={`0 0 800 120`} preserveAspectRatio="none" style={{ height: 140 }}>
-                    <defs>
-                      <linearGradient id="mainGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={selectedCfg.color} stopOpacity="0.3" />
-                        <stop offset="100%" stopColor={selectedCfg.color} stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {(() => {
-                      const vals = selectedHistory.map(d => d.value)
-                      const min = Math.min(...vals)
-                      const max = Math.max(...vals)
-                      const range = max - min || 1
-                      const pts = vals.map((v, i) => {
-                        const x = (i / (vals.length - 1)) * 800
-                        const y = 110 - ((v - min) / range) * 100
-                        return `${x},${y}`
-                      }).join(' ')
-                      return (
-                        <>
-                          <polygon points={`0,120 ${pts} 800,120`} fill="url(#mainGrad)" />
-                          <polyline points={pts} fill="none" stroke={selectedCfg.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          {[0.25, 0.5, 0.75].map(f => (
-                            <line key={f} x1={0} y1={120 - f * 110} x2={800} y2={120 - f * 110} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="6 4" />
-                          ))}
-                          {vals.map((_, i) => {
-                            if (i % 4 !== 0 && i !== vals.length - 1) return null
+                    <div style={{ width: '100%', overflowX: 'hidden' }}>
+                      <svg width="100%" viewBox={`0 0 800 120`} preserveAspectRatio="none" style={{ height: 140 }}>
+                        <defs>
+                          <linearGradient id="mainGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={selectedCfg.color} stopOpacity="0.3" />
+                            <stop offset="100%" stopColor={selectedCfg.color} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        {(() => {
+                          const vals = selectedHistory.map(d => d.value)
+                          const min = Math.min(...vals)
+                          const max = Math.max(...vals)
+                          const range = max - min || 1
+                          const pts = vals.map((v, i) => {
                             const x = (i / (vals.length - 1)) * 800
-                            return <text key={i} x={x} y={118} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.25)" fontFamily={F}>{selectedHistory[i].time}</text>
-                          })}
-                        </>
-                      )
-                    })()}
-                  </svg>
-                </div>
+                            const y = 110 - ((v - min) / range) * 100
+                            return `${x},${y}`
+                          }).join(' ')
+                          return (
+                            <>
+                              <polygon points={`0,120 ${pts} 800,120`} fill="url(#mainGrad)" />
+                              <polyline points={pts} fill="none" stroke={selectedCfg.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                              {[0.25, 0.5, 0.75].map(f => (
+                                <line key={f} x1={0} y1={120 - f * 110} x2={800} y2={120 - f * 110} stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="6 4" />
+                              ))}
+                              {vals.map((_, i) => {
+                                if (i % 4 !== 0 && i !== vals.length - 1) return null
+                                const x = (i / (vals.length - 1)) * 800
+                                return <text key={i} x={x} y={118} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.25)" fontFamily={F}>{selectedHistory[i].time}</text>
+                              })}
+                            </>
+                          )
+                        })()}
+                      </svg>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-                {[
-                  { label: 'Hiện tại', value: `${latest[selectedSensor]}${selectedCfg.unit}` },
-                  { label: 'Trung bình', value: `${(selectedHistory.reduce((a, d) => a + d.value, 0) / selectedHistory.length).toFixed(2)}${selectedCfg.unit}` },
-                  { label: 'Cao nhất', value: `${Math.max(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
-                  { label: 'Thấp nhất', value: `${Math.min(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
-                ].map(s => (
-                  <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'rgba(15,26,48,0.8)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: selectedCfg.color }}>{s.value}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
+              {selectedSensor !== 'waterLevel' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+                  {[
+                    { label: 'Hiện tại', value: `${latest[selectedSensor]}${selectedCfg.unit}` },
+                    { label: 'Trung bình', value: `${(selectedHistory.reduce((a, d) => a + d.value, 0) / selectedHistory.length).toFixed(2)}${selectedCfg.unit}` },
+                    { label: 'Cao nhất', value: `${Math.max(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
+                    { label: 'Thấp nhất', value: `${Math.min(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
+                  ].map(s => (
+                    <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'rgba(15,26,48,0.8)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: selectedCfg.color }}>{s.value}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
@@ -737,10 +874,10 @@ export default function DashboardPage() {
               <div style={{ marginTop: 24 }}>
                 <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
                 {[
-                  { icon: '💧', title: 'pH bất thường', desc: 'Sử dụng vôi để tăng pH hoặc thêm axit hữu cơ để giảm.' },
-                  { icon: '🌡️', title: 'Nhiệt độ quá cao', desc: 'Tăng lưu lượng nước hoặc che phủ ao tránh ánh nắng.' },
-                  { icon: '🫧', title: 'Oxy thấp', desc: 'Tăng cường sục khí, giảm mật độ nuôi.' },
-                  { icon: '⚗️', title: 'TDS cao', desc: 'Thay nước một phần để pha loãng khoáng chất.' },
+                  { icon: '💧', title: 'pH bất thường', desc: 'Thay 20% nước, kiểm tra lại hệ thống lọc.' },
+                  { icon: '🌡️', title: 'Nhiệt độ ngoài ngưỡng', desc: 'Kiểm tra lại quạt tản nhiệt/sưởi.' },
+                  { icon: '🌊', title: 'Mực nước thấp', desc: 'Kiểm tra van cấp nước và châm thêm nước vào bể.' },
+                  { icon: '⚗️', title: 'TDS cao', desc: 'Thay 20% nước để pha loãng khoáng chất.' },
                 ].map(t => (
                   <div key={t.title} style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 8, display: 'flex', gap: 14 }}>
                     <span style={{ fontSize: 20 }}>{t.icon}</span>
@@ -762,10 +899,11 @@ export default function DashboardPage() {
         <Dialog
           title="➕ Thêm bể cá mới"
           confirmText="Thêm bể"
+          error={dialogError}
           onConfirm={handleAddConfirm}
           onCancel={() => setAddDialog(false)}
         >
-          <div style={{ marginBottom: 4 }}>
+          <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Tên bể cá
             </label>
@@ -773,8 +911,66 @@ export default function DashboardPage() {
               autoFocus
               value={addName}
               onChange={e => setAddName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddConfirm()}
               placeholder="VD: Bể Rồng Phòng Ngủ"
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms',
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Thể tích (Lít)
+            </label>
+            <input
+              type="number"
+              value={addVolume}
+              onChange={e => setAddVolume(e.target.value)}
+              placeholder="VD: 250"
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms',
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            />
+          </div>
+          <div style={{ marginBottom: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Loài cá (Tùy chọn)
+            </label>
+            <select
+              value={addSpeciesId}
+              onChange={e => setAddSpeciesId(Number(e.target.value))}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms', appearance: 'none'
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            >
+              <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
+              {fishSpecies.map(sp => (
+                <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginTop: 12, marginBottom: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Mã thiết bị (MAC Address)
+            </label>
+            <input
+              value={addMacAddress}
+              onChange={e => setAddMacAddress(e.target.value)}
+              placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
                 background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
@@ -788,23 +984,83 @@ export default function DashboardPage() {
         </Dialog>
       )}
 
-      {/* ── Dialog: Đổi tên ── */}
-      {renameDialog && (
+      {/* ── Dialog: Cấu hình bể cá ── */}
+      {editDialog && (
         <Dialog
-          title="✏️ Đổi tên bể cá"
-          confirmText="Lưu tên"
-          onConfirm={handleRenameConfirm}
-          onCancel={() => setRenameDialog(null)}
+          title="✏️ Cấu hình bể cá"
+          confirmText="Lưu thay đổi"
+          error={dialogError}
+          onConfirm={handleEditConfirm}
+          onCancel={() => setEditDialog(null)}
         >
-          <div style={{ marginBottom: 4 }}>
+          <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Tên mới
+              Tên bể cá
             </label>
             <input
               autoFocus
-              value={renameName}
-              onChange={e => setRenameName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleRenameConfirm()}
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              placeholder="VD: Bể Rồng Phòng Ngủ"
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms',
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Thể tích (Lít)
+            </label>
+            <input
+              type="number"
+              value={editVolume}
+              onChange={e => setEditVolume(e.target.value)}
+              placeholder="VD: 250"
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms',
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            />
+          </div>
+          <div style={{ marginBottom: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Loài cá (Tùy chọn)
+            </label>
+            <select
+              value={editSpeciesId}
+              onChange={e => setEditSpeciesId(Number(e.target.value))}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms', appearance: 'none'
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+            >
+              <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
+              {fishSpecies.map(sp => (
+                <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginTop: 12, marginBottom: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Mã thiết bị (MAC Address)
+            </label>
+            <input
+              value={editMacAddress}
+              onChange={e => setEditMacAddress(e.target.value)}
+              placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
                 background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',

@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Thermometer, Droplets, Wind, Fish } from 'lucide-react'
+import { Thermometer, Droplets, Activity, Zap } from 'lucide-react'
 import Tilt3D from './Tilt3D'
 
 const FEATURES = [
-  { icon: Thermometer, title: 'Nhiệt độ nước', value: '26.0', unit: '°C', desc: 'Ngưỡng an toàn (24-28°C). Giám sát 24/7, tự động điều hòa nhiệt độ ao nuôi.', color: '#FF8C42' },
-  { icon: Droplets, title: 'Nồng độ pH', value: '7.0', unit: 'pH', desc: 'Ngưỡng an toàn (6.5-7.5). Đo liên tục, tự động đề xuất điều chỉnh nước.', color: '#4DA6FF' },
-  { icon: Wind, title: 'Oxy hòa tan (DO)', value: '6.5', unit: 'mg/L', desc: 'Ngưỡng an toàn (5-8 mg/L). Tự động kích hoạt sủi bọt/quạt nước khi DO thấp.', color: '#00A896' },
-  { icon: Droplets, title: 'Độ mặn', value: '0.1', unit: 'ppt', desc: 'Ngưỡng an toàn (0-0.5 ppt). Phù hợp với cá nước ngọt, tối ưu sinh trưởng.', color: '#B07AFF' },
-  { icon: Droplets, title: 'Chỉ số TDS', value: '250', unit: 'ppm', desc: 'Ngưỡng an toàn (150-300 ppm). Kiểm soát chất lượng, tránh ô nhiễm nước.', color: '#FFB347' },
-  { icon: Fish, title: 'Sức khỏe cá', value: '98', unit: '%', desc: 'Giám sát hình ảnh AI, phân tích hành vi bơi và phát hiện dấu hiệu bệnh.', color: '#5AE87D' },
+  { icon: Thermometer, title: 'Nhiệt độ nước', value: '26.5', unit: '°C', desc: 'Ngưỡng an toàn (24-28°C). Giám sát 24/7, tự động điều hòa nhiệt độ ao nuôi.', color: '#FF8C42' },
+  { icon: Activity, title: 'Nồng độ pH', value: '7.2', unit: 'pH', desc: 'Ngưỡng an toàn (6.5-7.5). Đo liên tục, tự động đề xuất điều chỉnh nước.', color: '#00A896' },
+  { icon: Zap, title: 'Chỉ số TDS', value: '250', unit: 'ppm', desc: 'Ngưỡng an toàn (150-300 ppm). Kiểm soát chất lượng, tránh ô nhiễm nước.', color: '#C77DFF' },
+  { icon: Droplets, title: 'Mực nước', value: 'Ổn định', unit: '', desc: 'Theo dõi mực nước liên tục, cảnh báo ngay lập tức qua App khi có dấu hiệu cạn.', color: '#4DA6FF' },
 ]
 
 const F = "'Inter', sans-serif"
@@ -52,18 +50,21 @@ export default function FeaturesSection() {
         </div>
 
         {/* Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }} className="features-grid">
-          {FEATURES.map((f, i) => (
-            <Tilt3D key={i} intensity={10} scale={1.03}>
-              <div
-                className="glass-card glass-card-hover"
-                style={{
-                  padding: 28,
-                  opacity: vis ? 1 : 0,
-                  transform: vis ? 'translateY(0)' : 'translateY(20px)',
-                  transition: `all 600ms ease ${200 + i * 80}ms`,
-                }}
-              >
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }} className="features-grid">
+            {FEATURES.map((f, i) => (
+              <Tilt3D key={i} intensity={10} scale={1.03}>
+                <div
+                  className="glass-card glass-card-hover"
+                  style={{
+                    padding: 28,
+                    background: 'rgba(15,26,48,0.7)',
+                    border: '1px solid rgba(26,45,74,0.6)',
+                    opacity: vis ? 1 : 0,
+                    transform: vis ? 'translateY(0)' : 'translateY(20px)',
+                    transition: `all 600ms ease ${200 + i * 80}ms`,
+                  }}
+                >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div
                     style={{
@@ -83,7 +84,8 @@ export default function FeaturesSection() {
                 <p style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
               </div>
             </Tilt3D>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* CTA */}
@@ -113,9 +115,6 @@ export default function FeaturesSection() {
       <style>{`
         @media (max-width: 768px) {
           .features-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .features-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
     </section>

@@ -54,15 +54,6 @@ final List<SensorData> sensorList = [
     history: [26.0, 26.3, 26.8, 27.0, 26.6, 26.4, 26.5, 26.7, 26.5, 26.5],
   ),
   SensorData(
-    name: 'Oxy (DO)',
-    unit: 'mg/L',
-    value: 6.80,
-    color: const Color(0xFF4DA6FF),
-    icon: Icons.bubble_chart_outlined,
-    status: 'Tốt',
-    history: [6.5, 6.7, 6.9, 7.0, 6.8, 6.6, 6.8, 6.9, 6.7, 6.8],
-  ),
-  SensorData(
     name: 'TDS',
     unit: 'ppm',
     value: 245.00,
@@ -83,22 +74,13 @@ final List<SensorData> sensorList = [
     ],
   ),
   SensorData(
-    name: 'Độ đục',
-    unit: 'NTU',
-    value: 2.40,
-    color: const Color(0xFFFFD166),
-    icon: Icons.blur_on_outlined,
-    status: 'Tốt',
-    history: [2.2, 2.3, 2.5, 2.6, 2.4, 2.3, 2.4, 2.5, 2.3, 2.4],
-  ),
-  SensorData(
-    name: 'Độ mặn',
-    unit: 'ppt',
-    value: 0.20,
-    color: const Color(0xFF00A896),
+    name: 'Mực nước',
+    unit: '',
+    value: 1.0,
+    color: const Color(0xFF4DA6FF),
     icon: Icons.waves_outlined,
-    status: 'Tốt',
-    history: [0.18, 0.19, 0.21, 0.22, 0.20, 0.19, 0.20, 0.21, 0.20, 0.20],
+    status: 'Ổn định',
+    history: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
   ),
 ];
 
@@ -139,28 +121,20 @@ final List<AlertItem> alertList = [
     isWarning: false,
   ),
   AlertItem(
-    title: 'DO thấp nhẹ',
-    message: 'Oxy hòa tan giảm xuống 6.8 mg/L, cần theo dõi',
+    title: 'Mực nước thấp',
+    message: 'Cảnh báo cạn nước, vui lòng kiểm tra van cấp và châm thêm nước',
     time: '12 phút trước',
-    color: const Color(0xFFFFD166),
+    color: const Color(0xFFFF6B6B),
     icon: Icons.warning_amber_outlined,
     isWarning: true,
   ),
   AlertItem(
     title: 'TDS tăng',
-    message: 'Nồng độ TDS tăng lên 245 ppm',
+    message: 'Nồng độ TDS tăng lên 245 ppm, cân nhắc thay 20% nước',
     time: '30 phút trước',
     color: const Color(0xFFFF8C42),
     icon: Icons.info_outline,
     isWarning: true,
-  ),
-  AlertItem(
-    title: 'Hệ thống bình thường',
-    message: 'Tất cả cảm biến hoạt động ổn định',
-    time: '1 giờ trước',
-    color: const Color(0xFF4DA6FF),
-    icon: Icons.check_circle_outline,
-    isWarning: false,
   ),
 ];
 
@@ -222,15 +196,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         history: genHistory(26.5, 2.0),
       ),
       SensorData(
-        name: 'Oxy (DO)',
-        unit: 'mg/L',
-        value: 6.5 + (rand.nextDouble() - 0.5) * 1.5,
-        color: const Color(0xFF4DA6FF),
-        icon: Icons.bubble_chart_outlined,
-        status: 'Tốt',
-        history: genHistory(6.8, 1.0),
-      ),
-      SensorData(
         name: 'TDS',
         unit: 'ppm',
         value: 250.0 + (rand.nextDouble() - 0.5) * 100,
@@ -240,22 +205,13 @@ class _DashboardScreenState extends State<DashboardScreen>
         history: genHistory(245.0, 30.0),
       ),
       SensorData(
-        name: 'Độ đục',
-        unit: 'NTU',
-        value: 2.0 + (rand.nextDouble() - 0.5) * 2,
-        color: const Color(0xFFFFD166),
-        icon: Icons.blur_on_outlined,
-        status: 'Tốt',
-        history: genHistory(2.4, 1.0),
-      ),
-      SensorData(
-        name: 'Độ mặn',
-        unit: 'ppt',
-        value: 0.1 + (rand.nextDouble() - 0.5) * 0.1,
-        color: const Color(0xFF00A896),
+        name: 'Mực nước',
+        unit: '',
+        value: 1.0,
+        color: const Color(0xFF4DA6FF),
         icon: Icons.waves_outlined,
-        status: 'Tốt',
-        history: genHistory(0.2, 0.1),
+        status: 'Ổn định',
+        history: List.generate(10, (_) => 1.0),
       ),
     ];
   }
@@ -1180,7 +1136,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   child: Text(
-                    '6 hoạt động',
+                    '4 hoạt động',
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -1258,7 +1214,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Tất cả 6 cảm biến trong ngưỡng an toàn',
+                  'Tất cả 4 cảm biến trong ngưỡng an toàn',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: Colors.white.withOpacity(0.4),
@@ -1485,16 +1441,27 @@ class SensorCard extends StatelessWidget {
             RichText(
               text: TextSpan(
                 children: [
-                  TextSpan(
-                    text: sensor.value.toStringAsFixed(2),
-                    style: GoogleFonts.inter(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: sensor.color,
-                      height: 1.0,
+                  if (sensor.name == 'Mực nước')
+                    TextSpan(
+                      text: sensor.value == 1.0 ? 'Ổn định' : 'Cạn nước',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                        height: 1.0,
+                      ),
+                    )
+                  else
+                    TextSpan(
+                      text: sensor.value.toStringAsFixed(2),
+                      style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: sensor.color,
+                        height: 1.0,
+                      ),
                     ),
-                  ),
-                  if (sensor.unit.isNotEmpty)
+                  if (sensor.unit.isNotEmpty && sensor.name != 'Mực nước')
                     TextSpan(
                       text: ' ${sensor.unit}',
                       style: GoogleFonts.inter(
@@ -1507,10 +1474,39 @@ class SensorCard extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            SizedBox(
-              height: 42,
-              child: SparklineChart(data: sensor.history, color: sensor.color),
-            ),
+            if (sensor.name == 'Mực nước')
+              Container(
+                height: 42,
+                alignment: Alignment.center,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: sensor.value == 1.0 ? 1.0 : 0.15,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SizedBox(
+                height: 42,
+                child: SparklineChart(data: sensor.history, color: sensor.color),
+              ),
           ],
         ),
       ),
@@ -1636,11 +1632,15 @@ class SensorDetailCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${sensor.value.toStringAsFixed(2)}${sensor.unit.isNotEmpty ? ' ${sensor.unit}' : ''}',
+                    sensor.name == 'Mực nước'
+                        ? (sensor.value == 1.0 ? 'Bình thường' : 'Cạn')
+                        : '${sensor.value.toStringAsFixed(2)}${sensor.unit.isNotEmpty ? ' ${sensor.unit}' : ''}',
                     style: GoogleFonts.inter(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: sensor.color,
+                      color: sensor.name == 'Mực nước'
+                          ? (sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B))
+                          : sensor.color,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1670,33 +1670,49 @@ class SensorDetailCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 80,
-            child: SparklineChart(data: sensor.history, color: sensor.color),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _statChip(
-                'Min',
-                sensor.history.reduce(min).toStringAsFixed(2),
-                sensor.color,
+          if (sensor.name == 'Mực nước')
+            Container(
+              height: 120,
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    sensor.value == 1.0 ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                    size: 48,
+                    color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    sensor.value == 1.0 ? 'Mực nước đang ở mức ổn định' : 'Cảnh báo: Bể đang cạn nước!',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              _statChip(
-                'Max',
-                sensor.history.reduce(max).toStringAsFixed(2),
-                sensor.color,
-              ),
-              const SizedBox(width: 10),
-              _statChip(
-                'Avg',
-                (sensor.history.reduce((a, b) => a + b) / sensor.history.length)
-                    .toStringAsFixed(2),
-                sensor.color,
-              ),
-            ],
-          ),
+            )
+          else
+            Column(
+              children: [
+                SizedBox(
+                  height: 80,
+                  child: SparklineChart(data: sensor.history, color: sensor.color),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _statChip('Min', sensor.history.reduce(min).toStringAsFixed(2), sensor.color),
+                    const SizedBox(width: 10),
+                    _statChip('Max', sensor.history.reduce(max).toStringAsFixed(2), sensor.color),
+                    const SizedBox(width: 10),
+                    _statChip('Avg', (sensor.history.reduce((a, b) => a + b) / sensor.history.length).toStringAsFixed(2), sensor.color),
+                  ],
+                ),
+              ],
+            ),
         ],
       ),
     );

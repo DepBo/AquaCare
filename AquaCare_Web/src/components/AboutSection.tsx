@@ -10,7 +10,7 @@ const STATS = [
 ]
 
 const HIGHLIGHTS = [
-  { icon: Waves, title: 'Giám sát nước', desc: 'Theo dõi pH, nhiệt độ, DO, độ mặn theo thời gian thực' },
+  { icon: Waves, title: 'Giám sát nước', desc: 'Theo dõi pH, nhiệt độ, TDS, mực nước theo thời gian thực' },
   { icon: Cpu, title: 'IoT Thông minh', desc: 'Cảm biến tự động kết nối và truyền dữ liệu liên tục' },
   { icon: BarChart3, title: 'Phân tích AI', desc: 'Dự đoán và cảnh báo sớm các rủi ro trong ao nuôi' },
   { icon: Shield, title: 'Bảo vệ cá cảnh', desc: 'Giảm thiểu tỷ lệ hao hụt, tối ưu năng suất nuôi' },

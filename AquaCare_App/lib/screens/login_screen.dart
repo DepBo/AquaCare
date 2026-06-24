@@ -5,13 +5,11 @@ import 'signup_screen.dart';
 import 'admin_screen.dart';
 import 'staff_screen.dart';
 
-// ─── Tài khoản giả lập ───────────────────────────────────────
-const _accounts = [
-  {'email': 'phamlenhatminh1609@gmail.com', 'password': '16092005M', 'role': 'user'},
-  {'email': 'admin1@gmail.com',             'password': '12345678',   'role': 'admin'},
-  {'email': 'staff1@gmail.com',             'password': '12345678',   'role': 'staff'},
-];
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
+const String apiUrl = 'http://10.0.2.2:5000/api/auth';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -59,67 +57,86 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
 
-    if (!mounted) return;
-
-    final email = _emailCtrl.text.trim();
+    final identifier = _emailCtrl.text.trim();
     final password = _passCtrl.text;
 
-    final matched = _accounts.firstWhere(
-      (a) => a['email'] == email && a['password'] == password,
-      orElse: () => {},
-    );
-
-    setState(() => _loading = false);
-
-    if (matched.isNotEmpty) {
-      final role = matched['role'];
-      Widget destination;
-      if (role == 'admin') {
-        destination = const AdminScreen();
-      } else if (role == 'staff') {
-        destination = const StaffScreen();
-      } else {
-        destination = const DashboardScreen();
-      }
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => destination,
-          transitionsBuilder: (_, anim, __, child) =>
-              FadeTransition(opacity: anim, child: child),
-          transitionDuration: const Duration(milliseconds: 400),
-        ),
+    try {
+      final res = await http.post(
+        Uri.parse('$apiUrl/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'identifier': identifier, 'password': password}),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          backgroundColor: const Color(0xFF1A0D0D),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
+
+      setState(() => _loading = false);
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', data['access_token']);
+        
+        final userInfo = data['user_info'];
+        final role = userInfo['role'];
+        await prefs.setString('role', role);
+
+        Widget destination;
+        if (role == 'admin') {
+          destination = const AdminScreen();
+        } else if (role == 'staff') {
+          destination = const StaffScreen();
+        } else {
+          destination = const DashboardScreen();
+        }
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => destination,
+            transitionsBuilder: (_, anim, __, child) =>
+                FadeTransition(opacity: anim, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
           ),
-          content: Row(
-            children: [
-              const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
-              const SizedBox(width: 10),
-              Text(
-                'Email hoặc mật khẩu không đúng!',
+        );
+      } else {
+        final data = jsonDecode(res.body);
+        _showError(data['error'] ?? 'Đăng nhập thất bại');
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (!mounted) return;
+      _showError('Lỗi kết nối máy chủ');
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        backgroundColor: const Color(0xFF1A0D0D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
+        ),
+        content: Row(
+          children: [
+            const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: const Color(0xFFFF6B6B),
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
+            ),
+          ],
         ),
-      );
-    }
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override

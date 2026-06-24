@@ -128,7 +128,7 @@ export default function Navbar({ scrollY }: NavbarProps) {
             >
               🎮 Mini Game
             </Link>
-            
+
             {/* Cart Icon */}
             <Link
               to="/cart"
@@ -143,10 +143,10 @@ export default function Navbar({ scrollY }: NavbarProps) {
               <ShoppingCart size={20} />
               {totalItems > 0 && (
                 <div style={{
-                  position: 'absolute', top: 0, right: 0, 
-                  backgroundColor: '#FF6B6B', color: '#fff', 
-                  fontSize: 10, fontWeight: 700, 
-                  width: 16, height: 16, borderRadius: '50%', 
+                  position: 'absolute', top: 0, right: 0,
+                  backgroundColor: '#FF6B6B', color: '#fff',
+                  fontSize: 10, fontWeight: 700,
+                  width: 16, height: 16, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transform: 'translate(25%, -25%)'
                 }}>
@@ -209,10 +209,10 @@ export default function Navbar({ scrollY }: NavbarProps) {
               <ShoppingCart size={22} />
               {totalItems > 0 && (
                 <div style={{
-                  position: 'absolute', top: -5, right: -8, 
-                  backgroundColor: '#FF6B6B', color: '#fff', 
-                  fontSize: 10, fontWeight: 700, 
-                  width: 16, height: 16, borderRadius: '50%', 
+                  position: 'absolute', top: -5, right: -8,
+                  backgroundColor: '#FF6B6B', color: '#fff',
+                  fontSize: 10, fontWeight: 700,
+                  width: 16, height: 16, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {totalItems}

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart' show GoogleLogoPainter;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+const String apiUrl = 'http://10.0.2.2:5000/api/auth';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -55,42 +59,79 @@ class _SignupScreenState extends State<SignupScreen>
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          backgroundColor: const Color(0xFF1A0D0D),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
-          ),
-          content: Row(
-            children: [
-              const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật!',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFFFF6B6B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      _showError('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật!');
+      return;
+    }
+
+    if (_passCtrl.text != _confirmCtrl.text) {
+      _showError('Mật khẩu xác nhận không khớp!');
       return;
     }
 
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() => _loading = false);
 
+    try {
+      final res = await http.post(
+        Uri.parse('$apiUrl/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fullName': _nameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'phone': _phoneCtrl.text.trim(),
+          'password': _passCtrl.text,
+        }),
+      );
+
+      setState(() => _loading = false);
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        _showSuccess('Tài khoản đã được tạo thành công!');
+        await Future.delayed(const Duration(milliseconds: 2200));
+        if (mounted) Navigator.pop(context);
+      } else {
+        final data = jsonDecode(res.body);
+        _showError(data['error'] ?? 'Đăng ký thất bại');
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (!mounted) return;
+      _showError('Lỗi kết nối máy chủ');
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        backgroundColor: const Color(0xFF1A0D0D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
+        ),
+        content: Row(
+          children: [
+            const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFFFF6B6B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -102,15 +143,16 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline,
-                color: Color(0xFF00A896), size: 18),
+            const Icon(Icons.check_circle_outline, color: Color(0xFF00A896), size: 18),
             const SizedBox(width: 10),
-            Text(
-              'Tài khoản đã được tạo thành công!',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF00A896),
-                fontWeight: FontWeight.w500,
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: const Color(0xFF00A896),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -118,8 +160,6 @@ class _SignupScreenState extends State<SignupScreen>
         duration: const Duration(seconds: 2),
       ),
     );
-    await Future.delayed(const Duration(milliseconds: 2200));
-    if (mounted) Navigator.pop(context);
   }
 
   @override

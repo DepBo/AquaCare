@@ -1,15 +1,49 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react'
 
 const F = "'Inter', sans-serif"
 
 export default function SignupPage() {
+  const navigate = useNavigate()
   const [showPass, setShowPass] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [agree, setAgree] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }))
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!agree) return setError('Vui lòng đồng ý với Điều khoản dịch vụ')
+    if (form.password !== form.confirm) return setError('Mật khẩu xác nhận không khớp')
+    setError('')
+    setLoading(true)
+
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: form.name,
+          email: form.email,
+          phone: form.phone,
+          password: form.password
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Đăng ký thất bại')
+      
+      // Success
+      navigate('/login')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const INPUT_STYLE: React.CSSProperties = {
     width: '100%', padding: '12px 14px 12px 40px', borderRadius: 12, fontSize: 13,
@@ -84,7 +118,13 @@ export default function SignupPage() {
           <h2 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Tạo tài khoản</h2>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>Điền thông tin để bắt đầu</p>
 
-          <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && (
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Name */}
             <div>
               <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 8 }}>Họ và tên</label>
@@ -155,17 +195,18 @@ export default function SignupPage() {
             </label>
 
             {/* Submit */}
-            <button type="submit" style={{
-              width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+            <button type="submit" disabled={loading} style={{
+              width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
               fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
-              background: 'linear-gradient(135deg, #1B4F72, #00A896)', color: '#fff',
+              background: loading ? 'rgba(0,229,160,0.3)' : 'linear-gradient(135deg, #1B4F72, #00A896)', color: '#fff',
               boxShadow: '0 4px 24px rgba(0,229,160,0.2)',
               transition: 'box-shadow 200ms, transform 200ms',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,229,160,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,229,160,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,229,160,0.2)'; e.currentTarget.style.transform = 'translateY(0)' }}
             >
-              Tạo tài khoản
+              {loading ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} /> Đang xử lý...</> : 'Tạo tài khoản'}
             </button>
           </form>
 
@@ -204,6 +245,7 @@ export default function SignupPage() {
       </div>
 
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 900px) {
           .auth-brand-panel { display: none !important; }
           .auth-form-panel { width: 100% !important; }
