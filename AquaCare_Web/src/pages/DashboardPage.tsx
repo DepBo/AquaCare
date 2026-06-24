@@ -392,14 +392,58 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  // Đổi thiết bị → làm mới data
-  useEffect(() => { fetchSensorData() }, [activeDevice])
-
-  // Cập nhật định kỳ 10 giây
+  // Đổi thiết bị → làm mới data & Thiết lập Realtime
   useEffect(() => {
     if (!activeDevice) return
-    // const interval = setInterval(fetchSensorData, 10000)
-    // return () => clearInterval(interval)
+
+    let channel: any;
+
+    const setupRealtime = async () => {
+      // 1. Load 24 điểm dữ liệu lịch sử ban đầu
+      await fetchSensorData();
+
+      // 2. Lấy device_id tương ứng với bể cá
+      const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+      if (!devices || devices.length === 0) return;
+      const deviceId = devices[0].id;
+
+      // 3. Đăng ký Realtime
+      channel = supabase.channel(`telemetry_logs_device_${deviceId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'telemetry_logs',
+            filter: `device_id=eq.${deviceId}`
+          },
+          (payload) => {
+            const newData = payload.new as any;
+            const timeStr = new Date(newData.recorded_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+            setSensorData(prev => {
+              const appendData = (arr: SensorReading[], val: number) => [...arr, { time: timeStr, value: val }].slice(-24);
+              return {
+                ph: appendData(prev.ph, Number(newData.ph) || 0),
+                tds: appendData(prev.tds, Number(newData.tds) || 0),
+                temp: appendData(prev.temp, Number(newData.temp) || 0),
+                waterLevel: appendData(prev.waterLevel, newData.water_level_ok ? 1 : 0),
+              };
+            });
+            setTick(t => t + 1); // Trigger check cảnh báo
+          }
+        )
+        .subscribe();
+    }
+
+    setupRealtime();
+
+    // 4. Dọn dẹp (Cleanup) khi đổi bể khác hoặc unmount
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    }
   }, [activeDevice])
 
   // Tạo cảnh báo

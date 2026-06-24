@@ -58,10 +58,6 @@ VALUES
 ('Cá Rồng', 24.0, 30.0, 6.0, 7.5, 80.0, 250.0),
 ('Cá Dĩa', 28.0, 31.0, 5.5, 6.8, 50.0, 150.0);
 
-SELECT t.tank_name, s.species_name 
-FROM tanks t 
-LEFT JOIN fish_species s ON t.species_id = s.id;
-
 -- ── 4. BẢNG BỂ CÁ (TANKS) ────────────────────────────────────────
 CREATE TABLE tanks (
     id SERIAL PRIMARY KEY, -- Chuyển sang số tự tăng
@@ -91,6 +87,14 @@ CREATE TABLE devices (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+INSERT INTO devices (mac_address, firmware_version)
+VALUES 
+('AA:AD:39:8F:DC:9E', 'v1.0.0'),
+('BB:C1:42:9A:ED:11', 'v1.0.0'),
+('CC:55:88:11:22:33', 'v1.0.1'),
+('DD:66:99:22:33:44', 'v1.1.0'),
+('EE:77:AA:33:44:55', 'v2.0.0');
 
 -- ── 6. BẢNG LỊCH SỬ CẢM BIẾN (TELEMETRY_LOGS) ────────────────────
 CREATE TABLE telemetry_logs (
