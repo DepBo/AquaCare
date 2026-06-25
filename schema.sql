@@ -160,3 +160,26 @@ CREATE INDEX idx_notifications_user ON notifications(user_id);
 -- CẤP LẠI QUYỀN TRUY CẬP (Đề phòng bị khóa như lúc nãy)
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE telemetry_logs;
+
+-- Cập nhật lại is_active dựa trên việc đã được gán vào bể hay chưa
+UPDATE devices 
+SET is_active = (tank_id IS NOT NULL);
+
+-- Nếu bạn muốn từ giờ về sau, mặc định thiết bị mới thêm vào là FALSE (đang ở kho)
+-- Bạn có thể sửa default value của cột is_active:
+ALTER TABLE devices ALTER COLUMN is_active SET DEFAULT FALSE;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE alerts_history;
+
+-- Thêm các cột lưu thời gian hẹn giờ (Kiểu TEXT để lưu chuỗi dạng 'HH:MM')
+ALTER TABLE public.devices 
+ADD COLUMN IF NOT EXISTS pump_on_time TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS pump_off_time TEXT DEFAULT NULL,
+
+ADD COLUMN IF NOT EXISTS aerator_on_time TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS aerator_off_time TEXT DEFAULT NULL,
+
+ADD COLUMN IF NOT EXISTS light_on_time TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS light_off_time TEXT DEFAULT NULL;
