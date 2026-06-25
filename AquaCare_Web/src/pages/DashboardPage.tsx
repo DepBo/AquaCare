@@ -1440,8 +1440,7 @@ export default function DashboardPage() {
                             </filter>
                           </defs>
                           <Pie
-                            activeIndex={activePieIndex as any}
-                            activeShape={renderActiveShape as any}
+                            {...({ activeIndex: activePieIndex, activeShape: renderActiveShape } as any)}
                             onMouseEnter={onPieEnter}
                             data={alertDistData}
                             dataKey="value"
