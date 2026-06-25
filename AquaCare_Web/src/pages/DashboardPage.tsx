@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Droplets, Thermometer, Wind, Zap, Fish, Bell,
+  Droplets, Thermometer, Zap, Fish, Bell,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power
 } from 'lucide-react'
@@ -128,8 +128,6 @@ function statusLabel(val: number, good: number[], warn: number[], key?: string) 
   if (val >= warn[0] && val <= warn[1]) return 'Cảnh báo'
   return 'Nguy hiểm'
 }
-
-const INITIAL_PONDS: Pond[] = []
 
 // ── Custom Dialog ────────────────────────────────────────────
 function Dialog({
@@ -720,7 +718,7 @@ export default function DashboardPage() {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
     return (
       <g>
-        <text x={cx} y={cy - 4} dy={0} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={11} fontWeight={600} fontFamily={F} textTransform="uppercase" letterSpacing="0.05em">
+        <text x={cx} y={cy - 4} dy={0} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={11} fontWeight={600} fontFamily={F} style={{ textTransform: 'uppercase' }} letterSpacing="0.05em">
           {payload.name}
         </text>
         <text x={cx} y={cy + 18} dy={0} textAnchor="middle" fill={fill} fontSize={22} fontWeight={800} fontFamily={F}>
@@ -1315,7 +1313,7 @@ export default function DashboardPage() {
                           />
                           <Tooltip
                             contentStyle={{ background: '#112240', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
-                            formatter={(value: number) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
+                            formatter={(value: any) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
                             labelFormatter={(label) => `Lúc ${label}`}
                           />
                           <Area
@@ -1442,8 +1440,8 @@ export default function DashboardPage() {
                             </filter>
                           </defs>
                           <Pie
-                            activeIndex={activePieIndex}
-                            activeShape={renderActiveShape}
+                            activeIndex={activePieIndex as any}
+                            activeShape={renderActiveShape as any}
                             onMouseEnter={onPieEnter}
                             data={alertDistData}
                             dataKey="value"
@@ -1456,7 +1454,7 @@ export default function DashboardPage() {
                             stroke="none"
                             cornerRadius={4}
                           >
-                            {alertDistData.map((entry, index) => (
+                            {alertDistData.map((_, index) => (
                               <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} style={{ filter: 'url(#pie3d)' }} />
                             ))}
                           </Pie>
