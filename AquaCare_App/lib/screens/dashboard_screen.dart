@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
+import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
@@ -158,63 +160,57 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isLoading = false;
 
   // ── Pond State ────────────────────────────────────────────
-  final List<Pond> _ponds = [
-    Pond(id: 'pond_01', name: 'Hồ Cá Koi Ngoài Sân'),
-    Pond(id: 'pond_02', name: 'Bể Thủy Sinh Phòng Khách'),
-    Pond(id: 'pond_03', name: 'Bể Ươm Cá Giống'),
-  ];
-  String _activePondId = 'pond_01';
+  List<Pond> _ponds = [];
+  String _activePondId = '';
 
-  Pond get _activePond => _ponds.firstWhere(
-    (p) => p.id == _activePondId,
-    orElse: () => _ponds.first,
-  );
-
-  List<SensorData> get _currentSensors {
-    final rand = Random(_activePondId.hashCode);
-    List<double> genHistory(double base, double range) {
-      return List.generate(10, (i) => base + (rand.nextDouble() - 0.5) * range);
-    }
-
-    return [
-      SensorData(
-        name: 'pH',
-        unit: '',
-        value: 7.0 + (rand.nextDouble() - 0.5) * 0.4,
-        color: const Color(0xFF00A896),
-        icon: Icons.science_outlined,
-        status: 'Tốt',
-        history: genHistory(7.1, 0.3),
-      ),
-      SensorData(
-        name: 'Nhiệt độ',
-        unit: '°C',
-        value: 26.0 + (rand.nextDouble() - 0.5) * 3,
-        color: const Color(0xFFFF8C42),
-        icon: Icons.thermostat_outlined,
-        status: 'Tốt',
-        history: genHistory(26.5, 2.0),
-      ),
-      SensorData(
-        name: 'TDS',
-        unit: 'ppm',
-        value: 250.0 + (rand.nextDouble() - 0.5) * 100,
-        color: const Color(0xFFC77DFF),
-        icon: Icons.water_drop_outlined,
-        status: 'Tốt',
-        history: genHistory(245.0, 30.0),
-      ),
-      SensorData(
-        name: 'Mực nước',
-        unit: '',
-        value: 1.0,
-        color: const Color(0xFF4DA6FF),
-        icon: Icons.waves_outlined,
-        status: 'Ổn định',
-        history: List.generate(10, (_) => 1.0),
-      ),
-    ];
+  Pond get _activePond {
+    if (_isLoading && _ponds.isEmpty)
+      return Pond(id: '', name: 'Đang đồng bộ...');
+    if (_ponds.isEmpty) return Pond(id: '', name: 'Chưa có bể cá');
+    return _ponds.firstWhere(
+      (p) => p.id == _activePondId,
+      orElse: () => _ponds.first,
+    );
   }
+
+  List<SensorData> _currentSensors = [
+    SensorData(
+      name: 'pH',
+      unit: '',
+      value: 0,
+      color: const Color(0xFF00A896),
+      icon: Icons.science_outlined,
+      status: '...',
+      history: [0],
+    ),
+    SensorData(
+      name: 'Nhiệt độ',
+      unit: '°C',
+      value: 0,
+      color: const Color(0xFFFF8C42),
+      icon: Icons.thermostat_outlined,
+      status: '...',
+      history: [0],
+    ),
+    SensorData(
+      name: 'TDS',
+      unit: 'ppm',
+      value: 0,
+      color: const Color(0xFFC77DFF),
+      icon: Icons.water_drop_outlined,
+      status: '...',
+      history: [0],
+    ),
+    SensorData(
+      name: 'Mực nước',
+      unit: '',
+      value: 0,
+      color: const Color(0xFF4DA6FF),
+      icon: Icons.waves_outlined,
+      status: '...',
+      history: [0],
+    ),
+  ];
 
   final List<String> _tabTitles = ['Tổng quan', 'Cảm biến', 'Cảnh báo'];
 
@@ -239,6 +235,113 @@ class _DashboardScreenState extends State<DashboardScreen>
     _pulseTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
       if (mounted) setState(() => _liveDot = !_liveDot);
     });
+
+    _loadPonds();
+  }
+
+  Future<void> _loadPonds() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      print('DEBUG: User hiện tại: $user');
+      final currentUserId = user?.id ?? '3da8dc87-687c-4a01-970a-2d8f2c7a04c6';
+      
+      print('--- DEBUG: _loadPonds started for user: $currentUserId ---');
+      final data = await SupabaseService.instance.getTanks(currentUserId);
+      print('--- DEBUG: Received data from getTanks: $data ---');
+      if (data.isNotEmpty) {
+        setState(() {
+          _ponds = data
+              .map(
+                (json) => Pond(id: json['id'].toString(), name: json['name']),
+              )
+              .toList();
+          _activePondId = _ponds.first.id;
+        });
+        await _fetchSensorsData();
+      }
+    } catch (e) {
+      print('Error loading ponds: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchSensorsData() async {
+    if (_activePondId.isEmpty) return;
+    setState(() => _isLoading = true);
+    try {
+      print(
+        '--- DEBUG: _fetchSensorsData started for pond: $_activePondId ---',
+      );
+      final logs = await SupabaseService.instance.getTelemetry(
+        _activePondId,
+        limit: 10,
+      );
+      print('--- DEBUG: Received ${logs.length} telemetry logs ---');
+
+      List<double> phHistory = [];
+      List<double> tempHistory = [];
+      List<double> tdsHistory = [];
+      List<double> waterLevelHistory = [];
+
+      for (var log in logs.reversed) {
+        phHistory.add((log['ph'] as num?)?.toDouble() ?? 7.0);
+        tempHistory.add((log['temperature'] as num?)?.toDouble() ?? 26.0);
+        tdsHistory.add((log['tds'] as num?)?.toDouble() ?? 250.0);
+        waterLevelHistory.add(log['water_level_ok'] == true ? 1.0 : 0.0);
+      }
+
+      if (phHistory.isEmpty) phHistory = [7.0];
+      if (tempHistory.isEmpty) tempHistory = [26.0];
+      if (tdsHistory.isEmpty) tdsHistory = [250.0];
+      if (waterLevelHistory.isEmpty) waterLevelHistory = [1.0];
+
+      setState(() {
+        _currentSensors = [
+          SensorData(
+            name: 'pH',
+            unit: '',
+            value: phHistory.last,
+            color: const Color(0xFF00A896),
+            icon: Icons.science_outlined,
+            status: 'Tốt',
+            history: phHistory,
+          ),
+          SensorData(
+            name: 'Nhiệt độ',
+            unit: '°C',
+            value: tempHistory.last,
+            color: const Color(0xFFFF8C42),
+            icon: Icons.thermostat_outlined,
+            status: 'Tốt',
+            history: tempHistory,
+          ),
+          SensorData(
+            name: 'TDS',
+            unit: 'ppm',
+            value: tdsHistory.last,
+            color: const Color(0xFFC77DFF),
+            icon: Icons.water_drop_outlined,
+            status: 'Tốt',
+            history: tdsHistory,
+          ),
+          SensorData(
+            name: 'Mực nước',
+            unit: '',
+            value: waterLevelHistory.last,
+            color: const Color(0xFF4DA6FF),
+            icon: Icons.waves_outlined,
+            status: waterLevelHistory.last == 1.0 ? 'Ổn định' : 'Cạn nước',
+            history: waterLevelHistory,
+          ),
+        ];
+      });
+    } catch (e) {
+      print('Error fetching telemetry: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _updateTime() {
@@ -251,10 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Simulate data reload ──────────────────────────────────
   void _simulateReload() {
-    setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) setState(() => _isLoading = false);
-    });
+    _fetchSensorsData();
   }
 
   // ─────────────── POND CRUD ───────────────────────────────
@@ -1447,7 +1547,9 @@ class SensorCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                        color: sensor.value == 1.0
+                            ? const Color(0xFF00A896)
+                            : const Color(0xFFFF6B6B),
                         height: 1.0,
                       ),
                     )
@@ -1492,7 +1594,9 @@ class SensorCard extends StatelessWidget {
                           widthFactor: sensor.value == 1.0 ? 1.0 : 0.15,
                           child: Container(
                             decoration: BoxDecoration(
-                              color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                              color: sensor.value == 1.0
+                                  ? const Color(0xFF00A896)
+                                  : const Color(0xFFFF6B6B),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -1505,7 +1609,10 @@ class SensorCard extends StatelessWidget {
             else
               SizedBox(
                 height: 42,
-                child: SparklineChart(data: sensor.history, color: sensor.color),
+                child: SparklineChart(
+                  data: sensor.history,
+                  color: sensor.color,
+                ),
               ),
           ],
         ),
@@ -1639,7 +1746,9 @@ class SensorDetailCard extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: sensor.name == 'Mực nước'
-                          ? (sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B))
+                          ? (sensor.value == 1.0
+                                ? const Color(0xFF00A896)
+                                : const Color(0xFFFF6B6B))
                           : sensor.color,
                     ),
                   ),
@@ -1678,17 +1787,25 @@ class SensorDetailCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    sensor.value == 1.0 ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                    sensor.value == 1.0
+                        ? Icons.check_circle_outline
+                        : Icons.warning_amber_rounded,
                     size: 48,
-                    color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                    color: sensor.value == 1.0
+                        ? const Color(0xFF00A896)
+                        : const Color(0xFFFF6B6B),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    sensor.value == 1.0 ? 'Mực nước đang ở mức ổn định' : 'Cảnh báo: Bể đang cạn nước!',
+                    sensor.value == 1.0
+                        ? 'Mực nước đang ở mức ổn định'
+                        : 'Cảnh báo: Bể đang cạn nước!',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: sensor.value == 1.0 ? const Color(0xFF00A896) : const Color(0xFFFF6B6B),
+                      color: sensor.value == 1.0
+                          ? const Color(0xFF00A896)
+                          : const Color(0xFFFF6B6B),
                     ),
                   ),
                 ],
@@ -1699,16 +1816,33 @@ class SensorDetailCard extends StatelessWidget {
               children: [
                 SizedBox(
                   height: 80,
-                  child: SparklineChart(data: sensor.history, color: sensor.color),
+                  child: SparklineChart(
+                    data: sensor.history,
+                    color: sensor.color,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _statChip('Min', sensor.history.reduce(min).toStringAsFixed(2), sensor.color),
+                    _statChip(
+                      'Min',
+                      sensor.history.reduce(min).toStringAsFixed(2),
+                      sensor.color,
+                    ),
                     const SizedBox(width: 10),
-                    _statChip('Max', sensor.history.reduce(max).toStringAsFixed(2), sensor.color),
+                    _statChip(
+                      'Max',
+                      sensor.history.reduce(max).toStringAsFixed(2),
+                      sensor.color,
+                    ),
                     const SizedBox(width: 10),
-                    _statChip('Avg', (sensor.history.reduce((a, b) => a + b) / sensor.history.length).toStringAsFixed(2), sensor.color),
+                    _statChip(
+                      'Avg',
+                      (sensor.history.reduce((a, b) => a + b) /
+                              sensor.history.length)
+                          .toStringAsFixed(2),
+                      sensor.color,
+                    ),
                   ],
                 ),
               ],

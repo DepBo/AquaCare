@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Droplets, Thermometer, Zap, Fish, Bell,
+  Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power
 } from 'lucide-react'
@@ -134,7 +134,7 @@ function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
   confirmColor = '#00A896', onConfirm, onCancel, children
 }: {
-  title: string; message?: string; error?: string; confirmText?: string; cancelText?: string
+  title: React.ReactNode | string; message?: string; error?: string; confirmText?: string; cancelText?: string
   confirmColor?: string; onConfirm: () => void; onCancel: () => void; children?: React.ReactNode
 }) {
   return (
@@ -584,12 +584,12 @@ export default function DashboardPage() {
     SENSOR_CFG.forEach(cfg => {
       const latest = sensorData[cfg.key].at(-1)?.value ?? 0
       if (cfg.key === 'waterLevel') {
-        if (latest === 0) newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `⚠️ Mực nước bể cá đang ở mức thấp, vui lòng châm thêm nước!`, level: 'danger' })
+        if (latest === 0) newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `Mực nước bể cá đang ở mức thấp, vui lòng châm thêm nước!`, level: 'danger' })
       } else {
         if (latest < cfg.warn[0] || latest > cfg.warn[1]) {
-          newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `⚠️ ${cfg.label} = ${latest}${cfg.unit} — ngoài ngưỡng cho phép!`, level: 'danger' })
+          newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `${cfg.label} = ${latest}${cfg.unit} — ngoài ngưỡng cho phép!`, level: 'danger' })
         } else if (latest < cfg.good[0] || latest > cfg.good[1]) {
-          newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `⚠️ ${cfg.label} = ${latest}${cfg.unit} — chạm mức cảnh báo sớm!`, level: 'warn' })
+          newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `${cfg.label} = ${latest}${cfg.unit} — chạm mức cảnh báo sớm!`, level: 'warn' })
         }
       }
     })
@@ -773,8 +773,8 @@ export default function DashboardPage() {
         <nav style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {[
             { id: 'overview', icon: Home, label: 'Tổng quan' },
-            { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
             { id: 'sensors', icon: Activity, label: 'Cảm biến' },
+            { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
             { id: 'alerts', icon: Bell, label: `Cảnh báo${alerts.length ? ` (${alerts.length})` : ''}` },
           ].map(item => (
             <button key={item.id}
@@ -820,10 +820,11 @@ export default function DashboardPage() {
         {/* Top bar */}
         <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(26,45,74,0.4)', background: 'rgba(10,20,38,0.7)', backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 10 }}>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-              {activeTab === 'overview' && '📊 Tổng quan hệ thống'}
-              {activeTab === 'sensors' && '📡 Biểu đồ cảm biến'}
-              {activeTab === 'alerts' && '🔔 Cảnh báo & Thông báo'}
+            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {activeTab === 'overview' && <><Home size={20} color="#00A896" /> Tổng quan hệ thống</>}
+              {activeTab === 'control' && <><Sliders size={20} color="#00A896" /> Điều khiển thiết bị</>}
+              {activeTab === 'sensors' && <><Activity size={20} color="#00A896" /> Biểu đồ cảm biến</>}
+              {activeTab === 'alerts' && <><Bell size={20} color="#00A896" /> Cảnh báo & Thông báo</>}
             </h1>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '2px 0 0' }}>Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}</p>
           </div>
@@ -909,12 +910,10 @@ export default function DashboardPage() {
                         {cfg.key === 'waterLevel' ? '' : `${val}${cfg.unit}`}
                       </div>
                       {cfg.key === 'waterLevel' ? (
-                        <div style={{ marginTop: 20, height: 48, display: 'flex', alignItems: 'center' }}>
-                          <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: val === 1 ? '100%' : '10%', background: sc, borderRadius: 4, transition: 'width 600ms ease' }} />
-                          </div>
-                          <span style={{ marginLeft: 12, fontSize: 13, fontWeight: 600, color: sc }}>
-                            {val === 1 ? 'Ổn định' : 'Cạn nước'}
+                        <div style={{ marginTop: 16, height: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          <Droplets size={28} color={sc} />
+                          <span style={{ fontSize: 16, fontWeight: 600, color: sc, letterSpacing: '0.02em' }}>
+                            {val === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
                           </span>
                         </div>
                       ) : (
@@ -970,7 +969,7 @@ export default function DashboardPage() {
           {/* ═══ TAB: CONTROL ═══ */}
           {activeTab === 'control' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
-              
+
               {/* Máy bơm nước */}
               <div style={{
                 padding: 24, borderRadius: 16, background: 'rgba(15,26,48,0.8)',
@@ -1039,8 +1038,8 @@ export default function DashboardPage() {
                         padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                      onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
                       />
                     </div>
                   </div>
@@ -1059,8 +1058,8 @@ export default function DashboardPage() {
                         padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                      onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
                       />
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1072,16 +1071,16 @@ export default function DashboardPage() {
                           padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)',
                           background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
                         >{item.l}</button>
                       ))}
                     </div>
                   </div>
                   <button onClick={async () => {
-                    const { error, data: dev } = await supabase.from('devices').update({ 
-                      pump_on_time: pumpOnTime || null, 
-                      pump_off_time: pumpOffTime || null 
+                    const { error, data: dev } = await supabase.from('devices').update({
+                      pump_on_time: pumpOnTime || null,
+                      pump_off_time: pumpOffTime || null
                     }).eq('tank_id', activeDevice).select('id').single();
                     if (!error && dev) {
                       await supabase.from('relay_logs').insert({
@@ -1097,8 +1096,8 @@ export default function DashboardPage() {
                     background: 'rgba(0,168,150,0.15)', border: '1px solid rgba(0,168,150,0.3)', color: '#00A896',
                     cursor: 'pointer', transition: 'all 200ms'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,168,150,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,168,150,0.15)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,168,150,0.25)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,168,150,0.15)'}
                   >
                     Lưu hẹn giờ Máy bơm
                   </button>
@@ -1173,8 +1172,8 @@ export default function DashboardPage() {
                         padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                      onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
                       />
                     </div>
                   </div>
@@ -1193,8 +1192,8 @@ export default function DashboardPage() {
                         padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
-                      onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                      onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
                       />
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1206,16 +1205,16 @@ export default function DashboardPage() {
                           padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)',
                           background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
                         >{item.l}</button>
                       ))}
                     </div>
                   </div>
                   <button onClick={async () => {
-                    const { error, data: dev } = await supabase.from('devices').update({ 
-                      light_on_time: lightOnTime || null, 
-                      light_off_time: lightOffTime || null 
+                    const { error, data: dev } = await supabase.from('devices').update({
+                      light_on_time: lightOnTime || null,
+                      light_off_time: lightOffTime || null
                     }).eq('tank_id', activeDevice).select('id').single();
                     if (!error && dev) {
                       await supabase.from('relay_logs').insert({
@@ -1231,8 +1230,8 @@ export default function DashboardPage() {
                     background: 'rgba(255,179,71,0.15)', border: '1px solid rgba(255,179,71,0.3)', color: '#FFB347',
                     cursor: 'pointer', transition: 'all 200ms'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,179,71,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,179,71,0.15)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,179,71,0.25)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,179,71,0.15)'}
                   >
                     Lưu hẹn giờ Đèn thủy sinh
                   </button>
@@ -1394,26 +1393,51 @@ export default function DashboardPage() {
                       const pondName = activePond?.name || 'Bể cá';
                       let title = '';
                       let desc = '';
-                      let icon = '⚠️';
+                      let AlertIcon = AlertTriangle;
+                      let iconColor = '#FF6B6B';
+                      
                       if (a.level === 'warn') {
                         title = `Cảnh báo sớm: ${a.label}`;
                         desc = `${pondName} đang có dấu hiệu bất thường về ${a.label}. Vui lòng theo dõi và kiểm tra lại hệ thống.`;
-                        icon = '👀';
+                        AlertIcon = AlertCircle;
+                        iconColor = '#FFB347';
                       } else if (a.level === 'danger' && a.key === 'waterLevel') {
                         title = `Nguy hiểm: Cạn nước`;
-                        desc = `🚨 ${pondName} CẠN NƯỚC! Hãy kiểm tra van bơm ngay lập tức để cứu cá!`;
-                        icon = '🌊';
+                        desc = `${pondName} CẠN NƯỚC! Hãy kiểm tra van bơm ngay lập tức để cứu cá!`;
+                        AlertIcon = Droplets;
+                        iconColor = '#FF6B6B';
                       } else {
                         title = `Nguy hiểm: ${a.label} bất thường`;
-                        desc = `🚨 ${pondName} đang gặp NGUY HIỂM! ${a.label} đã tụt giảm/tăng vọt bất thường về mức ${a.val}${a.unit}. Hãy đến kiểm tra bể và can thiệp ngay lập tức!`;
-                        icon = '🚨';
+                        desc = `${pondName} đang gặp NGUY HIỂM! ${a.label} đã tụt giảm/tăng vọt bất thường về mức ${a.val}${a.unit}. Hãy đến kiểm tra bể và can thiệp ngay lập tức!`;
+                        AlertIcon = AlertTriangle;
+                        iconColor = '#FF6B6B';
                       }
+
+                      // Bổ sung Gợi ý xử lý
+                      const cfg = SENSOR_CFG.find(c => c.key === a.key);
+                      if (cfg) {
+                        const isHigh = a.val > cfg.good[1];
+                        const isLow = a.val < cfg.good[0];
+
+                        if (a.key === 'temp') {
+                          if (isHigh) desc += "\nGợi ý: Bạn có thể bật quạt tản nhiệt/chiller hoặc thả đá lạnh (bọc túi nilon) để làm mát hồ cá từ từ.";
+                          else if (isLow) desc += "\nGợi ý: Bạn nên bật máy sưởi hồ cá để nâng nhiệt độ lên từ từ, tránh làm cá sốc nhiệt.";
+                        } else if (a.key === 'ph') {
+                          if (isHigh) desc += "\nGợi ý: Bạn có thể thay 20-30% nước hoặc sử dụng lá bàng/dung dịch giảm pH chuyên dụng.";
+                          else if (isLow) desc += "\nGợi ý: Bạn có thể bổ sung san hô vụn vào bộ lọc hoặc dùng dung dịch tăng pH.";
+                        } else if (a.key === 'tds') {
+                          desc += "\nGợi ý: Vui lòng thay 20-30% nước và kiểm tra lại vật liệu lọc của hệ thống máy bơm.";
+                        } else if (a.key === 'waterLevel') {
+                          desc += "\nGợi ý: Vui lòng châm thêm nước hoặc bật máy bơm. Kiểm tra xem hồ cá có bị rạn nứt hay rò rỉ ở đâu không.";
+                        }
+                      }
+
                       return (
                         <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 8, display: 'flex', gap: 14 }}>
-                          <span style={{ fontSize: 20 }}>{icon}</span>
+                          <AlertIcon size={24} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{title}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{desc}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
                           </div>
                         </div>
                       )
@@ -1527,7 +1551,7 @@ export default function DashboardPage() {
       {/* ── Dialog: Thêm bể mới ── */}
       {addDialog && (
         <Dialog
-          title="➕ Thêm bể cá mới"
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18} color="#00A896" /> Thêm bể cá mới</div>}
           confirmText="Thêm bể"
           error={dialogError}
           onConfirm={handleAddConfirm}
@@ -1617,7 +1641,7 @@ export default function DashboardPage() {
       {/* ── Dialog: Cấu hình bể cá ── */}
       {editDialog && (
         <Dialog
-          title="✏️ Cấu hình bể cá"
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#4DA6FF" /> Cấu hình bể cá</div>}
           confirmText="Lưu thay đổi"
           error={dialogError}
           onConfirm={handleEditConfirm}
@@ -1707,7 +1731,7 @@ export default function DashboardPage() {
       {/* ── Dialog: Xác nhận xóa ── */}
       {deleteDialog && (
         <Dialog
-          title="🗑️ Xóa bể cá"
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Trash2 size={18} color="#FF6B6B" /> Xóa bể cá</div>}
           message={`Bạn có chắc muốn xóa "${deleteDialog.name}"? Hành động này không thể hoàn tác.`}
           confirmText="Xóa bể"
           confirmColor="#FF6B6B"

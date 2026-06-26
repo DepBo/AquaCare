@@ -3,12 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
 
-void main() {
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
+
+  await Supabase.initialize(
+    url: 'https://nwmeysspxfgqxtvxeuil.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53bWV5c3NweGZncXh0dnhldWlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjIwNTM4NSwiZXhwIjoyMDk3NzgxMzg1fQ.mZUzdQH9Hj7faBB9SuOYXYc4YEU5-ttmscbjEH_C5-I',
+  );
+
   runApp(const AquaCareApp());
 }
 
