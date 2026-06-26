@@ -39,6 +39,7 @@ const PRODUCTS: Product[] = [
     rating: 4.6,
     details: ['Màn hình LCD đèn nền rõ nét', 'Phạm vi đo 0 - 100 ppt', 'Tự động bù nhiệt độ (ATC)', 'Đầu dò Titan chống ăn mòn', 'Tự động tắt sau 5 phút']
   },
+  /*
   {
     id: 'p5',
     name: 'Đèn LED quang phổ rộng',
@@ -75,6 +76,7 @@ const PRODUCTS: Product[] = [
     rating: 4.9,
     details: ['Máy nén Panasonic siêu bền', 'Môi chất lạnh R134a an toàn', 'Kiểm soát nhiệt độ chính xác ±0.1°C', 'Thiết kế vỏ kim loại sơn tĩnh điện', 'Vận hành êm ái, độ ồn thấp']
   }
+  */
 ];
 
 const F = "'Inter', sans-serif"
@@ -110,6 +112,28 @@ export default function ProductsSection() {
       ref={ref}
       style={{ position: 'relative', padding: '96px 0', overflow: 'hidden', backgroundColor: '#0a1628', fontFamily: F }}
     >
+      <style>{`
+        .product-action-bar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: auto;
+        }
+        @media (max-width: 640px) {
+          .product-action-bar {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .product-action-bar > span {
+            text-align: center;
+          }
+          .product-action-bar > div {
+            justify-content: center;
+          }
+        }
+      `}</style>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px' }}>
         {/* Header */}
         <div style={{
@@ -167,7 +191,7 @@ export default function ProductsSection() {
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, flex: 1, margin: '0 0 20px 0' }}>
                   {product.description}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                <div className="product-action-bar">
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#4DA6FF' }}>
                     {formatPrice(product.price)}
                   </span>
@@ -182,6 +206,7 @@ export default function ProductsSection() {
                         color: '#fff',
                         border: 'none', cursor: 'pointer',
                         transition: 'all 200ms',
+                        whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
@@ -199,6 +224,7 @@ export default function ProductsSection() {
                         color: addedItems[product.id] ? '#000' : '#4DA6FF',
                         border: 'none', cursor: 'pointer',
                         transition: 'all 200ms',
+                        whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => {
                         if (!addedItems[product.id]) {

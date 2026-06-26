@@ -10,9 +10,9 @@ const NAV_LINKS = [
   { label: 'Trang chủ', href: '#hero' },
   { label: 'Giới thiệu', href: '#about' },
   { label: 'Giải pháp', href: '#features' },
+  { label: 'Sản phẩm', href: '#products' },
   { label: 'Công nghệ', href: '#technology' },
   { label: 'Quy trình', href: '#howitworks' },
-  { label: 'Đội ngũ', href: '#team' },
   { label: 'Liên hệ', href: '#contact' },
 ]
 
@@ -182,7 +182,7 @@ export default function Navbar({ scrollY }: NavbarProps) {
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.6)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)' }}
               >
-                Dashboard
+                Trang Chủ
               </Link>
             ) : (
               <Link

@@ -6,7 +6,6 @@ import AboutSection from './components/AboutSection'
 import FeaturesSection from './components/FeaturesSection'
 import TechnologySection from './components/TechnologySection'
 import HowItWorksSection from './components/HowItWorksSection'
-import TeamSection from './components/TeamSection'
 import ContactSection from './components/ContactSection'
 import Footer from './components/Footer'
 import PageTransition from './components/PageTransition'
@@ -40,7 +39,6 @@ function MainPage() {
       <ProductsSection />
       <TechnologySection />
       <HowItWorksSection />
-      <TeamSection />
       <ContactSection />
       <Footer />
     </div>

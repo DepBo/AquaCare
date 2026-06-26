@@ -57,7 +57,7 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
           </defs>
           <XAxis
             dataKey="time"
-            fontSize={9}
+            fontSize={12}
             tick={{ fill: 'rgba(255,255,255,0.4)' }}
             axisLine={false}
             tickLine={false}
@@ -65,16 +65,16 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
           />
           <YAxis
             domain={['dataMin', 'dataMax']}
-            fontSize={9}
+            fontSize={12}
             tick={{ fill: 'rgba(255,255,255,0.4)' }}
             axisLine={false}
             tickLine={false}
-            width={35}
+            width={40}
           />
           <Tooltip
-            contentStyle={{ background: '#112240', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, color: '#fff' }}
-            itemStyle={{ color: color, fontWeight: 600 }}
-            labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
+            contentStyle={{ background: '#112240', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, color: '#fff', padding: '8px 12px' }}
+            itemStyle={{ color: color, fontWeight: 700, fontSize: 16 }}
+            labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: 6, fontSize: 13 }}
           />
           <Area type="monotone" dataKey="value" stroke={color} fillOpacity={1} fill={`url(#color-${color.replace('#', '')})`} strokeWidth={2} />
         </AreaChart>
@@ -799,25 +799,25 @@ export default function DashboardPage() {
         <div style={{ padding: '12px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {sidebarOpen && (
             <div style={{ padding: '8px 12px', marginBottom: 4 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#fff' }}>Phạm Lê Nhật Minh</div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Phạm Lê Nhật Minh</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
             </div>
           )}
           <Link to="/" style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
-            textDecoration: 'none', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 500,
+            textDecoration: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
             transition: 'all 180ms', whiteSpace: 'nowrap'
           }}
             onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+            onMouseLeave={e => e.currentTarget.style.color = '#fff'}
           >
             <ArrowLeft size={16} style={{ flexShrink: 0 }} />
             {sidebarOpen && 'Về trang chủ'}
           </Link>
           <button onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, background: 'transparent', color: 'rgba(255,107,107,0.7)', transition: 'all 180ms', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.1)'; e.currentTarget.style.color = '#FF6B6B' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,107,107,0.7)' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 600, background: 'transparent', color: '#FF6B6B', transition: 'all 180ms', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.15)'; e.currentTarget.style.color = '#ff8282' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF6B6B' }}
           >
             <LogOut size={16} style={{ flexShrink: 0 }} />
             {sidebarOpen && 'Đăng xuất'}
@@ -874,8 +874,7 @@ export default function DashboardPage() {
               </div>
             )}
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: loading ? '#FFB347' : '#00A896', boxShadow: `0 0 8px ${loading ? '#FFB347' : '#00A896'}`, animation: 'pulse 2s ease-in-out infinite' }} />
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{loading ? 'Sync...' : 'Live'}</span>
-            <Link to="/game" style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.2)', color: '#00A896', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>🐠 Farm Game</Link>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{loading ? 'Sync...' : 'Live'}</span>
           </div>
         </div>
 
