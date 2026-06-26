@@ -347,6 +347,15 @@ export default function DashboardPage() {
   const [activeDevice, setActiveDevice] = useState<number | null>(null)
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [hourlyPh, setHourlyPh] = useState<{time: string, value: number}[]>([])
+  const [notification, setNotification] = useState<{show: boolean, msg: string}>({show: false, msg: ''})
+
+  const showNotification = (msg: string) => {
+    setNotification({ show: true, msg })
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }))
+    }, 3000)
+  }
 
   // Dialog states
   const [addDialog, setAddDialog] = useState(false)
@@ -427,6 +436,49 @@ export default function DashboardPage() {
     }
     setTick(t => t + 1)
     setLoading(false)
+    fetchHourlyPhData()
+  }
+
+  const fetchHourlyPhData = async () => {
+    if (!activeDevice) return
+    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice)
+    if (!devices || devices.length === 0) return
+
+    const deviceId = devices[0].id
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+    const { data } = await supabase.from('telemetry_logs')
+      .select('ph, recorded_at')
+      .eq('device_id', deviceId)
+      .gte('recorded_at', twelveHoursAgo)
+      .order('recorded_at', { ascending: true })
+
+    const buckets: Record<string, { sum: number, count: number }> = {}
+    const now = new Date()
+    
+    // Create 12 buckets for the last 12 hours
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 60 * 60 * 1000)
+      const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
+      buckets[hourStr] = { sum: 0, count: 0 }
+    }
+
+    if (data) {
+      data.forEach(t => {
+        const d = new Date(t.recorded_at)
+        const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
+        if (buckets[hourStr]) {
+          buckets[hourStr].sum += Number(t.ph) || 0
+          buckets[hourStr].count += 1
+        }
+      })
+    }
+
+    const processed = Object.keys(buckets).map(time => ({
+      time,
+      value: buckets[time].count > 0 ? Number((buckets[time].sum / buckets[time].count).toFixed(2)) : 0
+    }))
+
+    setHourlyPh(processed)
   }
 
   const fetchAlertHistoryPage = async (pageIndex: number, deviceId: number, cursors: number[]) => {
@@ -947,9 +999,9 @@ export default function DashboardPage() {
                 <div style={{ padding: 20, borderRadius: 16, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(26,45,74,0.5)' }}>
                   <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Hoạt động 12 giờ qua (pH)</h3>
                   <BarChart
-                    data={sensorData.ph.slice(-12).map(d => d.value)}
+                    data={hourlyPh.length > 0 ? hourlyPh.map(d => d.value) : Array(12).fill(0)}
                     color="#00A896"
-                    labels={sensorData.ph.slice(-12).map(d => d.time)}
+                    labels={hourlyPh.length > 0 ? hourlyPh.map(d => d.time) : Array(12).fill('00:00')}
                   />
                 </div>
                 <div style={{ padding: 20, borderRadius: 16, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(26,45,74,0.5)' }}>
@@ -1099,7 +1151,7 @@ export default function DashboardPage() {
                         action: 'ON',
                         triggered_by: 'AUTO'
                       });
-                      alert('Đã lưu cấu hình hẹn giờ Máy bơm!');
+                      showNotification('Đã lưu cấu hình thành công!');
                     }
                   }} style={{
                     width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
@@ -1233,7 +1285,7 @@ export default function DashboardPage() {
                         action: 'ON',
                         triggered_by: 'AUTO'
                       });
-                      alert('Đã lưu cấu hình hẹn giờ Đèn thủy sinh!');
+                      showNotification('Đã lưu cấu hình thành công!');
                     }
                   }} style={{
                     width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
@@ -1749,6 +1801,33 @@ export default function DashboardPage() {
           onCancel={() => setDeleteDialog(null)}
         />
       )}
+
+      {/* ── Custom Notification ── */}
+      <div style={{
+        position: 'fixed',
+        top: 24,
+        left: '50%',
+        zIndex: 1000,
+        background: 'rgba(10, 25, 40, 0.95)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid #00A896',
+        color: '#00A896',
+        padding: '12px 24px',
+        borderRadius: 12,
+        fontSize: 14,
+        fontWeight: 600,
+        opacity: notification.show ? 1 : 0,
+        transform: notification.show ? 'translate(-50%, 0)' : 'translate(-50%, -20px)',
+        transition: 'all 300ms ease',
+        pointerEvents: notification.show ? 'auto' : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        boxShadow: '0 8px 32px rgba(0, 168, 150, 0.2)'
+      }}>
+        <CheckCircle size={18} />
+        {notification.msg}
+      </div>
 
       <style>{`
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }

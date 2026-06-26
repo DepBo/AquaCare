@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Wifi, Database, Cloud, Monitor } from 'lucide-react'
 
 const TECH = [
-  { icon: Wifi, name: 'IoT Sensors', desc: 'ESP32, Arduino, LoRa WAN', color: '#00A896' },
-  { icon: Database, name: 'Backend', desc: 'Node.js, MQTT, InfluxDB', color: '#4DA6FF' },
-  { icon: Cloud, name: 'Cloud', desc: 'AWS IoT Core, Lambda', color: '#B07AFF' },
-  { icon: Monitor, name: 'Frontend', desc: 'React, TypeScript, D3.js', color: '#FF6B6B' },
+  { icon: Wifi, name: 'Thiết bị giám sát', desc: 'Bộ cảm biến thông minh đặt tại ao, liên tục theo dõi chất lượng nước.', color: '#00A896' },
+  { icon: Database, name: 'Bộ não xử lý', desc: 'Hệ thống tự động phân tích dữ liệu, phát hiện sớm rủi ro.', color: '#4DA6FF' },
+  { icon: Cloud, name: 'Trung tâm dữ liệu', desc: 'Thông tin luôn được lưu trữ an toàn, cho phép bạn xem mọi lúc mọi nơi.', color: '#B07AFF' },
+  { icon: Monitor, name: 'Ứng dụng quản lý', desc: 'Xem biểu đồ trực quan, nhận cảnh báo ngay trên điện thoại.', color: '#FF6B6B' },
 ]
 
 const F = "'Inter', sans-serif"
@@ -40,11 +40,10 @@ export default function TechnologySection() {
             <div style={{ width: 28, height: 1, backgroundColor: '#00A896' }} />
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 16 }}>
-            Kiến trúc hệ thống <span className="gradient-text">hiện đại</span>
+            Cách AquaCare bảo vệ <span className="gradient-text">ao nuôi của bạn</span>
           </h2>
           <p style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, maxWidth: 560, margin: '0 auto' }}>
-            AquaCare được xây dựng trên nền tảng công nghệ tiên tiến, từ cảm biến phần cứng
-            đến nền tảng đám mây, đảm bảo độ tin cậy và khả năng mở rộng.
+            AquaCare mang đến một hệ thống tự động, liên tục theo dõi và phân tích dữ liệu để giúp bạn an tâm quản lý ao nuôi mà không cần rành về kỹ thuật.
           </p>
         </div>
 
@@ -63,9 +62,9 @@ export default function TechnologySection() {
           <div style={{
             opacity: vis ? 1 : 0, transform: vis ? 'translateX(0)' : 'translateX(30px)', transition: 'all 800ms ease 400ms',
           }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Nền tảng công nghệ</h3>
+            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Quy trình vận hành</h3>
             <p style={{ fontSize: 13, fontWeight: 400, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, marginBottom: 28, maxWidth: 360 }}>
-              Hệ thống AquaCare sử dụng kiến trúc microservices với 4 lớp chính, đảm bảo module hóa và dễ mở rộng.
+              Mọi thứ diễn ra hoàn toàn tự động qua 4 bước đơn giản, đảm bảo bạn luôn làm chủ được tình trạng ao nuôi dù ở bất cứ đâu.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
@@ -89,7 +88,7 @@ export default function TechnologySection() {
 
             {/* Tags */}
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginTop: 24 }}>
-              {['MQTT', 'REST API', 'WebSocket', 'LoRa'].map(tag => (
+              {['Tự động hóa', 'Cảnh báo sớm', 'Giám sát 24/7', 'Dễ sử dụng'].map(tag => (
                 <span key={tag} style={{
                   padding: '5px 12px', borderRadius: 8,
                   fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.1em',

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Radio, CloudUpload, LineChart, BellRing } from 'lucide-react'
 
 const STEPS = [
-  { icon: Radio, step: '01', title: 'Thu thập dữ liệu', desc: 'Cảm biến IoT đặt trực tiếp trong ao nuôi thu thập pH, nhiệt độ, DO, độ mặn, độ đục mỗi 5 phút.', color: '#00A896' },
-  { icon: CloudUpload, step: '02', title: 'Truyền lên Cloud', desc: 'Dữ liệu được truyền qua LoRa/WiFi đến trạm gốc và đẩy lên đám mây AWS IoT Core qua giao thức MQTT bảo mật.', color: '#4DA6FF' },
-  { icon: LineChart, step: '03', title: 'Phân tích & xử lý', desc: 'AI engine phân tích xu hướng dữ liệu, so sánh với ngưỡng an toàn, dự đoán các rủi ro tiềm ẩn cho ao nuôi.', color: '#B07AFF' },
-  { icon: BellRing, step: '04', title: 'Cảnh báo & hành động', desc: 'Gửi thông báo tức thì qua app khi phát hiện bất thường. Tự động kích hoạt thiết bị (quạt nước, máy sục khí) nếu cần.', color: '#FFB347' },
+  { icon: Radio, step: '01', title: 'Thu thập dữ liệu', desc: 'Cảm biến được thả xuống ao, tự động đo đạc chất lượng nước như độ pH, nhiệt độ, oxy... mỗi 5 phút.', color: '#00A896' },
+  { icon: CloudUpload, step: '02', title: 'Tự động gửi tin', desc: 'Dữ liệu được gửi không dây về hệ thống trung tâm mà bạn không cần làm gì cả.', color: '#4DA6FF' },
+  { icon: LineChart, step: '03', title: 'Hệ thống tự kiểm tra', desc: 'AquaCare liên tục theo dõi các chỉ số, so sánh với môi trường sống lý tưởng để đảm bảo cá luôn khỏe mạnh.', color: '#B07AFF' },
+  { icon: BellRing, step: '04', title: 'Cảnh báo & hành động', desc: 'Nếu có vấn đề, bạn sẽ nhận được thông báo ngay trên điện thoại. Hệ thống có thể tự bật máy quạt nước, sục khí nếu cần.', color: '#FFB347' },
 ]
 
 const F = "'Inter', sans-serif"
