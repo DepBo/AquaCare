@@ -6,8 +6,35 @@ const authRoutes = require('./routes/auth.routes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middlewares
-app.use(cors());
+// Middlewares – CORS phải được khai báo ĐẦU TIÊN, trước mọi route
+const allowedOrigins = [
+  'http://localhost:5173',          // Dev local (Vite default)
+  'http://localhost:3000',          // Dev local (alt port)
+  'https://aquacare-p78r.onrender.com', // Backend Render (self)
+  /\.vercel\.app$/,                 // Mọi subdomain Vercel
+  /\.netlify\.app$/,                // Mọi subdomain Netlify
+  /\.github\.io$/,                  // GitHub Pages
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Cho phép request không có origin (Postman, curl, mobile app)
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 204, // Fix cho IE11 / một số browser cũ
+}));
+
+// Xử lý preflight OPTIONS cho tất cả routes
+app.options('*', cors());
+
 app.use(express.json());
 
 // Routes
