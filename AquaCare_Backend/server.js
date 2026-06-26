@@ -21,3 +21,11 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Khởi chạy Bộ quét hẹn giờ ngầm cùng lúc với Server
+try {
+  require('./timer_worker.js');
+  console.log('✅ Đã tích hợp Timer Worker chạy nền thành công!');
+} catch (err) {
+  console.error('❌ Lỗi khi khởi chạy Timer Worker:', err);
+}
