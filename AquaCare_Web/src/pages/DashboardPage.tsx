@@ -8,7 +8,7 @@ import {
 import { createClient } from '@supabase/supabase-js'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:5000'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
