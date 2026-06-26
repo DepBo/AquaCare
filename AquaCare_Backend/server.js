@@ -33,7 +33,7 @@ app.use(cors({
 }));
 
 // Xử lý preflight OPTIONS cho tất cả routes
-app.options('*', cors());
+// app.options('/*', cors());
 
 app.use(express.json());
 
