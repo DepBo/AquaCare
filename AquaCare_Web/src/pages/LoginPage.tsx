@@ -26,7 +26,7 @@ export default function LoginPage() {
         body: JSON.stringify({ identifier: email, password })
       })
       const data = await res.json()
-      
+
       if (!res.ok) throw new Error(data.error || 'Đăng nhập thất bại')
 
       localStorage.setItem('cs_auth', 'true')
@@ -37,7 +37,7 @@ export default function LoginPage() {
       if (data.user_info.role === 'admin') navigate('/admin')
       else if (data.user_info.role === 'staff') navigate('/staff')
       else navigate('/dashboard')
-      
+
     } catch (err: any) {
       setError(err.message)
     } finally {

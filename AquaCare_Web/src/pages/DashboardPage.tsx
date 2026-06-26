@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft
+  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft,
+  Sun, Moon
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
@@ -58,7 +59,7 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
           <XAxis
             dataKey="time"
             fontSize={12}
-            tick={{ fill: 'rgba(255,255,255,0.4)' }}
+            tick={{ fill: 'var(--text-primary)' }}
             axisLine={false}
             tickLine={false}
             minTickGap={20}
@@ -66,15 +67,15 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
           <YAxis
             domain={['dataMin', 'dataMax']}
             fontSize={12}
-            tick={{ fill: 'rgba(255,255,255,0.4)' }}
+            tick={{ fill: 'var(--text-primary)' }}
             axisLine={false}
             tickLine={false}
             width={40}
           />
           <Tooltip
-            contentStyle={{ background: '#112240', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 14, color: '#fff', padding: '8px 12px' }}
+            contentStyle={{ background: 'var(--bg-tooltip)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', padding: '8px 12px' }}
             itemStyle={{ color: color, fontWeight: 700, fontSize: 16 }}
-            labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: 6, fontSize: 13 }}
+            labelStyle={{ color: 'var(--text-secondary)', marginBottom: 6, fontSize: 13 }}
           />
           <Area type="monotone" dataKey="value" stroke={color} fillOpacity={1} fill={`url(#color-${color.replace('#', '')})`} strokeWidth={2} />
         </AreaChart>
@@ -98,7 +99,7 @@ function BarChart({ data, color, labels, height = 120 }: { data: number[]; color
           <g key={i}>
             <rect x={x} y={height - bh} width={barW} height={bh} rx={4}
               fill={color} opacity={i === data.length - 1 ? 1 : 0.45} />
-            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.3)" fontFamily={F}>
+            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fontSize="8" fill="var(--text-primary)" fontFamily={F}>
               {labels[i]}
             </text>
           </g>
@@ -144,20 +145,20 @@ function Dialog({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onCancel}>
       <div style={{
-        background: 'linear-gradient(135deg, #0d1a2e, #112240)',
-        border: '1px solid rgba(255,255,255,0.10)',
+        background: 'var(--bg-dialog)',
+        border: '1px solid var(--border-color)',
         borderRadius: 18, padding: '28px 32px', width: 360, maxWidth: '90vw',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         animation: 'dialogIn 200ms cubic-bezier(0.34,1.56,0.64,1)',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{title}</h3>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 4, borderRadius: 6 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6 }}>
             <X size={16} />
           </button>
         </div>
         {message && (
-          <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{message}</p>
+          <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{message}</p>
         )}
         {children}
         {error && (
@@ -165,16 +166,16 @@ function Dialog({
         )}
         <div style={{ display: 'flex', gap: 10, marginTop: error ? 16 : 24 }}>
           <button onClick={onCancel} style={{
-            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.10)',
-            background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', fontFamily: F,
+            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--border-color)',
+            background: 'var(--bg-btn-cancel)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontFamily: F,
             transition: 'all 160ms',
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-btn-cancel)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
           >{cancelText}</button>
           <button onClick={onConfirm} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            background: confirmColor, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
             transition: 'all 160ms', boxShadow: `0 4px 16px ${confirmColor}40`,
           }}
             onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' }}
@@ -214,12 +215,12 @@ function PondDropdown({
       <button onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '7px 14px', borderRadius: 10, cursor: 'pointer',
-        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+        background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
         color: '#00A896', fontSize: 12, fontWeight: 600, fontFamily: F,
         transition: 'all 180ms', minWidth: 180,
       }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-btn-cancel)'}
       >
         <Fish size={13} />
         <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -233,14 +234,14 @@ function PondDropdown({
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
           background: 'linear-gradient(135deg, #0d1a2e, #112240)',
-          border: '1px solid rgba(255,255,255,0.10)', borderRadius: 14,
+          border: '1px solid var(--border-color)', borderRadius: 14,
           boxShadow: '0 20px 60px rgba(0,0,0,0.6)', minWidth: 240,
           animation: 'fadeDown 160ms ease',
           overflow: 'hidden',
         }}>
           {/* Pond list */}
           <div style={{ padding: '8px 8px 4px' }}>
-            <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px 8px' }}>
+            <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px 8px' }}>
               Danh sách bể cá
             </div>
             {ponds.map(pond => (
@@ -250,13 +251,13 @@ function PondDropdown({
                 background: pond.id === activeDevice ? 'rgba(0,168,150,0.12)' : 'transparent',
                 transition: 'background 150ms',
               }}
-                onMouseEnter={e => { if (pond.id !== activeDevice) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseEnter={e => { if (pond.id !== activeDevice) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
                 onMouseLeave={e => { if (pond.id !== activeDevice) e.currentTarget.style.background = 'transparent' }}
               >
                 {/* Select area */}
                 <button onClick={() => { onSelect(pond.id); setOpen(false) }} style={{
                   flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  background: 'none', border: 'none', cursor: 'pointer', color: pond.id === activeDevice ? '#00A896' : 'rgba(255,255,255,0.65)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: pond.id === activeDevice ? '#00A896' : 'var(--text-secondary)',
                   fontSize: 12, fontWeight: pond.id === activeDevice ? 600 : 400, fontFamily: F, textAlign: 'left', padding: 0,
                 }}>
                   {pond.id === activeDevice
@@ -269,18 +270,18 @@ function PondDropdown({
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                   <button onClick={e => { e.stopPropagation(); onEdit(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
-                    color: 'rgba(255,255,255,0.3)', transition: 'all 140ms',
+                    color: 'var(--text-muted)', transition: 'all 140ms',
                   }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#4DA6FF' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)' }}
                     title="Cấu hình"
                   ><Pencil size={11} /></button>
                   <button onClick={e => { e.stopPropagation(); onDelete(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
-                    color: 'rgba(255,255,255,0.3)', transition: 'all 140ms',
+                    color: 'var(--text-muted)', transition: 'all 140ms',
                   }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.12)'; e.currentTarget.style.color = '#FF6B6B' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)' }}
                     title="Xóa"
                   ><Trash2 size={11} /></button>
                 </div>
@@ -289,7 +290,7 @@ function PondDropdown({
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+          <div style={{ height: 1, background: 'var(--bg-btn-cancel)', margin: '4px 0' }} />
 
           {/* Add new */}
           <div style={{ padding: '4px 8px 8px' }}>
@@ -347,8 +348,9 @@ export default function DashboardPage() {
   const [activeDevice, setActiveDevice] = useState<number | null>(null)
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [hourlyPh, setHourlyPh] = useState<{time: string, value: number}[]>([])
-  const [notification, setNotification] = useState<{show: boolean, msg: string}>({show: false, msg: ''})
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
+  const [hourlyPh, setHourlyPh] = useState<{ time: string, value: number }[]>([])
+  const [notification, setNotification] = useState<{ show: boolean, msg: string }>({ show: false, msg: '' })
 
   const showNotification = (msg: string) => {
     setNotification({ show: true, msg })
@@ -356,6 +358,12 @@ export default function DashboardPage() {
       setNotification(prev => ({ ...prev, show: false }))
     }, 3000)
   }
+
+  // Apply theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('dashboard_theme', theme)
+  }, [theme])
 
   // Dialog states
   const [addDialog, setAddDialog] = useState(false)
@@ -454,7 +462,7 @@ export default function DashboardPage() {
 
     const buckets: Record<string, { sum: number, count: number }> = {}
     const now = new Date()
-    
+
     // Create 12 buckets for the last 12 hours
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 60 * 60 * 1000)
@@ -770,7 +778,7 @@ export default function DashboardPage() {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
     return (
       <g>
-        <text x={cx} y={cy - 4} dy={0} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={11} fontWeight={600} fontFamily={F} style={{ textTransform: 'uppercase' }} letterSpacing="0.05em">
+        <text x={cx} y={cy - 4} dy={0} textAnchor="middle" fill={theme === 'dark' ? "rgba(255,255,255,0.6)" : "#000"} fontSize={11} fontWeight={600} fontFamily={F} style={{ textTransform: 'uppercase' }} letterSpacing="0.05em">
           {payload.name}
         </text>
         <text x={cx} y={cy + 18} dy={0} textAnchor="middle" fill={fill} fontSize={22} fontWeight={800} fontFamily={F}>
@@ -801,22 +809,34 @@ export default function DashboardPage() {
     );
   };
 
+  const PowerStyles = `
+    :root, [data-theme='dark'] {
+      --btn-power-bg: rgba(255,255,255,0.08);
+      --btn-power-active: rgba(255,255,255,0.2);
+    }
+    [data-theme='light'] {
+      --btn-power-bg: rgba(0,0,0,0.05);
+      --btn-power-active: rgba(0,0,0,0.15);
+    }
+  `;
+
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #060e1a 0%, #0a1628 60%, #0d2235 100%)', fontFamily: F, color: '#fff', display: 'flex' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', fontFamily: F, color: 'var(--text-primary)', display: 'flex' }}>
+      <style>{PowerStyles}</style>
 
       {/* ── Sidebar ── */}
       <aside style={{
         width: sidebarOpen ? 240 : 64, flexShrink: 0,
-        background: 'rgba(10,20,38,0.95)', borderRight: '1px solid rgba(26,45,74,0.5)',
+        background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)',
         backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
         transition: 'width 280ms cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden',
         position: 'sticky', top: 0, height: '100vh',
       }}>
         {/* Logo */}
-        <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+        <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
           onClick={() => setSidebarOpen(o => !o)}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#1B4F72,#00A896)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,229,160,0.25)' }}>
-            <Fish size={18} color="#fff" />
+            <Fish size={18} color="var(--text-primary)" />
           </div>
           {sidebarOpen && <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
         </div>
@@ -835,10 +855,10 @@ export default function DashboardPage() {
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
                 border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 500,
                 background: activeTab === item.id ? 'rgba(0,229,160,0.12)' : 'transparent',
-                color: activeTab === item.id ? '#00A896' : 'rgba(255,255,255,0.45)',
+                color: activeTab === item.id ? '#00A896' : (theme === 'dark' ? 'var(--text-nav)' : '#000'),
                 transition: 'all 180ms', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'var(--bg-nav-hover)' }}
               onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'transparent' }}
             >
               <item.icon size={16} style={{ flexShrink: 0 }} />
@@ -848,20 +868,20 @@ export default function DashboardPage() {
         </nav>
 
         {/* User + Logout */}
-        <div style={{ padding: '12px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {sidebarOpen && (
             <div style={{ padding: '8px 12px', marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Phạm Lê Nhật Minh</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Phạm Lê Nhật Minh</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
             </div>
           )}
           <Link to="/" style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
-            textDecoration: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
             transition: 'all 180ms', whiteSpace: 'nowrap'
           }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = '#fff'}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-primary)'}
           >
             <ArrowLeft size={16} style={{ flexShrink: 0 }} />
             {sidebarOpen && 'Về trang chủ'}
@@ -881,7 +901,7 @@ export default function DashboardPage() {
       <main style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* Top bar */}
-        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(26,45,74,0.4)', background: 'rgba(10,20,38,0.7)', backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 10 }}>
+        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-topbar)', backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               {activeTab === 'overview' && <><Home size={20} color="#00A896" /> Tổng quan hệ thống</>}
@@ -889,12 +909,12 @@ export default function DashboardPage() {
               {activeTab === 'sensors' && <><Activity size={20} color="#00A896" /> Biểu đồ cảm biến</>}
               {activeTab === 'alerts' && <><Bell size={20} color="#00A896" /> Cảnh báo & Thông báo</>}
             </h1>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '2px 0 0' }}>Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {/* Custom Pond Dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Bể cá:</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Bể cá:</span>
               <PondDropdown
                 ponds={ponds}
                 activeDevice={activeDevice}
@@ -914,7 +934,7 @@ export default function DashboardPage() {
 
             {/* Loading indicator */}
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
                 <div style={{ width: 12, height: 12, border: '2px solid rgba(0,229,160,0.3)', borderTopColor: '#00A896', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                 Đang tải...
               </div>
@@ -926,7 +946,22 @@ export default function DashboardPage() {
               </div>
             )}
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: loading ? '#FFB347' : '#00A896', boxShadow: `0 0 8px ${loading ? '#FFB347' : '#00A896'}`, animation: 'pulse 2s ease-in-out infinite' }} />
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{loading ? 'Sync...' : 'Live'}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{loading ? 'Sync...' : 'Live'}</span>
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)', cursor: 'pointer', transition: 'all 200ms',
+                color: theme === 'dark' ? '#FFB347' : '#4DA6FF',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-nav-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
           </div>
         </div>
 
@@ -948,7 +983,7 @@ export default function DashboardPage() {
                   return (
                     <div key={cfg.key}
                       onClick={() => { setSelectedSensor(cfg.key); setActiveTab('sensors') }}
-                      style={{ padding: '20px', borderRadius: 16, background: 'rgba(15,26,48,0.8)', border: `1px solid ${cfg.color}18`, cursor: 'pointer', transition: 'all 220ms', position: 'relative', overflow: 'hidden' }}
+                      style={{ padding: '20px', borderRadius: 16, background: 'var(--bg-card)', border: `1px solid ${cfg.color}18`, cursor: 'pointer', transition: 'all 220ms', position: 'relative', overflow: 'hidden' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = `${cfg.color}40`; e.currentTarget.style.transform = 'translateY(-2px)' }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = `${cfg.color}18`; e.currentTarget.style.transform = 'translateY(0)' }}
                     >
@@ -959,7 +994,7 @@ export default function DashboardPage() {
                             <cfg.icon size={16} color={cfg.color} />
                           </div>
                           <div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>{cfg.label}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{cfg.label}</div>
                             <div style={{ fontSize: 9, color: sc, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{sl}</div>
                           </div>
                         </div>
@@ -982,10 +1017,10 @@ export default function DashboardPage() {
                         <>
                           <Sparkline data={sensorData[cfg.key]} color={cfg.color} height={75} />
                           <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'var(--bg-btn-cancel)', overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
                             </div>
-                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
+                            <span style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
                           </div>
                         </>
                       )}
@@ -996,28 +1031,28 @@ export default function DashboardPage() {
 
               {/* Bottom charts row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div style={{ padding: 20, borderRadius: 16, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(26,45,74,0.5)' }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Hoạt động 12 giờ qua (pH)</h3>
+                <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Hoạt động 12 giờ qua (pH)</h3>
                   <BarChart
                     data={hourlyPh.length > 0 ? hourlyPh.map(d => d.value) : Array(12).fill(0)}
                     color="#00A896"
                     labels={hourlyPh.length > 0 ? hourlyPh.map(d => d.time) : Array(12).fill('00:00')}
                   />
                 </div>
-                <div style={{ padding: 20, borderRadius: 16, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(26,45,74,0.5)' }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
+                <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
                   {SENSOR_CFG.map(cfg => {
                     const val = latest[cfg.key]
                     const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
                     const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
                     return (
-                      <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <cfg.icon size={13} color={cfg.color} />
-                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{cfg.label}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cfg.label}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{val}{cfg.unit}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{val}{cfg.unit}</span>
                           <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: `${sc}18`, color: sc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sl}</span>
                         </div>
                       </div>
@@ -1034,7 +1069,7 @@ export default function DashboardPage() {
 
               {/* Máy bơm nước */}
               <div style={{
-                padding: 24, borderRadius: 16, background: 'rgba(15,26,48,0.8)',
+                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
                 border: `1px solid ${pumpState ? '#00A896' : 'rgba(26,45,74,0.5)'}`,
                 transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
               }}>
@@ -1042,15 +1077,15 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{
                       width: 48, height: 48, borderRadius: 12,
-                      background: pumpState ? 'rgba(0,168,150,0.15)' : 'rgba(255,255,255,0.05)',
+                      background: pumpState ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
                       display: 'flex', justifyContent: 'center', alignItems: 'center',
                       transition: 'all 200ms'
                     }}>
-                      <Droplets size={24} color={pumpState ? '#00A896' : 'rgba(255,255,255,0.3)'} />
+                      <Droplets size={24} color={pumpState ? '#00A896' : 'var(--text-muted)'} />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: '#fff' }}>Máy bơm nước</h3>
-                      <p style={{ fontSize: 13, margin: 0, color: pumpState ? '#00A896' : 'rgba(255,255,255,0.4)', transition: 'color 200ms' }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy bơm nước</h3>
+                      <p style={{ fontSize: 13, margin: 0, color: pumpState ? '#00A896' : 'var(--text-muted)', transition: 'color 200ms' }}>
                         {pumpState ? 'Đang hoạt động' : 'Đang tắt'}
                       </p>
                     </div>
@@ -1074,54 +1109,84 @@ export default function DashboardPage() {
                       }
                     }}
                     style={{
-                      width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                      background: pumpState ? '#00A896' : 'rgba(255,255,255,0.1)',
+                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                      background: pumpState ? '#00A896' : 'var(--btn-power-bg)',
                       boxShadow: pumpState ? '0 0 20px rgba(0,168,150,0.4)' : 'none',
                       display: 'flex', justifyContent: 'center', alignItems: 'center',
                       transition: 'all 200ms', flexShrink: 0
                     }}
                   >
-                    <Power size={24} color={pumpState ? '#fff' : 'rgba(255,255,255,0.5)'} />
+                    <Power size={24} color={pumpState ? '#fff' : 'var(--text-secondary)'} />
                   </button>
                 </div>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20 }}>
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                  {(pumpOnTime || pumpOffTime) && (
+                    <div style={{
+                      background: 'var(--bg-btn-cancel)', border: '1px dashed #00A896', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                    }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Lịch tự động: 
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                          {pumpOnTime && `Bật ${pumpOnTime}`}
+                          {pumpOnTime && pumpOffTime && ' - '}
+                          {pumpOffTime && `Tắt ${pumpOffTime}`}
+                        </span>
+                      </div>
+                      <button onClick={async () => {
+                        const { error } = await supabase.from('devices').update({ pump_on_time: null, pump_off_time: null }).eq('tank_id', activeDevice);
+                        if (!error) {
+                          setPumpOnTime('');
+                          setPumpOffTime('');
+                          showNotification('Đã hủy lịch hẹn Máy bơm');
+                        }
+                      }} style={{
+                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                      }}
+                      >Hủy lịch</button>
+                    </div>
+                  )}
+
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                       {['07:00', '09:00', '12:00'].map(t => (
                         <button key={t} onClick={() => setPumpOnTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOnTime === t ? '#00A896' : 'rgba(255,255,255,0.1)'}`,
-                          background: pumpOnTime === t ? 'rgba(0,168,150,0.15)' : 'rgba(255,255,255,0.05)',
-                          color: pumpOnTime === t ? '#00A896' : 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOnTime === t ? '#00A896' : 'var(--border-color)'}`,
+                          background: pumpOnTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
+                          color: pumpOnTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}>{t}</button>
                       ))}
                       <input type="time" value={pumpOnTime} onChange={e => setPumpOnTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
                         onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
                       {['08:00', '10:00'].map(t => (
                         <button key={t} onClick={() => setPumpOffTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOffTime === t ? '#00A896' : 'rgba(255,255,255,0.1)'}`,
-                          background: pumpOffTime === t ? 'rgba(0,168,150,0.15)' : 'rgba(255,255,255,0.05)',
-                          color: pumpOffTime === t ? '#00A896' : 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOffTime === t ? '#00A896' : 'var(--border-color)'}`,
+                          background: pumpOffTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
+                          color: pumpOffTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}>{t}</button>
                       ))}
                       <input type="time" value={pumpOffTime} onChange={e => setPumpOffTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
                         onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
                       />
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1130,11 +1195,11 @@ export default function DashboardPage() {
                           const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
                           setPumpOffTime(d.toTimeString().slice(0, 5));
                         }} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)',
-                          background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
                         >{item.l}</button>
                       ))}
                     </div>
@@ -1155,11 +1220,13 @@ export default function DashboardPage() {
                     }
                   }} style={{
                     width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    background: 'rgba(0,168,150,0.15)', border: '1px solid rgba(0,168,150,0.3)', color: '#00A896',
+                    background: theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896',
+                    border: theme === 'dark' ? '1px solid rgba(0,168,150,0.4)' : 'none',
+                    color: theme === 'dark' ? '#00A896' : '#fff',
                     cursor: 'pointer', transition: 'all 200ms'
                   }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,168,150,0.25)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,168,150,0.15)'}
+                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.35)' : '#008F80'}
+                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896'}
                   >
                     Lưu hẹn giờ Máy bơm
                   </button>
@@ -1168,7 +1235,7 @@ export default function DashboardPage() {
 
               {/* Đèn thủy sinh */}
               <div style={{
-                padding: 24, borderRadius: 16, background: 'rgba(15,26,48,0.8)',
+                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
                 border: `1px solid ${lightState ? '#FFB347' : 'rgba(26,45,74,0.5)'}`,
                 transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
               }}>
@@ -1176,15 +1243,15 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{
                       width: 48, height: 48, borderRadius: 12,
-                      background: lightState ? 'rgba(255,179,71,0.15)' : 'rgba(255,255,255,0.05)',
+                      background: lightState ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
                       display: 'flex', justifyContent: 'center', alignItems: 'center',
                       transition: 'all 200ms'
                     }}>
-                      <Lightbulb size={24} color={lightState ? '#FFB347' : 'rgba(255,255,255,0.3)'} />
+                      <Lightbulb size={24} color={lightState ? '#FFB347' : 'var(--text-muted)'} />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: '#fff' }}>Đèn thủy sinh</h3>
-                      <p style={{ fontSize: 13, margin: 0, color: lightState ? '#FFB347' : 'rgba(255,255,255,0.4)', transition: 'color 200ms' }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Đèn thủy sinh</h3>
+                      <p style={{ fontSize: 13, margin: 0, color: lightState ? '#FFB347' : 'var(--text-muted)', transition: 'color 200ms' }}>
                         {lightState ? 'Đang hoạt động' : 'Đang tắt'}
                       </p>
                     </div>
@@ -1208,54 +1275,84 @@ export default function DashboardPage() {
                       }
                     }}
                     style={{
-                      width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                      background: lightState ? '#FFB347' : 'rgba(255,255,255,0.1)',
+                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                      background: lightState ? '#FFB347' : 'var(--btn-power-bg)',
                       boxShadow: lightState ? '0 0 20px rgba(255,179,71,0.4)' : 'none',
                       display: 'flex', justifyContent: 'center', alignItems: 'center',
                       transition: 'all 200ms', flexShrink: 0
                     }}
                   >
-                    <Power size={24} color={lightState ? '#fff' : 'rgba(255,255,255,0.5)'} />
+                    <Power size={24} color={lightState ? '#fff' : 'var(--text-secondary)'} />
                   </button>
                 </div>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20 }}>
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                  {(lightOnTime || lightOffTime) && (
+                    <div style={{
+                      background: 'var(--bg-btn-cancel)', border: '1px dashed #FFB347', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                    }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Lịch tự động: 
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                          {lightOnTime && `Bật ${lightOnTime}`}
+                          {lightOnTime && lightOffTime && ' - '}
+                          {lightOffTime && `Tắt ${lightOffTime}`}
+                        </span>
+                      </div>
+                      <button onClick={async () => {
+                        const { error } = await supabase.from('devices').update({ light_on_time: null, light_off_time: null }).eq('tank_id', activeDevice);
+                        if (!error) {
+                          setLightOnTime('');
+                          setLightOffTime('');
+                          showNotification('Đã hủy lịch hẹn Đèn thủy sinh');
+                        }
+                      }} style={{
+                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                      }}
+                      >Hủy lịch</button>
+                    </div>
+                  )}
+
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                       {['07:00', '09:00', '12:00'].map(t => (
                         <button key={t} onClick={() => setLightOnTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOnTime === t ? '#FFB347' : 'rgba(255,255,255,0.1)'}`,
-                          background: lightOnTime === t ? 'rgba(255,179,71,0.15)' : 'rgba(255,255,255,0.05)',
-                          color: lightOnTime === t ? '#FFB347' : 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOnTime === t ? '#FFB347' : 'var(--border-color)'}`,
+                          background: lightOnTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
+                          color: lightOnTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}>{t}</button>
                       ))}
                       <input type="time" value={lightOnTime} onChange={e => setLightOnTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
                         onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
                       {['08:00', '10:00'].map(t => (
                         <button key={t} onClick={() => setLightOffTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOffTime === t ? '#FFB347' : 'rgba(255,255,255,0.1)'}`,
-                          background: lightOffTime === t ? 'rgba(255,179,71,0.15)' : 'rgba(255,255,255,0.05)',
-                          color: lightOffTime === t ? '#FFB347' : 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOffTime === t ? '#FFB347' : 'var(--border-color)'}`,
+                          background: lightOffTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
+                          color: lightOffTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}>{t}</button>
                       ))}
                       <input type="time" value={lightOffTime} onChange={e => setLightOffTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
                       }}
                         onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
                       />
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1264,11 +1361,11 @@ export default function DashboardPage() {
                           const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
                           setLightOffTime(d.toTimeString().slice(0, 5));
                         }} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)',
-                          background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', transition: 'all 150ms'
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
                         }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
                         >{item.l}</button>
                       ))}
                     </div>
@@ -1289,11 +1386,13 @@ export default function DashboardPage() {
                     }
                   }} style={{
                     width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    background: 'rgba(255,179,71,0.15)', border: '1px solid rgba(255,179,71,0.3)', color: '#FFB347',
+                    background: theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500',
+                    border: theme === 'dark' ? '1px solid rgba(255,179,71,0.4)' : 'none',
+                    color: theme === 'dark' ? '#FFB347' : '#fff',
                     cursor: 'pointer', transition: 'all 200ms'
                   }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,179,71,0.25)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,179,71,0.15)'}
+                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.35)' : '#E08300'}
+                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500'}
                   >
                     Lưu hẹn giờ Đèn thủy sinh
                   </button>
@@ -1310,7 +1409,7 @@ export default function DashboardPage() {
                 {SENSOR_CFG.map(cfg => (
                   <button key={cfg.key}
                     onClick={() => setSelectedSensor(cfg.key)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${selectedSensor === cfg.key ? cfg.color : 'rgba(255,255,255,0.08)'}`, background: selectedSensor === cfg.key ? `${cfg.color}15` : 'rgba(255,255,255,0.03)', color: selectedSensor === cfg.key ? cfg.color : 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'all 180ms' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${selectedSensor === cfg.key ? cfg.color : 'var(--border-color)'}`, background: selectedSensor === cfg.key ? `${cfg.color}15` : 'var(--bg-btn-cancel)', color: selectedSensor === cfg.key ? cfg.color : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'all 180ms' }}
                   >
                     <cfg.icon size={13} />
                     {cfg.label}
@@ -1318,7 +1417,7 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              <div style={{ padding: 24, borderRadius: 20, background: 'rgba(15,26,48,0.9)', border: `1px solid ${selectedCfg.color}20`, marginBottom: 20 }}>
+              <div style={{ padding: 24, borderRadius: 20, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}20`, marginBottom: 20 }}>
                 {selectedSensor === 'waterLevel' ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, flexDirection: 'column' }}>
                     <selectedCfg.icon size={64} color={latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B'} style={{ marginBottom: 16 }} />
@@ -1339,7 +1438,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Khoảng an toàn</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Khoảng an toàn</div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: selectedCfg.color }}>{selectedCfg.good[0]}–{selectedCfg.good[1]}{selectedCfg.unit}</div>
                       </div>
                     </div>
@@ -1353,27 +1452,27 @@ export default function DashboardPage() {
                               <stop offset="95%" stopColor={selectedCfg.color} stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={true} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={true} />
                           <XAxis
                             dataKey="time"
-                            stroke="rgba(255,255,255,0.3)"
+                            stroke="var(--text-primary)"
                             fontSize={11}
                             tickMargin={12}
                             minTickGap={15}
-                            tick={{ fill: 'rgba(255,255,255,0.5)' }}
-                            axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                            tick={{ fill: 'var(--text-primary)' }}
+                            axisLine={{ stroke: 'var(--border-color)' }}
                           />
                           <YAxis
-                            stroke="rgba(255,255,255,0.3)"
+                            stroke="var(--text-primary)"
                             fontSize={11}
                             domain={['dataMin', 'dataMax']}
                             tickFormatter={(val) => val.toFixed(selectedCfg.key === 'ph' ? 2 : 1)}
-                            tick={{ fill: 'rgba(255,255,255,0.5)' }}
+                            tick={{ fill: 'var(--text-primary)' }}
                             axisLine={false}
                             tickLine={false}
                           />
                           <Tooltip
-                            contentStyle={{ background: '#112240', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
+                            contentStyle={{ background: 'var(--bg-tooltip)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: 8 }}
                             formatter={(value: any) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
                             labelFormatter={(label) => `Lúc ${label}`}
                           />
@@ -1401,9 +1500,9 @@ export default function DashboardPage() {
                     { label: 'Cao nhất', value: `${Math.max(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
                     { label: 'Thấp nhất', value: `${Math.min(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
                   ].map(s => (
-                    <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'rgba(15,26,48,0.8)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
+                    <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
                       <div style={{ fontSize: 20, fontWeight: 700, color: selectedCfg.color }}>{s.value}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -1425,7 +1524,7 @@ export default function DashboardPage() {
                       <div style={{ fontSize: 13, fontWeight: 600, color: alertGlobalColor }}>
                         {alerts.length ? `${alerts.length} cảnh báo đang hoạt động` : 'Tất cả thông số trong ngưỡng an toàn'}
                       </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Cập nhật mỗi 3 giây</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Cập nhật mỗi 3 giây</div>
                     </div>
                   </div>
                   {alerts.length > 0 && (
@@ -1436,7 +1535,7 @@ export default function DashboardPage() {
                         const bg = isWarn ? 'rgba(255,179,71,0.07)' : 'rgba(255,107,107,0.07)';
                         const border = isWarn ? 'rgba(255,179,71,0.15)' : 'rgba(255,107,107,0.15)';
                         return (
-                          <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: bg, border: `1px solid ${border}`, marginBottom: i < alerts.length - 1 ? 10 : 0, fontSize: 13, color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: bg, border: `1px solid ${border}`, marginBottom: i < alerts.length - 1 ? 10 : 0, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
                             <AlertTriangle size={14} color={color} style={{ flexShrink: 0 }} />
                             {a.msg}
                           </div>
@@ -1447,9 +1546,9 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
                   {alerts.length === 0 ? (
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Không có cảnh báo nào cần xử lý.</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có cảnh báo nào cần xử lý.</div>
                   ) : (
                     alerts.map((a, i) => {
                       const pondName = activePond?.name || 'Bể cá';
@@ -1457,7 +1556,7 @@ export default function DashboardPage() {
                       let desc = '';
                       let AlertIcon = AlertTriangle;
                       let iconColor = '#FF6B6B';
-                      
+
                       if (a.level === 'warn') {
                         title = `Cảnh báo sớm: ${a.label}`;
                         desc = `${pondName} đang có dấu hiệu bất thường về ${a.label}. Vui lòng theo dõi và kiểm tra lại hệ thống.`;
@@ -1495,11 +1594,11 @@ export default function DashboardPage() {
                       }
 
                       return (
-                        <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 8, display: 'flex', gap: 14 }}>
+                        <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', marginBottom: 8, display: 'flex', gap: 14 }}>
                           <AlertIcon size={24} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} />
                           <div>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{title}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{title}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
                           </div>
                         </div>
                       )
@@ -1511,8 +1610,8 @@ export default function DashboardPage() {
               {/* Cột phải: Analytics & History */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, height: '100%' }}>
                 {/* Widget Thống kê */}
-                <div style={{ padding: 20, borderRadius: 14, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
+                <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
                   <div style={{ height: 220, width: '100%' }}>
                     {alertDistData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
@@ -1540,14 +1639,14 @@ export default function DashboardPage() {
                             cornerRadius={4}
                           >
                             {alertDistData.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} style={{ filter: 'url(#pie3d)' }} />
+                              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} style={{ filter: theme === 'dark' ? 'url(#pie3d)' : 'none' }} />
                             ))}
                           </Pie>
-                          <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', bottom: -4 }} verticalAlign="bottom" height={30} />
+                          <Legend formatter={(value) => <span style={{ color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#000' }}>{value}</span>} wrapperStyle={{ fontSize: 11, bottom: -4 }} verticalAlign="bottom" height={30} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: 'var(--text-muted)' }}>
                         Chưa có dữ liệu thống kê
                       </div>
                     )}
@@ -1555,44 +1654,44 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Widget Lịch sử */}
-                <div style={{ padding: 20, borderRadius: 14, background: 'rgba(15,26,48,0.8)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-                    <h3 style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
+                    <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <button
                         onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice, historyCursors) }}
                         disabled={currentHistoryPage === 0 || historyLoading}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 8px', color: currentHistoryPage === 0 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
+                        style={{ background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: currentHistoryPage === 0 ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'var(--text-primary)', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
                       >Trang trước</button>
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Trang {currentHistoryPage + 1}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trang {currentHistoryPage + 1}</span>
                       <button
                         onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage + 1, activeDevice, historyCursors) }}
                         disabled={!historyHasNext || historyLoading}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 8px', color: !historyHasNext ? 'rgba(255,255,255,0.2)' : '#fff', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
+                        style={{ background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: !historyHasNext ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'var(--text-primary)', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
                       >Trang sau</button>
                     </div>
                   </div>
-                  <div className="custom-scrollbar" style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', flex: 1, overflowY: 'auto' }}>
+                  <div className="custom-scrollbar" style={{ background: theme === 'dark' ? 'var(--bg-card)' : '#F2F4F7', borderRadius: 12, border: '1px solid var(--border-color)', flex: 1, overflowY: 'auto' }}>
                     {alertHistory.length === 0 ? (
-                      <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+                      <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
                         Chưa có lịch sử cảnh báo nào
                       </div>
                     ) : (
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                         <thead style={{ position: 'sticky', top: 0, background: '#152441', zIndex: 1 }}>
-                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Thời gian</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Loại</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Giá trị</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Trạng thái</th>
+                          <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Thời gian</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Loại</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Giá trị</th>
+                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Trạng thái</th>
                           </tr>
                         </thead>
                         <tbody>
                           {alertHistory.map(h => (
-                            <tr key={h.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                              <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.7)' }}>{new Date(h.created_at).toLocaleString('vi-VN')}</td>
-                              <td style={{ padding: '12px 16px', color: '#fff' }}>{h.alert_type}</td>
-                              <td style={{ padding: '12px 16px', color: '#FFB347' }}>{h.actual_value}</td>
+                            <tr key={h.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{new Date(h.created_at).toLocaleString('vi-VN')}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{h.alert_type}</td>
+                              <td style={{ padding: '12px 16px', color: '#FF8C00', fontWeight: 500 }}>{h.actual_value}</td>
                               <td style={{ padding: '12px 16px', color: h.is_read ? '#00A896' : '#FF6B6B' }}>
                                 {h.is_read ? 'Đã xem' : 'Mới'}
                               </td>
@@ -1620,7 +1719,7 @@ export default function DashboardPage() {
           onCancel={() => setAddDialog(false)}
         >
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Tên bể cá
             </label>
             <input
@@ -1630,16 +1729,16 @@ export default function DashboardPage() {
               placeholder="VD: Bể Rồng Phòng Ngủ"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Thể tích (Lít)
             </label>
             <input
@@ -1649,16 +1748,16 @@ export default function DashboardPage() {
               placeholder="VD: 250"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
           <div style={{ marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Loài cá (Tùy chọn)
             </label>
             <select
@@ -1666,12 +1765,12 @@ export default function DashboardPage() {
               onChange={e => setAddSpeciesId(Number(e.target.value))}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms', appearance: 'none'
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             >
               <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
               {fishSpecies.map(sp => (
@@ -1680,7 +1779,7 @@ export default function DashboardPage() {
             </select>
           </div>
           <div style={{ marginTop: 12, marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Mã thiết bị (MAC Address)
             </label>
             <input
@@ -1689,12 +1788,12 @@ export default function DashboardPage() {
               placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
         </Dialog>
@@ -1710,7 +1809,7 @@ export default function DashboardPage() {
           onCancel={() => setEditDialog(null)}
         >
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Tên bể cá
             </label>
             <input
@@ -1720,16 +1819,16 @@ export default function DashboardPage() {
               placeholder="VD: Bể Rồng Phòng Ngủ"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Thể tích (Lít)
             </label>
             <input
@@ -1739,16 +1838,16 @@ export default function DashboardPage() {
               placeholder="VD: 250"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
           <div style={{ marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Loài cá (Tùy chọn)
             </label>
             <select
@@ -1756,12 +1855,12 @@ export default function DashboardPage() {
               onChange={e => setEditSpeciesId(Number(e.target.value))}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms', appearance: 'none'
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             >
               <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
               {fishSpecies.map(sp => (
@@ -1770,7 +1869,7 @@ export default function DashboardPage() {
             </select>
           </div>
           <div style={{ marginTop: 12, marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Mã thiết bị (MAC Address)
             </label>
             <input
@@ -1779,12 +1878,12 @@ export default function DashboardPage() {
               placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                color: '#fff', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
                 transition: 'border-color 200ms',
               }}
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
         </Dialog>
@@ -1808,7 +1907,7 @@ export default function DashboardPage() {
         top: 24,
         left: '50%',
         zIndex: 1000,
-        background: 'rgba(10, 25, 40, 0.95)',
+        background: 'var(--bg-notif)',
         backdropFilter: 'blur(8px)',
         border: '1px solid #00A896',
         color: '#00A896',
@@ -1830,6 +1929,41 @@ export default function DashboardPage() {
       </div>
 
       <style>{`
+        /* ─── CSS Theme Variables ─── */
+        :root, [data-theme='dark'] {
+          --bg-main: linear-gradient(135deg, #060e1a 0%, #0a1628 60%, #0d2235 100%);
+          --bg-sidebar: rgba(10,20,38,0.95);
+          --bg-topbar: rgba(10,20,38,0.7);
+          --bg-card: rgba(15,26,48,0.8);
+          --bg-dialog: linear-gradient(135deg, #0d1a2e, #112240);
+          --bg-tooltip: #112240;
+          --bg-btn-cancel: rgba(255,255,255,0.04);
+          --bg-btn-cancel-hover: rgba(255,255,255,0.08);
+          --bg-nav-hover: rgba(255,255,255,0.05);
+          --text-primary: #ffffff;
+          --text-secondary: rgba(255,255,255,0.5);
+          --text-nav: rgba(255,255,255,0.45);
+          --text-muted: rgba(255,255,255,0.3);
+          --border-color: rgba(26,45,74,0.5);
+          --bg-notif: rgba(10, 25, 40, 0.95);
+        }
+        [data-theme='light'] {
+          --bg-main: linear-gradient(135deg, #e8f4f8 0%, #ddeef8 60%, #cfe4f2 100%);
+          --bg-sidebar: rgba(255,255,255,0.97);
+          --bg-topbar: rgba(255,255,255,0.85);
+          --bg-card: rgba(255,255,255,0.9);
+          --bg-dialog: #ffffff;
+          --bg-tooltip: #1e293b;
+          --bg-btn-cancel: rgba(0,0,0,0.04);
+          --bg-notif: var(--bg-card);
+          --bg-btn-cancel-hover: rgba(0,0,0,0.08);
+          --bg-nav-hover: rgba(0,0,0,0.04);
+          --text-primary: #0f172a;
+          --text-secondary: #475569;
+          --text-nav: #64748b;
+          --text-muted: #94a3b8;
+          --border-color: rgba(0,0,0,0.1);
+        }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }

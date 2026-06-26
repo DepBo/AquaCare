@@ -172,7 +172,7 @@ SET is_active = (tank_id IS NOT NULL);
 ALTER TABLE devices ALTER COLUMN is_active SET DEFAULT FALSE;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE alerts_history;
-
+ALTER PUBLICATION supabase_realtime ADD TABLE devices;
 -- Thêm các cột lưu thời gian hẹn giờ (Kiểu TEXT để lưu chuỗi dạng 'HH:MM')
 ALTER TABLE public.devices 
 ADD COLUMN IF NOT EXISTS pump_on_time TEXT DEFAULT NULL,
@@ -183,3 +183,5 @@ ADD COLUMN IF NOT EXISTS aerator_off_time TEXT DEFAULT NULL,
 
 ADD COLUMN IF NOT EXISTS light_on_time TEXT DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS light_off_time TEXT DEFAULT NULL;
+
+ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
