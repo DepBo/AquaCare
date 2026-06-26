@@ -3,10 +3,13 @@ import { Waves, Cpu, BarChart3, Shield } from 'lucide-react'
 import Tilt3D from './Tilt3D'
 
 const STATS = [
-  { value: '500+', label: 'Ao nuôi giám sát' },
-  { value: '99.5%', label: 'Độ chính xác' },
+  // { value: '500+', label: 'Ao nuôi giám sát' },
+  // { value: '99.5%', label: 'Độ chính xác' },
+  // { value: '24/7', label: 'Giám sát liên tục' },
+  // { value: '30%', label: 'Giảm tỷ lệ hao hụt' },
   { value: '24/7', label: 'Giám sát liên tục' },
-  { value: '30%', label: 'Giảm tỷ lệ hao hụt' },
+  { value: 'Tối ưu', label: 'Giảm tỉ lệ hao hụt' },
+  { value: 'Hiệu quả', label: 'Tăng năng suất nuôi' },
 ]
 
 const HIGHLIGHTS = [
@@ -120,7 +123,7 @@ export default function AboutSection() {
           style={{
             marginTop: 80,
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 24,
             textAlign: 'center' as const,
             opacity: vis ? 1 : 0,

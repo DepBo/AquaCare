@@ -462,9 +462,11 @@ export default function HeroSection() {
           className="hidden xl:flex"
         >
           {[
-            { v: '24/7', l: 'Giám sát' },
-            { v: '99%', l: 'Chính xác' },
-            { v: '5+', l: 'Cảm biến' },
+            // { v: '24/7', l: 'Giám sát' },
+            // { v: '99%', l: 'Chính xác' },
+            // { v: '5+', l: 'Cảm biến' },
+            { v: '24/7', l: 'Giám sát liên tục' },
+            { v: 'Tối ưu', l: 'Độ chính xác cao' },
           ].map((st, i) => (
             <div
               key={i}

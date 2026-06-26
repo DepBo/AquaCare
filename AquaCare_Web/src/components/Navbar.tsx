@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, ShoppingCart } from 'lucide-react'
 import { useCart } from '../contexts/CartContext'
@@ -19,6 +19,13 @@ const NAV_LINKS = [
 export default function Navbar({ scrollY }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { totalItems } = useCart()
+  const [isAuth, setIsAuth] = useState(false)
+  const [userRole, setUserRole] = useState('')
+
+  useEffect(() => {
+    setIsAuth(!!localStorage.getItem('cs_auth'))
+    setUserRole(localStorage.getItem('cs_role') || '')
+  }, [])
 
   const isScrolled = scrollY > 60
 
@@ -107,7 +114,7 @@ export default function Navbar({ scrollY }: NavbarProps) {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Link
+            {/* <Link
               to="/game"
               style={{
                 padding: '7px 14px',
@@ -127,7 +134,7 @@ export default function Navbar({ scrollY }: NavbarProps) {
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,183,71,0.2)' }}
             >
               🎮 Mini Game
-            </Link>
+            </Link> */}
 
             {/* Cart Icon */}
             <Link
@@ -155,26 +162,50 @@ export default function Navbar({ scrollY }: NavbarProps) {
               )}
             </Link>
 
-            <Link
-              to="/login"
-              style={{
-                padding: '7px 14px',
-                borderRadius: 8,
-                fontSize: 10,
-                fontWeight: 500,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em',
-                textDecoration: 'none',
-                color: 'rgba(255,255,255,0.6)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                transition: 'color 200ms, border-color 200ms',
-                whiteSpace: 'nowrap' as const,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
-            >
-              Đăng nhập
-            </Link>
+            {isAuth ? (
+              <Link
+                to={userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard'}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  fontSize: 10,
+                  fontWeight: 600,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.06em',
+                  textDecoration: 'none',
+                  color: '#fff',
+                  border: '1px solid rgba(0,229,160,0.4)',
+                  background: 'rgba(0,229,160,0.1)',
+                  transition: 'all 200ms',
+                  whiteSpace: 'nowrap' as const,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.6)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)' }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.06em',
+                  textDecoration: 'none',
+                  color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  transition: 'color 200ms, border-color 200ms',
+                  whiteSpace: 'nowrap' as const,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+              >
+                Đăng nhập
+              </Link>
+            )}
             <a
               href="#contact"
               style={{

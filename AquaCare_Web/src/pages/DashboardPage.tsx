@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power
+  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
@@ -803,6 +803,17 @@ export default function DashboardPage() {
               <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
             </div>
           )}
+          <Link to="/" style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+            textDecoration: 'none', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 500,
+            transition: 'all 180ms', whiteSpace: 'nowrap'
+          }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+          >
+            <ArrowLeft size={16} style={{ flexShrink: 0 }} />
+            {sidebarOpen && 'Về trang chủ'}
+          </Link>
           <button onClick={handleLogout}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, background: 'transparent', color: 'rgba(255,107,107,0.7)', transition: 'all 180ms', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.1)'; e.currentTarget.style.color = '#FF6B6B' }}
