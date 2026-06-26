@@ -32,8 +32,8 @@ app.use(cors({
   optionsSuccessStatus: 204, // Fix cho IE11 / một số browser cũ
 }));
 
-// Xử lý preflight OPTIONS cho tất cả routes
-app.options('*', cors());
+// Xử lý preflight OPTIONS cho tất cả routes (tương thích Express 5 / Node 24+)
+app.options('/{*path}', cors());
 
 app.use(express.json());
 
