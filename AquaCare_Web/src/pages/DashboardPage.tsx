@@ -7,7 +7,7 @@ import {
   Sun, Moon
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector, BarChart, Bar } from 'recharts'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
@@ -73,7 +73,7 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
             width={40}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--bg-tooltip)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', padding: '8px 12px' }}
+            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
             itemStyle={{ color: color, fontWeight: 700, fontSize: 16 }}
             labelStyle={{ color: 'var(--text-secondary)', marginBottom: 6, fontSize: 13 }}
           />
@@ -84,30 +84,7 @@ function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; h
   )
 }
 
-// ── Bar Chart ─────────────────────────────────────────────────
-function BarChart({ data, color, labels, height = 120 }: { data: number[]; color: string; labels: string[]; height?: number }) {
-  const max = Math.max(...data) || 1
-  const barW = 20
-  const gap = 8
-  const total = data.length * (barW + gap)
-  return (
-    <svg width="100%" viewBox={`0 0 ${total} ${height + 20}`} style={{ overflow: 'visible' }}>
-      {data.map((v, i) => {
-        const bh = (v / max) * height
-        const x = i * (barW + gap)
-        return (
-          <g key={i}>
-            <rect x={x} y={height - bh} width={barW} height={bh} rx={4}
-              fill={color} opacity={i === data.length - 1 ? 1 : 0.45} />
-            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fontSize="8" fill="var(--text-primary)" fontFamily={F}>
-              {labels[i]}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
+
 
 // ── Cấu hình cảm biến ─────────────────────────────────────────
 const SENSOR_CFG = [
@@ -349,7 +326,8 @@ export default function DashboardPage() {
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
-  const [hourlyPh, setHourlyPh] = useState<{ time: string, value: number }[]>([])
+  const [hourlySensorData, setHourlySensorData] = useState<SensorData>(emptySensor())
+  const [hourlyActiveTab, setHourlyActiveTab] = useState<keyof SensorData>('ph')
   const [notification, setNotification] = useState<{ show: boolean, msg: string }>({ show: false, msg: '' })
 
   const showNotification = (msg: string) => {
@@ -444,10 +422,10 @@ export default function DashboardPage() {
     }
     setTick(t => t + 1)
     setLoading(false)
-    fetchHourlyPhData()
+    fetchHourlyData()
   }
 
-  const fetchHourlyPhData = async () => {
+  const fetchHourlyData = async () => {
     if (!activeDevice) return
     const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice)
     if (!devices || devices.length === 0) return
@@ -455,19 +433,24 @@ export default function DashboardPage() {
     const deviceId = devices[0].id
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
     const { data } = await supabase.from('telemetry_logs')
-      .select('ph, recorded_at')
+      .select('ph, tds, temp, water_level_ok, recorded_at')
       .eq('device_id', deviceId)
       .gte('recorded_at', twelveHoursAgo)
       .order('recorded_at', { ascending: true })
 
-    const buckets: Record<string, { sum: number, count: number }> = {}
+    const buckets: Record<string, {
+      phSum: number, phCount: number,
+      tdsSum: number, tdsCount: number,
+      tempSum: number, tempCount: number,
+      waterSum: number, waterCount: number
+    }> = {}
     const now = new Date()
 
     // Create 12 buckets for the last 12 hours
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 60 * 60 * 1000)
       const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
-      buckets[hourStr] = { sum: 0, count: 0 }
+      buckets[hourStr] = { phSum: 0, phCount: 0, tdsSum: 0, tdsCount: 0, tempSum: 0, tempCount: 0, waterSum: 0, waterCount: 0 }
     }
 
     if (data) {
@@ -475,18 +458,34 @@ export default function DashboardPage() {
         const d = new Date(t.recorded_at)
         const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
         if (buckets[hourStr]) {
-          buckets[hourStr].sum += Number(t.ph) || 0
-          buckets[hourStr].count += 1
+          buckets[hourStr].phSum += Number(t.ph) || 0
+          buckets[hourStr].phCount += 1
+          buckets[hourStr].tdsSum += Number(t.tds) || 0
+          buckets[hourStr].tdsCount += 1
+          buckets[hourStr].tempSum += Number(t.temp) || 0
+          buckets[hourStr].tempCount += 1
+          buckets[hourStr].waterSum += t.water_level_ok ? 1 : 0
+          buckets[hourStr].waterCount += 1
         }
       })
     }
 
-    const processed = Object.keys(buckets).map(time => ({
-      time,
-      value: buckets[time].count > 0 ? Number((buckets[time].sum / buckets[time].count).toFixed(2)) : 0
-    }))
+    const mapMetric = (sumKey: string, countKey: string) => {
+      return Object.keys(buckets).map(time => {
+        const b = buckets[time] as any
+        return {
+          time,
+          value: b[countKey] > 0 ? Number((b[sumKey] / b[countKey]).toFixed(2)) : 0
+        }
+      })
+    }
 
-    setHourlyPh(processed)
+    setHourlySensorData({
+      ph: mapMetric('phSum', 'phCount'),
+      tds: mapMetric('tdsSum', 'tdsCount'),
+      temp: mapMetric('tempSum', 'tempCount'),
+      waterLevel: mapMetric('waterSum', 'waterCount'),
+    })
   }
 
   const fetchAlertHistoryPage = async (pageIndex: number, deviceId: number, cursors: number[]) => {
@@ -1032,12 +1031,57 @@ export default function DashboardPage() {
               {/* Bottom charts row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Hoạt động 12 giờ qua (pH)</h3>
-                  <BarChart
-                    data={hourlyPh.length > 0 ? hourlyPh.map(d => d.value) : Array(12).fill(0)}
-                    color="#00A896"
-                    labels={hourlyPh.length > 0 ? hourlyPh.map(d => d.time) : Array(12).fill('00:00')}
-                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Hoạt động 12 giờ qua</h3>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {SENSOR_CFG.map(cfg => (
+                        <button key={cfg.key} onClick={() => setHourlyActiveTab(cfg.key)} style={{
+                          padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, fontFamily: F, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                          background: hourlyActiveTab === cfg.key ? `${cfg.color}20` : 'transparent',
+                          color: hourlyActiveTab === cfg.key ? cfg.color : 'var(--text-muted)'
+                        }}>
+                          {cfg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ height: 160, width: '100%', marginTop: 10 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({length: 12}).map((_, i) => ({ time: '00:00', value: 0 }))}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <XAxis
+                          dataKey="time"
+                          fontSize={10}
+                          tick={{ fill: 'var(--text-secondary)' }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          domain={['auto', 'auto']}
+                          tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={25}
+                          tickFormatter={(val) => val.toFixed(1)}
+                        />
+                        <Tooltip
+                          cursor={{ fill: 'rgba(0,0,0,0.1)' }}
+                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          formatter={(value: number) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
+                          labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                          itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
+                        />
+                        <Bar
+                          dataKey="value"
+                          fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
+                          radius={[4, 4, 0, 0]}
+                          barSize={30}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
                 <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                   <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
@@ -1472,9 +1516,11 @@ export default function DashboardPage() {
                             tickLine={false}
                           />
                           <Tooltip
-                            contentStyle={{ background: 'var(--bg-tooltip)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: 8 }}
+                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                             formatter={(value: any) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
                             labelFormatter={(label) => `Lúc ${label}`}
+                            labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                            itemStyle={{ color: selectedCfg.color, fontWeight: 700 }}
                           />
                           <Area
                             type="monotone"
@@ -1611,7 +1657,7 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, height: '100%' }}>
                 {/* Widget Thống kê */}
                 <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
                   <div style={{ height: 220, width: '100%' }}>
                     {alertDistData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
@@ -1656,7 +1702,7 @@ export default function DashboardPage() {
                 {/* Widget Lịch sử */}
                 <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-                    <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
+                    <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <button
                         onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice, historyCursors) }}
