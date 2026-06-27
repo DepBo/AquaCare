@@ -1048,7 +1048,7 @@ export default function DashboardPage() {
                   <div style={{ height: 160, width: '100%', marginTop: 10 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({length: 12}).map((_, i) => ({ time: '00:00', value: 0 }))}
+                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({length: 12}).map(() => ({ time: '00:00', value: 0 }))}
                         margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                       >
                         <XAxis
@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
                         <Tooltip
                           cursor={{ fill: 'rgba(0,0,0,0.1)' }}
                           contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                          formatter={(value: number) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
+                          formatter={(value: any, name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
                           labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
                           itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
                         />
