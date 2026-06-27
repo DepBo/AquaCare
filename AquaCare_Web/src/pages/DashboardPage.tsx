@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
                         <Tooltip
                           cursor={{ fill: 'rgba(0,0,0,0.1)' }}
                           contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                          formatter={(value: any, name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
+                          formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
                           labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
                           itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
                         />
