@@ -5,11 +5,15 @@ import 'signup_screen.dart';
 import 'admin_screen.dart';
 import 'staff_screen.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String apiUrl = 'http://10.0.2.2:5000/api/auth';
+// const String apiUrl = 'http://172.20.10.8:5000/api/auth';
+const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -76,6 +80,18 @@ class _LoginScreenState extends State<LoginScreen>
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', data['access_token']);
         
+        final refreshToken = data['refresh_token'];
+        if (refreshToken != null) {
+          await prefs.setString('refresh_token', refreshToken);
+          try {
+            final authResponse = await Supabase.instance.client.auth.setSession(refreshToken);
+            debugPrint('🔑 Session sau set: ${authResponse.session?.user.id}');
+            debugPrint('✅ [SUCCESS]: Đã đồng bộ session Supabase thành công từ refresh_token.');
+          } catch (e) {
+            debugPrint('❌ [ERROR]: Lỗi khi gọi setSession: $e');
+          }
+        }
+
         final userInfo = data['user_info'];
         final role = userInfo['role'];
         await prefs.setString('role', role);
@@ -88,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen>
         } else {
           destination = const DashboardScreen();
         }
+        debugPrint('🚀 Chuyển hướng sang màn hình: $destination');
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
@@ -120,7 +137,11 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         content: Row(
           children: [
-            const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
+            const Icon(
+              Icons.warning_rounded,
+              color: Color(0xFFFF6B6B),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -206,10 +227,13 @@ class _LoginScreenState extends State<LoginScreen>
 
                                 // ── Ghi nhớ & Quên mật khẩu ──
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     GestureDetector(
-                                      onTap: () => setState(() => _rememberMe = !_rememberMe),
+                                      onTap: () => setState(
+                                        () => _rememberMe = !_rememberMe,
+                                      ),
                                       behavior: HitTestBehavior.opaque,
                                       child: Row(
                                         children: [
@@ -217,19 +241,31 @@ class _LoginScreenState extends State<LoginScreen>
                                             scale: 0.85,
                                             child: Checkbox(
                                               value: _rememberMe,
-                                              onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                                              activeColor: const Color(0xFF00A896),
+                                              onChanged: (v) => setState(
+                                                () => _rememberMe = v ?? false,
+                                              ),
+                                              activeColor: const Color(
+                                                0xFF00A896,
+                                              ),
                                               checkColor: Colors.white,
-                                              side: const BorderSide(color: Colors.white24, width: 1.5),
-                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                              visualDensity: VisualDensity.compact,
+                                              side: const BorderSide(
+                                                color: Colors.white24,
+                                                width: 1.5,
+                                              ),
+                                              materialTapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                             ),
                                           ),
                                           Text(
                                             'Ghi nhớ đăng nhập',
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
-                                              color: Colors.white.withOpacity(0.4),
+                                              color: Colors.white.withOpacity(
+                                                0.4,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -264,7 +300,9 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
                                   child: Text(
                                     'hoặc',
                                     style: GoogleFonts.inter(
@@ -295,18 +333,25 @@ class _LoginScreenState extends State<LoginScreen>
                               onTap: () => Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (_, __, ___) => const SignupScreen(),
+                                  pageBuilder: (_, __, ___) =>
+                                      const SignupScreen(),
                                   transitionsBuilder: (_, anim, __, child) =>
                                       SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(1.0, 0),
-                                      end: Offset.zero,
-                                    ).animate(CurvedAnimation(
-                                        parent: anim, curve: Curves.easeOut)),
-                                    child: child,
+                                        position:
+                                            Tween<Offset>(
+                                              begin: const Offset(1.0, 0),
+                                              end: Offset.zero,
+                                            ).animate(
+                                              CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.easeOut,
+                                              ),
+                                            ),
+                                        child: child,
+                                      ),
+                                  transitionDuration: const Duration(
+                                    milliseconds: 350,
                                   ),
-                                  transitionDuration:
-                                      const Duration(milliseconds: 350),
                                 ),
                               ),
                               child: RichText(
@@ -316,7 +361,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     TextSpan(
                                       text: 'Chưa có tài khoản? ',
                                       style: TextStyle(
-                                          color: Colors.white.withOpacity(0.35)),
+                                        color: Colors.white.withOpacity(0.35),
+                                      ),
                                     ),
                                     const TextSpan(
                                       text: 'Đăng ký ngay',
@@ -468,8 +514,10 @@ class _LoginScreenState extends State<LoginScreen>
   InputDecoration _fieldDecoration(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.2)),
+      hintStyle: GoogleFonts.inter(
+        fontSize: 13,
+        color: Colors.white.withOpacity(0.2),
+      ),
       prefixIcon: Icon(icon, size: 18, color: Colors.white.withOpacity(0.2)),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
@@ -477,17 +525,23 @@ class _LoginScreenState extends State<LoginScreen>
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(255, 255, 255, 0.08), width: 1),
+          color: Color.fromRGBO(255, 255, 255, 0.08),
+          width: 1,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(255, 255, 255, 0.08), width: 1),
+          color: Color.fromRGBO(255, 255, 255, 0.08),
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(0, 229, 160, 0.3), width: 1),
+          color: Color.fromRGBO(0, 229, 160, 0.3),
+          width: 1,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -497,8 +551,10 @@ class _LoginScreenState extends State<LoginScreen>
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
       ),
-      errorStyle:
-          GoogleFonts.inter(fontSize: 11, color: const Color(0xFFFF6B6B)),
+      errorStyle: GoogleFonts.inter(
+        fontSize: 11,
+        color: const Color(0xFFFF6B6B),
+      ),
     );
   }
 

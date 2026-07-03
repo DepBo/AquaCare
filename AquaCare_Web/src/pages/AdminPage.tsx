@@ -1,179 +1,907 @@
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import {
+  Fish, Box, LogOut, ArrowLeft, Sun, Moon,
+  Plus, Edit, Trash2, X, Server, Users, Shield, ShoppingCart,
+  CheckCheck, FileText, Truck, Wrench
+} from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
 
+// ─── Theme Setup ─────────────────────────────────────────────────────────────
+const ThemeStyles = ({ theme }: { theme: 'dark' | 'light' }) => {
+  const isDark = theme === 'dark'
+  return (
+    <style dangerouslySetInnerHTML={{ __html: `
+      :root[data-theme="${theme}"] {
+        --ap-bg-main: ${isDark ? '#0f172a' : '#f8fafc'};
+        --ap-bg-sidebar: ${isDark ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)'};
+        --ap-bg-topbar: ${isDark ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.9)'};
+        --ap-bg-card: ${isDark ? '#1e293b' : '#ffffff'};
+        --ap-bg-modal: ${isDark ? '#1e293b' : '#ffffff'};
+        
+        --ap-text-primary: ${isDark ? '#f8fafc' : '#0f172a'};
+        --ap-text-secondary: ${isDark ? '#94a3b8' : '#475569'};
+        --ap-text-muted: ${isDark ? '#64748b' : '#94a3b8'};
+        
+        --ap-border: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
+        
+        --ap-hover-bg: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'};
+        --ap-hover-danger: ${isDark ? 'rgba(255,107,107,0.15)' : 'rgba(255,107,107,0.1)'};
+        
+        --ap-input-bg: ${isDark ? 'rgba(0,0,0,0.2)' : '#ffffff'};
+        --ap-input-border: ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'};
+        
+        --ap-shadow: ${isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.08)'};
+        --ap-shadow-sm: ${isDark ? '0 4px 16px rgba(0,0,0,0.2)' : '0 4px 16px rgba(0,0,0,0.05)'};
+        
+        --ap-table-header: ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'};
+        
+        --ap-purple-text: ${isDark ? '#a78bfa' : '#7c3aed'};
+        --ap-purple-bg: ${isDark ? 'rgba(139,92,246,0.12)' : 'rgba(124,58,237,0.1)'};
+        
+        --ap-modal-overlay: ${isDark ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.3)'};
+        --ap-btn-cancel: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+      }
+    `}} />
+  )
+}
+
+interface FishSpecies {
+  id: number
+  species_name: string
+  temp_min: number
+  temp_max: number
+  ph_min: number
+  ph_max: number
+  tds_min: number
+  tds_max: number
+}
+
+interface Device {
+  id: number
+  mac_address: string
+  firmware_version: string
+  is_active: boolean
+  created_at: string
+  tank_id?: number
+  tanks?: {
+    tank_name: string
+    users?: {
+      full_name: string
+      phone: string
+    }
+  }
+}
+
+interface Staff {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  created_at: string
+}
+
+const VERSION_CONFIG = {
+  'V1': { hardware: 1900000, operation: 200000, margin: 0.2, price: 2500000 },
+  'V2': { hardware: 2200000, operation: 200000, margin: 0.3, price: 3100000 },
+  'V3': { hardware: 2500000, operation: 200000, margin: 0.4, price: 3800000 },
+}
+
+const getNormalizedVersion = (version: string) => {
+  if (!version) return 'V1'
+  const v = version.toUpperCase()
+  if (v.includes('V1')) return 'V1'
+  if (v.includes('V2')) return 'V2'
+  if (v.includes('V3')) return 'V3'
+  return 'V1'
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+interface Order {
+  id: string
+  customerName: string
+  phone: string
+  address: string
+  productVersion: 'V1' | 'V2' | 'V3'
+  totalPrice: number
+  paymentMethod: 'COD' | 'Chuyển khoản'
+  status: 'pending' | 'approved'
+  createdAt: string
+}
+
+const MOCK_ORDERS: Order[] = [
+  { id: 'ORD-001', customerName: 'Nguyễn Văn An', phone: '0901234567', address: '12 Nguyễn Huệ, Q.1, TP.HCM', productVersion: 'V2', totalPrice: 3100000, paymentMethod: 'COD', status: 'pending', createdAt: '2026-07-01T08:30:00Z' },
+  { id: 'ORD-002', customerName: 'Trần Thị Bích', phone: '0912345678', address: '45 Lê Lợi, Q.3, TP.HCM', productVersion: 'V1', totalPrice: 2500000, paymentMethod: 'Chuyển khoản', status: 'pending', createdAt: '2026-07-01T10:15:00Z' },
+  { id: 'ORD-003', customerName: 'Lê Hoàng Dũng', phone: '0923456789', address: '78 Trần Hưng Đạo, Q.5, TP.HCM', productVersion: 'V3', totalPrice: 3800000, paymentMethod: 'Chuyển khoản', status: 'approved', createdAt: '2026-06-30T14:00:00Z' },
+  { id: 'ORD-004', customerName: 'Phạm Minh Châu', phone: '0934567890', address: '90 Điện Biên Phủ, Q.Bình Thạnh, TP.HCM', productVersion: 'V1', totalPrice: 2500000, paymentMethod: 'COD', status: 'pending', createdAt: '2026-07-02T07:45:00Z' },
+  { id: 'ORD-005', customerName: 'Hoàng Thị Lan', phone: '0945678901', address: '23 Cách Mạng Tháng Tám, Q.10, TP.HCM', productVersion: 'V2', totalPrice: 3100000, paymentMethod: 'Chuyển khoản', status: 'pending', createdAt: '2026-07-02T09:20:00Z' },
+]
+
+const TASK_TYPES = [
+  { value: 'delivery', label: 'Giao hàng', icon: Truck },
+  { value: 'installation', label: 'Lắp đặt mới', icon: Wrench },
+]
+
+function Dialog({
+  title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
+  confirmColor = 'var(--ap-purple-text)', onConfirm, onCancel, children
+}: any) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'var(--ap-modal-overlay)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onCancel}>
+      <div style={{
+        background: 'var(--ap-bg-modal)',
+        border: '1px solid var(--ap-border)',
+        borderRadius: 18, padding: '28px 32px', width: 420, maxWidth: '90vw',
+        boxShadow: 'var(--ap-shadow)',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ap-text-primary)' }}>{title}</h3>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ap-text-primary)' }}>
+            <X size={16} />
+          </button>
+        </div>
+        {message && <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--ap-text-primary)' }}>{message}</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {children}
+        </div>
+        {error && <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>}
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={onCancel} style={{
+            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--ap-border)',
+            background: 'var(--ap-btn-cancel)', color: 'var(--ap-text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: F, fontWeight: 600,
+            transition: 'background 160ms'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--ap-btn-cancel)'}
+          >{cancelText}</button>
+          <button onClick={onConfirm} style={{
+            flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            transition: 'filter 160ms'
+          }}
+          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+          onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+          >{confirmText}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Input({ label, ...props }: any) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>{label}</label>
+      <input style={{
+        width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)',
+        background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none',
+        transition: 'border-color 160ms'
+      }} 
+      onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+      onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+      {...props} />
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const navigate = useNavigate()
+  const userInfoStr = localStorage.getItem('user_info')
+  const userInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [activeTab, setActiveTab] = useState<'species' | 'devices' | 'staff' | 'orders'>('species')
+
+  // Orders state
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS)
+  const [approveModal, setApproveModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
+  const [selectedTaskType, setSelectedTaskType] = useState('delivery')
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
+
+  const [species, setSpecies] = useState<FishSpecies[]>([])
+  const [devices, setDevices] = useState<Device[]>([])
+  const [staff, setStaff] = useState<Staff[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Modals
+  const [speciesModal, setSpeciesModal] = useState<{ show: boolean, data?: FishSpecies, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
+  const [spForm, setSpForm] = useState<Partial<FishSpecies>>({})
+
+  const [deviceModal, setDeviceModal] = useState<{ show: boolean, data?: Device, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
+  const [devForm, setDevForm] = useState<{ mac_address: string, firmware_version: string }>({ mac_address: '', firmware_version: 'V1' })
+
+  const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'delete' }>({ show: false, mode: 'add' })
+  const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '' })
+
+  const [errorMsg, setErrorMsg] = useState('')
+
+  useEffect(() => {
+    if (!localStorage.getItem('cs_auth')) navigate('/login')
+  }, [navigate])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('dashboard_theme', theme)
+  }, [theme])
+
+  const fetchData = async () => {
+    setLoading(true)
+    const { data: spData } = await supabase.from('fish_species').select('*').order('id')
+    if (spData) setSpecies(spData)
+
+    const { data: devData } = await supabase.from('devices').select('*, tanks(tank_name, users(full_name, phone))').order('created_at', { ascending: false })
+    if (devData) setDevices(devData)
+
+    const { data: staffData } = await supabase.from('users').select('*').eq('role', 'staff').order('created_at', { ascending: false })
+    if (staffData) setStaff(staffData)
+
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
-    navigate('/login')
+    navigate('/')
+  }
+
+  // ---- Species CRUD ----
+  const saveSpecies = async () => {
+    setErrorMsg('')
+    if (!spForm.species_name) return setErrorMsg('Vui lòng nhập tên loài cá')
+    if (speciesModal.mode === 'add') {
+      await supabase.from('fish_species').insert(spForm)
+    } else if (speciesModal.mode === 'edit' && speciesModal.data) {
+      await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
+    } else if (speciesModal.mode === 'delete' && speciesModal.data) {
+      await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
+    }
+    setSpeciesModal({ show: false, mode: 'add' })
+    fetchData()
+  }
+
+  const openSpeciesModal = (mode: 'add' | 'edit' | 'delete', data?: FishSpecies) => {
+    setSpeciesModal({ show: true, mode, data })
+    if (mode === 'add') setSpForm({ species_name: '', temp_min: 24, temp_max: 30, ph_min: 6.5, ph_max: 7.5, tds_min: 100, tds_max: 300 })
+    else if (data) setSpForm(data)
+  }
+
+  // ---- Devices CRUD ----
+  const saveDevice = async () => {
+    setErrorMsg('')
+    if (deviceModal.mode === 'add') {
+      if (!devForm.mac_address) return setErrorMsg('Vui lòng nhập MAC Address')
+      const { error } = await supabase.from('devices').insert({
+        mac_address: devForm.mac_address,
+        firmware_version: devForm.firmware_version,
+      })
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+    } else if (deviceModal.mode === 'edit' && deviceModal.data) {
+      const { error } = await supabase.from('devices').update({
+        mac_address: devForm.mac_address,
+        firmware_version: devForm.firmware_version,
+      }).eq('id', deviceModal.data.id)
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+    } else if (deviceModal.mode === 'delete' && deviceModal.data) {
+      await supabase.from('devices').delete().eq('id', deviceModal.data.id)
+    }
+    setDeviceModal({ show: false, mode: 'add' })
+    fetchData()
+  }
+
+  const openDeviceModal = (mode: 'add' | 'edit' | 'delete', data?: Device) => {
+    setDeviceModal({ show: true, mode, data })
+    if (mode === 'add') setDevForm({ mac_address: '', firmware_version: 'V1' })
+    else if (data) setDevForm({ mac_address: data.mac_address, firmware_version: getNormalizedVersion(data.firmware_version) })
+  }
+
+  // ---- Staff CRUD ----
+  const saveStaff = async () => {
+    setErrorMsg('')
+    if (staffModal.mode === 'add') {
+      if (!staffForm.email || !staffForm.password || !staffForm.full_name) return setErrorMsg('Vui lòng điền đủ thông tin bắt buộc')
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: staffForm.email,
+        password: staffForm.password,
+      })
+      
+      if (authError) return setErrorMsg('Lỗi tạo tài khoản: ' + authError.message)
+      
+      if (authData.user) {
+        const { error: dbError } = await supabase.from('users').insert({
+          id: authData.user.id,
+          full_name: staffForm.full_name,
+          email: staffForm.email,
+          phone: staffForm.phone || null,
+          role: 'staff'
+        })
+        if (dbError) return setErrorMsg('Lỗi lưu thông tin: ' + dbError.message)
+      }
+    } else if (staffModal.mode === 'delete' && staffModal.data) {
+      const { error } = await supabase.from('users').delete().eq('id', staffModal.data.id)
+      if (error) return setErrorMsg('Lỗi xóa nhân viên: ' + error.message)
+    }
+    setStaffModal({ show: false, mode: 'add' })
+    fetchData()
+  }
+
+  const openStaffModal = (mode: 'add' | 'delete', data?: Staff) => {
+    setStaffModal({ show: true, mode, data })
+    if (mode === 'add') setStaffForm({ full_name: '', email: '', phone: '', password: '' })
+  }
+
+  const calculatePrice = (version: string) => {
+    if (!version) return 0
+    const cfg = VERSION_CONFIG[version as keyof typeof VERSION_CONFIG]
+    if (!cfg) return 0
+    return Number(cfg.price) || 0
+  }
+
+  const formatPrice = (version: string) => {
+    const price = calculatePrice(version)
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      fontFamily: F,
-      background: 'linear-gradient(135deg, #0a0612 0%, #130a24 40%, #1a0a2e 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Animated blobs */}
-      <div style={{
-        position: 'absolute', top: -200, left: -200,
-        width: 600, height: 600, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)',
-        animation: 'floatBlob1 8s ease-in-out infinite',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: -150, right: -150,
-        width: 500, height: 500, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(88,28,135,0.15) 0%, transparent 70%)',
-        animation: 'floatBlob2 10s ease-in-out infinite',
-      }} />
-      <div style={{
-        position: 'absolute', top: '40%', right: '10%',
-        width: 300, height: 300, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(196,130,245,0.07) 0%, transparent 70%)',
-        animation: 'floatBlob1 12s ease-in-out infinite reverse',
-      }} />
+    <div style={{ minHeight: '100vh', background: 'var(--ap-bg-main)', fontFamily: F, color: 'var(--ap-text-primary)', display: 'flex' }}>
+      <ThemeStyles theme={theme} />
 
-      {/* Grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(139,92,246,0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(139,92,246,0.03) 1px, transparent 1px)
-        `,
-        backgroundSize: '60px 60px',
-      }} />
-
-      {/* Logout button */}
-      <button
-        onClick={handleLogout}
-        style={{
-          position: 'absolute', top: 24, right: 32,
-          padding: '8px 20px', borderRadius: 10, border: '1px solid rgba(139,92,246,0.25)',
-          background: 'rgba(139,92,246,0.1)', color: 'rgba(255,255,255,0.6)',
-          fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: F,
-          transition: 'all 200ms',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = 'rgba(139,92,246,0.2)'
-          e.currentTarget.style.color = '#fff'
-          e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = 'rgba(139,92,246,0.1)'
-          e.currentTarget.style.color = 'rgba(255,255,255,0.6)'
-          e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)'
-        }}
-      >
-        Đăng xuất
-      </button>
-
-      {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-        {/* Icon */}
-        <div style={{
-          width: 96, height: 96, borderRadius: 28,
-          background: 'linear-gradient(135deg, #4c1d95, #8b5cf6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 32px',
-          boxShadow: '0 20px 60px rgba(139,92,246,0.4)',
-        }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
+      {/* Sidebar */}
+      <aside style={{
+        width: sidebarOpen ? 240 : 64, flexShrink: 0,
+        background: 'var(--ap-bg-sidebar)', borderRight: '1px solid var(--ap-border)',
+        backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
+        transition: 'width 280ms cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden',
+        position: 'sticky', top: 0, height: '100vh',
+      }}>
+        <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--ap-border)', cursor: 'pointer' }}
+          onClick={() => setSidebarOpen(o => !o)}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#8b5cf6,#4c1d95)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'var(--ap-shadow-sm)' }}>
+            <Server size={18} color="white" />
+          </div>
+          {sidebarOpen && <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap', color: 'var(--ap-purple-text)' }}>ADMIN PANEL</span>}
         </div>
 
-        {/* Badge */}
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '6px 16px', borderRadius: 100,
-          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
-          marginBottom: 20,
-        }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#8b5cf6', boxShadow: '0 0 8px #8b5cf6' }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Admin Panel
-          </span>
-        </div>
-
-        <h1 style={{
-          fontSize: 48, fontWeight: 800, color: '#fff',
-          marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.1,
-        }}>
-          Trang Quản Trị
-        </h1>
-        <p style={{
-          fontSize: 16, color: 'rgba(255,255,255,0.35)',
-          maxWidth: 400, margin: '0 auto 48px', lineHeight: 1.7,
-        }}>
-          Khu vực dành riêng cho quản trị viên hệ thống.<br />
-          Chức năng đang được phát triển.
-        </p>
-
-        {/* Feature cards */}
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <nav style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {[
-            { label: 'Quản lý Users', icon: '👥' },
-            { label: 'Hệ thống', icon: '⚙️' },
-            { label: 'Thống kê', icon: '📊' },
-          ].map((item, i) => (
-            <div key={i} style={{
-              padding: '20px 28px', borderRadius: 16,
-              background: 'rgba(139,92,246,0.06)',
-              border: '1px solid rgba(139,92,246,0.12)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-              minWidth: 120,
-              transition: 'all 200ms',
-              cursor: 'default',
-            }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(139,92,246,0.12)'
-                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)'
-                e.currentTarget.style.transform = 'translateY(-4px)'
+            { id: 'species', icon: Fish, label: 'Quản lý loài cá' },
+            { id: 'devices', icon: Box, label: 'Thiết bị & Kho' },
+            { id: 'staff', icon: Users, label: 'Quản lý nhân viên' },
+            { id: 'orders', icon: ShoppingCart, label: 'Quản lý Đơn hàng' },
+          ].map(item => (
+            <button key={item.id}
+              onClick={() => setActiveTab(item.id as any)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+                border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 500,
+                background: activeTab === item.id ? 'var(--ap-purple-bg)' : 'transparent',
+                color: activeTab === item.id ? 'var(--ap-purple-text)' : 'var(--ap-text-secondary)',
+                transition: 'all 180ms', whiteSpace: 'nowrap', textAlign: 'left'
               }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(139,92,246,0.06)'
-                e.currentTarget.style.borderColor = 'rgba(139,92,246,0.12)'
-                e.currentTarget.style.transform = 'translateY(0)'
-              }}
+              onMouseEnter={e => { if (activeTab !== item.id) { e.currentTarget.style.background = 'var(--ap-hover-bg)'; e.currentTarget.style.color = 'var(--ap-text-primary)' } }}
+              onMouseLeave={e => { if (activeTab !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ap-text-secondary)' } }}
             >
-              <span style={{ fontSize: 28 }}>{item.icon}</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{item.label}</span>
-              <span style={{
-                fontSize: 9, fontWeight: 700, color: '#8b5cf6',
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-                background: 'rgba(139,92,246,0.15)', padding: '2px 8px', borderRadius: 4,
-              }}>
-                Coming Soon
-              </span>
-            </div>
+              <item.icon size={16} style={{ flexShrink: 0 }} />
+              {sidebarOpen && item.label}
+            </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      <style>{`
-        @keyframes floatBlob1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -40px) scale(1.05); }
-          66% { transform: translate(-20px, 20px) scale(0.95); }
-        }
-        @keyframes floatBlob2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-40px, 30px) scale(1.08); }
-          66% { transform: translate(20px, -20px) scale(0.93); }
-        }
-      `}</style>
+        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--ap-border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {sidebarOpen && (
+            <div style={{ padding: '8px 12px', marginBottom: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>{userInfo.full_name || 'Người dùng'}</div>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{userInfo.email || ''}</div>
+            </div>
+          )}
+          <Link to="/" style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+            textDecoration: 'none', color: 'var(--ap-text-primary)', fontSize: 13, fontWeight: 600,
+            transition: 'all 180ms', whiteSpace: 'nowrap'
+          }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--ap-text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--ap-text-primary)'}
+          >
+            <ArrowLeft size={16} style={{ flexShrink: 0 }} />
+            {sidebarOpen && 'Về trang chủ'}
+          </Link>
+          <button onClick={handleLogout}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 600, background: 'transparent', color: '#FF6B6B', transition: 'all 180ms', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.15)'; e.currentTarget.style.color = '#ff8282' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF6B6B' }}
+          >
+            <LogOut size={16} style={{ flexShrink: 0 }} />
+            {sidebarOpen && 'Đăng xuất'}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--ap-border)', background: 'var(--ap-bg-topbar)', backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 10 }}>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ap-text-primary)' }}>
+              {activeTab === 'species' && <><Fish size={20} color="var(--ap-purple-text)" /> Quản lý loài cá</>}
+              {activeTab === 'devices' && <><Box size={20} color="var(--ap-purple-text)" /> Thiết bị & Quản lý kho</>}
+              {activeTab === 'staff' && <><Users size={20} color="var(--ap-purple-text)" /> Quản lý nhân viên</>}
+              {activeTab === 'orders' && <><ShoppingCart size={20} color="var(--ap-purple-text)" /> Quản lý Đơn hàng</>}
+            </h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {loading && <span style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Đang tải...</span>}
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 10, border: '1px solid var(--ap-border)',
+                background: 'var(--ap-bg-card)', cursor: 'pointer', transition: 'all 200ms',
+                color: theme === 'dark' ? '#FFB347' : '#0ea5e9',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--ap-bg-card)'}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          </div>
+        </div>
+
+        <div className="custom-scrollbar" style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+
+          {/* TAB SPECIES */}
+          {activeTab === 'species' && (
+            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Danh sách các loài cá</h3>
+                <button onClick={() => openSpeciesModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
+                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                >
+                  <Plus size={14} /> Thêm loài mới
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 600 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--ap-table-header)', color: 'var(--ap-text-muted)' }}>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Tên loài</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Nhiệt độ (°C)</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>pH</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>TDS (ppm)</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700, width: 100 }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {species.map(s => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid var(--ap-border)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--ap-text-primary)' }}>{s.species_name}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.temp_min} - {s.temp_max}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.ph_min} - {s.ph_max}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.tds_min} - {s.tds_max}</td>
+                        <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                          <button onClick={() => openSpeciesModal('edit', s)} style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', padding: 4 }}><Edit size={16} /></button>
+                          <button onClick={() => openSpeciesModal('delete', s)} style={{ background: 'none', border: 'none', color: '#FF6B6B', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {species.length === 0 && !loading && (
+                      <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có dữ liệu</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB DEVICES */}
+          {activeTab === 'devices' && (
+            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Quản lý kho thiết bị</h3>
+                <button onClick={() => openDeviceModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
+                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                >
+                  <Plus size={14} /> Thêm thiết bị
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 800 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--ap-table-header)', color: 'var(--ap-text-muted)' }}>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>MAC Address</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Phiên bản</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Trạng thái</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Người sở hữu</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Bể cá</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Ngày tạo</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700, width: 100 }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devices.map(d => {
+                      const status = d.tank_id ? 'Đang dùng' : 'Trong kho'
+                      const statusColor = d.tank_id ? '#F59E0B' : '#10B981'
+                      const statusBg = d.tank_id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'
+                      const statusBorder = d.tank_id ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'
+                      const owner = d.tanks?.users ? `${d.tanks.users.full_name} (${d.tanks.users.phone || 'N/A'})` : '-'
+                      const tankName = d.tanks?.tank_name || '-'
+
+                      return (
+                        <tr key={d.id} style={{ borderBottom: '1px solid var(--ap-border)' }}>
+                          <td style={{ padding: '12px 16px', fontWeight: 600, fontFamily: 'monospace', color: 'var(--ap-text-primary)' }}>{d.mac_address}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--ap-table-header)', fontSize: 11, fontWeight: 700, color: 'var(--ap-text-secondary)', border: '1px solid var(--ap-border)' }}>
+                              {d.firmware_version}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ padding: '4px 10px', borderRadius: 100, background: statusBg, color: statusColor, fontSize: 11, fontWeight: 700, border: `1px solid ${statusBorder}` }}>
+                              {status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{owner}</td>
+                          <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{tankName}</td>
+                          <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{new Date(d.created_at).toLocaleDateString('vi-VN')}</td>
+                          <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                            <button onClick={() => openDeviceModal('edit', d)} style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', padding: 4 }}><Edit size={16} /></button>
+                            <button onClick={() => openDeviceModal('delete', d)} style={{ background: 'none', border: 'none', color: '#FF6B6B', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {devices.length === 0 && !loading && (
+                      <tr><td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có thiết bị nào</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB STAFF */}
+          {activeTab === 'staff' && (
+            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Danh sách nhân viên</h3>
+                <button onClick={() => openStaffModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
+                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                >
+                  <Plus size={14} /> Thêm nhân viên
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 600 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--ap-table-header)', color: 'var(--ap-text-muted)' }}>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Họ và tên</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Email</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Số điện thoại</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Chức vụ</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700 }}>Ngày tạo</th>
+                      <th style={{ padding: '12px 16px', fontWeight: 700, width: 80 }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staff.map(s => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid var(--ap-border)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--ap-text-primary)' }}>{s.full_name}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.email}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.phone || '-'}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ padding: '4px 10px', borderRadius: 100, background: 'var(--ap-purple-bg)', color: 'var(--ap-purple-text)', fontSize: 11, fontWeight: 700, border: '1px solid rgba(139,92,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Shield size={10} /> Staff
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
+                        <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                          <button onClick={() => openStaffModal('delete', s)} style={{ background: 'none', border: 'none', color: '#FF6B6B', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {staff.length === 0 && !loading && (
+                      <tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có nhân viên nào</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {/* TAB ORDERS */}
+          {activeTab === 'orders' && (() => {
+            const pendingCount = orders.filter(o => o.status === 'pending').length
+            return (
+              <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+                <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Danh sách đơn hàng</h3>
+                    {pendingCount > 0 && (
+                      <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 11, fontWeight: 700 }}>
+                        {pendingCount} chờ duyệt
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>{orders.length} đơn hàng</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 900 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--ap-table-header)', color: 'var(--ap-text-muted)' }}>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Mã đơn</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Khách hàng</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Sản phẩm</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Tổng tiền</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Thanh toán</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Trạng thái</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700 }}>Ngày đặt</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 700, width: 160 }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map(order => (
+                        <tr key={order.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 160ms' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--ap-purple-text)', fontSize: 12 }}>{order.id}</td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 2 }}>{order.customerName}</div>
+                            <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>{order.phone}</div>
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{ padding: '4px 10px', borderRadius: 6, background: 'var(--ap-table-header)', fontSize: 11, fontWeight: 800, color: 'var(--ap-text-secondary)', border: '1px solid var(--ap-border)' }}>
+                              AquaCare {order.productVersion}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--ap-text-primary)' }}>
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.totalPrice)}
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            {order.paymentMethod === 'COD'
+                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', color: '#F97316', fontSize: 11, fontWeight: 700 }}>COD</span>
+                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)', color: '#0ea5e9', fontSize: 11, fontWeight: 700 }}>Chuyển khoản</span>
+                            }
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            {order.status === 'pending'
+                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 11, fontWeight: 700 }}>⏳ Chờ duyệt</span>
+                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>✓ Đã duyệt</span>
+                            }
+                          </td>
+                          <td style={{ padding: '14px 16px', color: 'var(--ap-text-muted)', fontSize: 12 }}>
+                            {new Date(order.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                              {order.paymentMethod === 'Chuyển khoản' && (
+                                <button
+                                  onClick={() => alert(`[Mock] Xem biên lai thanh toán\nĐơn hàng: ${order.id}\nKhách hàng: ${order.customerName}\nSố tiền: ${new Intl.NumberFormat('vi-VN').format(order.totalPrice)}đ\nTrạng thái: Đã xác nhận`)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'filter 160ms', whiteSpace: 'nowrap' }}
+                                  onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.15)'}
+                                  onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                                >
+                                  <FileText size={12} /> Biên lai
+                                </button>
+                              )}
+                              {order.status === 'pending' && (
+                                <button
+                                  onClick={() => { setApproveModal({ show: true, order }); setSelectedTaskType('delivery') }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 7, background: '#a78bfa', color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: F, transition: 'filter 160ms', whiteSpace: 'nowrap' }}
+                                  onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                                  onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                                >
+                                  <CheckCheck size={13} /> Duyệt đơn
+                                </button>
+                              )}
+                              {order.status === 'approved' && (
+                                <span style={{ fontSize: 11, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <CheckCheck size={13} /> Đã xử lý
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      </main>
+
+      {/* Modals */}
+      {speciesModal.show && (
+        <Dialog
+          title={speciesModal.mode === 'add' ? 'Thêm loài cá mới' : speciesModal.mode === 'edit' ? 'Sửa loài cá' : 'Xóa loài cá'}
+          message={speciesModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa loài cá "${speciesModal.data?.species_name}"?` : undefined}
+          error={errorMsg}
+          confirmText={speciesModal.mode === 'delete' ? 'Xóa' : 'Lưu'}
+          confirmColor={speciesModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
+          onConfirm={saveSpecies}
+          onCancel={() => setSpeciesModal({ show: false, mode: 'add' })}
+        >
+          {speciesModal.mode !== 'delete' && (
+            <>
+              <Input label="Tên loài cá" value={spForm.species_name} onChange={(e: any) => setSpForm({ ...spForm, species_name: e.target.value })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <Input label="Temp Min (°C)" type="number" step="0.1" value={spForm.temp_min} onChange={(e: any) => setSpForm({ ...spForm, temp_min: parseFloat(e.target.value) })} />
+                <Input label="Temp Max (°C)" type="number" step="0.1" value={spForm.temp_max} onChange={(e: any) => setSpForm({ ...spForm, temp_max: parseFloat(e.target.value) })} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <Input label="pH Min" type="number" step="0.1" value={spForm.ph_min} onChange={(e: any) => setSpForm({ ...spForm, ph_min: parseFloat(e.target.value) })} />
+                <Input label="pH Max" type="number" step="0.1" value={spForm.ph_max} onChange={(e: any) => setSpForm({ ...spForm, ph_max: parseFloat(e.target.value) })} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <Input label="TDS Min (ppm)" type="number" value={spForm.tds_min} onChange={(e: any) => setSpForm({ ...spForm, tds_min: parseFloat(e.target.value) })} />
+                <Input label="TDS Max (ppm)" type="number" value={spForm.tds_max} onChange={(e: any) => setSpForm({ ...spForm, tds_max: parseFloat(e.target.value) })} />
+              </div>
+            </>
+          )}
+        </Dialog>
+      )}
+
+      {deviceModal.show && (
+        <Dialog
+          title={deviceModal.mode === 'add' ? 'Thêm thiết bị mới' : deviceModal.mode === 'edit' ? 'Sửa thiết bị' : 'Xóa thiết bị'}
+          message={deviceModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa thiết bị có MAC "${deviceModal.data?.mac_address}"?` : undefined}
+          error={errorMsg}
+          confirmText={deviceModal.mode === 'delete' ? 'Xóa' : 'Lưu'}
+          confirmColor={deviceModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
+          onConfirm={saveDevice}
+          onCancel={() => setDeviceModal({ show: false, mode: 'add' })}
+        >
+          {deviceModal.mode !== 'delete' && (
+            <>
+              <Input label="MAC Address" value={devForm.mac_address} onChange={(e: any) => setDevForm({ ...devForm, mac_address: e.target.value })} placeholder="VD: AA:BB:CC:DD:EE:FF" />
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>Phiên bản</label>
+                <select style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)',
+                  background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none',
+                  transition: 'border-color 160ms'
+                }} 
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+                value={devForm.firmware_version} onChange={(e) => setDevForm({ ...devForm, firmware_version: e.target.value })}>
+                  <option value="V1" style={{ color: '#000' }}>V1</option>
+                  <option value="V2" style={{ color: '#000' }}>V2</option>
+                  <option value="V3" style={{ color: '#000' }}>V3</option>
+                </select>
+              </div>
+
+              {/* Auto price calculation display */}
+              {devForm.firmware_version && VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG] ? (
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', marginBottom: 8, fontWeight: 600 }}>Thông tin cấu hình {devForm.firmware_version}:</div>
+                  <div style={{ fontSize: 11, color: 'var(--ap-text-primary)', marginBottom: 12, lineHeight: 1.6 }}>
+                    <span style={{ color: 'var(--ap-text-secondary)' }}>Giá vốn phần cứng:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].hardware))}đ</b><br/>
+                    <span style={{ color: 'var(--ap-text-secondary)' }}>Chi phí vận hành:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].operation))}đ</b><br/>
+                    <span style={{ color: 'var(--ap-text-secondary)' }}>Biên lợi nhuận (Margin):</span> <b>{Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].margin) * 100}%</b>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(139,92,246,0.2)', paddingTop: 12 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)' }}>Giá bán dự kiến:</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ap-purple-text)' }}>{formatPrice(devForm.firmware_version)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)' }}>Giá bán dự kiến:</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ap-purple-text)' }}>0đ</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </Dialog>
+      )}
+
+      {staffModal.show && (
+        <Dialog
+          title={staffModal.mode === 'add' ? 'Thêm nhân viên mới' : 'Xóa nhân viên'}
+          message={staffModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa nhân viên "${staffModal.data?.full_name}"?` : undefined}
+          error={errorMsg}
+          confirmText={staffModal.mode === 'delete' ? 'Xóa' : 'Thêm mới'}
+          confirmColor={staffModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
+          onConfirm={saveStaff}
+          onCancel={() => setStaffModal({ show: false, mode: 'add' })}
+        >
+          {staffModal.mode !== 'delete' && (
+            <>
+              <Input label="Họ và tên" placeholder="Nhập họ và tên" value={staffForm.full_name} onChange={(e: any) => setStaffForm({ ...staffForm, full_name: e.target.value })} />
+              <Input label="Email" type="email" placeholder="Nhập địa chỉ email" value={staffForm.email} onChange={(e: any) => setStaffForm({ ...staffForm, email: e.target.value })} />
+              <Input label="Số điện thoại" placeholder="Nhập số điện thoại" value={staffForm.phone} onChange={(e: any) => setStaffForm({ ...staffForm, phone: e.target.value })} />
+              <Input label="Mật khẩu" type="password" placeholder="Nhập mật khẩu (min 6 ký tự)" value={staffForm.password} onChange={(e: any) => setStaffForm({ ...staffForm, password: e.target.value })} />
+            </>
+          )}
+        </Dialog>
+      )}
+
+      {/* Approve Order Modal */}
+      {approveModal.show && approveModal.order && (
+        <Dialog
+          title="Duyệt đơn hàng"
+          error=""
+          confirmText="Xác nhận & Giao việc"
+          cancelText="Hủy"
+          confirmColor="#10B981"
+          onConfirm={() => {
+            setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'approved' } : o))
+            const taskLabel = TASK_TYPES.find(t => t.value === selectedTaskType)?.label || ''
+            alert(`✅ Đã duyệt đơn ${approveModal.order!.id}!\n\nTask "${taskLabel}" đã được tạo và giao cho Staff.\nKhách hàng: ${approveModal.order!.customerName}\nĐịa chỉ: ${approveModal.order!.address}`)
+            setApproveModal({ show: false, order: null })
+          }}
+          onCancel={() => setApproveModal({ show: false, order: null })}
+        >
+          {/* Order summary */}
+          <div style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--ap-table-header)', border: '1px solid var(--ap-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Mã đơn</span>
+              <span style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--ap-purple-text)' }}>{approveModal.order.id}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Khách hàng</span>
+              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{approveModal.order.customerName}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Sản phẩm</span>
+              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>AquaCare {approveModal.order.productVersion}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền</span>
+              <span style={{ fontWeight: 700, color: '#10B981' }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(approveModal.order.totalPrice)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Địa chỉ</span>
+              <span style={{ fontWeight: 500, color: 'var(--ap-text-secondary)', maxWidth: 200, textAlign: 'right' }}>{approveModal.order.address}</span>
+            </div>
+          </div>
+
+          {/* Task type selector */}
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 8 }}>Loại công việc giao cho Staff</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {TASK_TYPES.map(task => {
+                const isSelected = selectedTaskType === task.value
+                const TaskIcon = task.icon
+                return (
+                  <button
+                    key={task.value}
+                    onClick={() => setSelectedTaskType(task.value)}
+                    style={{
+                      flex: 1, padding: '12px 10px', borderRadius: 10, cursor: 'pointer', fontFamily: F,
+                      border: `1.5px solid ${isSelected ? '#10B981' : 'var(--ap-border)'}`,
+                      background: isSelected ? 'rgba(16,185,129,0.1)' : 'var(--ap-btn-cancel)',
+                      color: isSelected ? '#10B981' : 'var(--ap-text-secondary)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      transition: 'all 160ms',
+                    }}
+                  >
+                    <TaskIcon size={20} />
+                    <span style={{ fontSize: 12, fontWeight: 600 }}>{task.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </Dialog>
+      )}
+
     </div>
   )
 }

@@ -292,6 +292,8 @@ function PondDropdown({
 // ── Component chính ───────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const userInfoStr = localStorage.getItem('user_info')
+  const currentUserInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
   const [sensorData, setSensorData] = useState<SensorData>(emptySensor())
   const [selectedSensor, setSelectedSensor] = useState<keyof SensorData>('ph')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -870,8 +872,8 @@ export default function DashboardPage() {
         <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {sidebarOpen && (
             <div style={{ padding: '8px 12px', marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Phạm Lê Nhật Minh</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>phamlenhatminh1609@gmail.com</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
             </div>
           )}
           <Link to="/" style={{
@@ -1048,7 +1050,7 @@ export default function DashboardPage() {
                   <div style={{ height: 160, width: '100%', marginTop: 10 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({length: 12}).map(() => ({ time: '00:00', value: 0 }))}
+                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
                         margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                       >
                         <XAxis
@@ -1172,8 +1174,8 @@ export default function DashboardPage() {
                     }}>
                       <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          Lịch tự động: 
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                          Lịch tự động:
                         </span>
                         <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
                           {pumpOnTime && `Bật ${pumpOnTime}`}
@@ -1338,8 +1340,8 @@ export default function DashboardPage() {
                     }}>
                       <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          Lịch tự động: 
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                          Lịch tự động:
                         </span>
                         <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
                           {lightOnTime && `Bật ${lightOnTime}`}

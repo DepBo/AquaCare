@@ -6,6 +6,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
 import '../services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'alerts_screen.dart';
+import '../widgets/alerts_pie_chart.dart';
+import 'control_screen.dart';
 
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
@@ -162,6 +165,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Pond State ────────────────────────────────────────────
   List<Pond> _ponds = [];
   String _activePondId = '';
+  Stream<List<Map<String, dynamic>>>? _telemetryStream;
+  Stream<List<Map<String, dynamic>>>? _alertsStream;
+  int _unreadAlertCount = 0;
+
+  void _updateStream() {
+    if (_activePondId.isNotEmpty) {
+      _telemetryStream = SupabaseService.instance.getTelemetryStream(
+        _activePondId,
+      );
+      _alertsStream = SupabaseService.instance.getAlertsStream(
+        _activePondId,
+      );
+    }
+  }
 
   Pond get _activePond {
     if (_isLoading && _ponds.isEmpty)
@@ -212,11 +229,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     ),
   ];
 
-  final List<String> _tabTitles = ['Tổng quan', 'Cảm biến', 'Cảnh báo'];
+  final List<String> _tabTitles = ['Tổng quan', 'Cảm biến', 'Điều khiển', 'Cảnh báo'];
 
   @override
   void initState() {
     super.initState();
+    debugPrint('🚀 DashboardScreen đã khởi tạo');
     _updateTime();
     _clockTimer = Timer.periodic(
       const Duration(seconds: 30),
@@ -242,103 +260,41 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadPonds() async {
     setState(() => _isLoading = true);
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      print('DEBUG: User hiện tại: $user');
+      User? user = Supabase.instance.client.auth.currentUser;
+      int retries = 0;
+      while (user == null && retries < 5) {
+        debugPrint('⏳ Đợi Supabase Session... ($retries/5)');
+        await Future.delayed(const Duration(milliseconds: 500));
+        user = Supabase.instance.client.auth.currentUser;
+        retries++;
+      }
+
+      if (user == null) {
+        debugPrint(
+          '❌ [LỖI NGHIÊM TRỌNG]: Supabase currentUser đang là NULL! Client gửi request ẩn danh nên RLS sẽ chặn lại.',
+        );
+      } else {
+        debugPrint('✅ [SUCCESS]: User hiện tại: ${user.id} - ${user.email}');
+      }
       final currentUserId = user?.id ?? '3da8dc87-687c-4a01-970a-2d8f2c7a04c6';
-      
-      print('--- DEBUG: _loadPonds started for user: $currentUserId ---');
+
+      debugPrint('--- DEBUG: _loadPonds started for user: $currentUserId ---');
       final data = await SupabaseService.instance.getTanks(currentUserId);
-      print('--- DEBUG: Received data from getTanks: $data ---');
+      debugPrint('--- DEBUG: Received data from getTanks: $data ---');
       if (data.isNotEmpty) {
         setState(() {
           _ponds = data
               .map(
-                (json) => Pond(id: json['id'].toString(), name: json['name']),
+                (json) =>
+                    Pond(id: json['id'].toString(), name: json['tank_name']),
               )
               .toList();
           _activePondId = _ponds.first.id;
+          _updateStream();
         });
-        await _fetchSensorsData();
       }
     } catch (e) {
       print('Error loading ponds: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _fetchSensorsData() async {
-    if (_activePondId.isEmpty) return;
-    setState(() => _isLoading = true);
-    try {
-      print(
-        '--- DEBUG: _fetchSensorsData started for pond: $_activePondId ---',
-      );
-      final logs = await SupabaseService.instance.getTelemetry(
-        _activePondId,
-        limit: 10,
-      );
-      print('--- DEBUG: Received ${logs.length} telemetry logs ---');
-
-      List<double> phHistory = [];
-      List<double> tempHistory = [];
-      List<double> tdsHistory = [];
-      List<double> waterLevelHistory = [];
-
-      for (var log in logs.reversed) {
-        phHistory.add((log['ph'] as num?)?.toDouble() ?? 7.0);
-        tempHistory.add((log['temperature'] as num?)?.toDouble() ?? 26.0);
-        tdsHistory.add((log['tds'] as num?)?.toDouble() ?? 250.0);
-        waterLevelHistory.add(log['water_level_ok'] == true ? 1.0 : 0.0);
-      }
-
-      if (phHistory.isEmpty) phHistory = [7.0];
-      if (tempHistory.isEmpty) tempHistory = [26.0];
-      if (tdsHistory.isEmpty) tdsHistory = [250.0];
-      if (waterLevelHistory.isEmpty) waterLevelHistory = [1.0];
-
-      setState(() {
-        _currentSensors = [
-          SensorData(
-            name: 'pH',
-            unit: '',
-            value: phHistory.last,
-            color: const Color(0xFF00A896),
-            icon: Icons.science_outlined,
-            status: 'Tốt',
-            history: phHistory,
-          ),
-          SensorData(
-            name: 'Nhiệt độ',
-            unit: '°C',
-            value: tempHistory.last,
-            color: const Color(0xFFFF8C42),
-            icon: Icons.thermostat_outlined,
-            status: 'Tốt',
-            history: tempHistory,
-          ),
-          SensorData(
-            name: 'TDS',
-            unit: 'ppm',
-            value: tdsHistory.last,
-            color: const Color(0xFFC77DFF),
-            icon: Icons.water_drop_outlined,
-            status: 'Tốt',
-            history: tdsHistory,
-          ),
-          SensorData(
-            name: 'Mực nước',
-            unit: '',
-            value: waterLevelHistory.last,
-            color: const Color(0xFF4DA6FF),
-            icon: Icons.waves_outlined,
-            status: waterLevelHistory.last == 1.0 ? 'Ổn định' : 'Cạn nước',
-            history: waterLevelHistory,
-          ),
-        ];
-      });
-    } catch (e) {
-      print('Error fetching telemetry: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -354,7 +310,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Simulate data reload ──────────────────────────────────
   void _simulateReload() {
-    _fetchSensorsData();
+    setState(() => _isLoading = true);
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _isLoading = false);
+    });
   }
 
   // ─────────────── POND CRUD ───────────────────────────────
@@ -752,7 +711,100 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: AnimatedOpacity(
                       opacity: _isLoading ? 0.35 : 1.0,
                       duration: const Duration(milliseconds: 250),
-                      child: _buildTabContent(),
+                      child: _activePondId.isEmpty
+                          ? const SizedBox.shrink()
+                          : StreamBuilder<List<Map<String, dynamic>>>(
+                              stream: _telemetryStream,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00A896),
+                                    ),
+                                  );
+                                }
+
+                                final logs = snapshot.data ?? [];
+                                // debugPrint('🔔 [REALTIME]: Nhận data mới lúc: ${DateTime.now()} - ${logs.length} bản ghi');
+
+                                List<double> phHistory = [];
+                                List<double> tempHistory = [];
+                                List<double> tdsHistory = [];
+                                List<double> waterLevelHistory = [];
+
+                                for (var log in logs.reversed) {
+                                  try {
+                                    phHistory.add(
+                                      (log['ph'] as num?)?.toDouble() ?? 7.0,
+                                    );
+                                    tempHistory.add(
+                                      (log['temp'] as num?)?.toDouble() ?? 26.0,
+                                    );
+                                    tdsHistory.add(
+                                      (log['tds'] as num?)?.toDouble() ?? 250.0,
+                                    );
+                                    waterLevelHistory.add(
+                                      log['water_level_ok'] == true ? 1.0 : 0.0,
+                                    );
+                                  } catch (e) {
+                                    debugPrint(
+                                      '❌ [DB ERROR]: Lỗi khi map dữ liệu từ log: $e',
+                                    );
+                                  }
+                                }
+
+                                if (phHistory.isEmpty) phHistory = [7.0];
+                                if (tempHistory.isEmpty) tempHistory = [26.0];
+                                if (tdsHistory.isEmpty) tdsHistory = [250.0];
+                                if (waterLevelHistory.isEmpty)
+                                  waterLevelHistory = [1.0];
+
+                                // Cập nhật state biến _currentSensors trực tiếp trong quá trình build
+                                _currentSensors = [
+                                  SensorData(
+                                    name: 'pH',
+                                    unit: '',
+                                    value: phHistory.last,
+                                    color: const Color(0xFF00A896),
+                                    icon: Icons.science_outlined,
+                                    status: 'Tốt',
+                                    history: phHistory,
+                                  ),
+                                  SensorData(
+                                    name: 'Nhiệt độ',
+                                    unit: '°C',
+                                    value: tempHistory.last,
+                                    color: const Color(0xFFFF8C42),
+                                    icon: Icons.thermostat_outlined,
+                                    status: 'Tốt',
+                                    history: tempHistory,
+                                  ),
+                                  SensorData(
+                                    name: 'TDS',
+                                    unit: 'ppm',
+                                    value: tdsHistory.last,
+                                    color: const Color(0xFFC77DFF),
+                                    icon: Icons.water_drop_outlined,
+                                    status: 'Tốt',
+                                    history: tdsHistory,
+                                  ),
+                                  SensorData(
+                                    name: 'Mực nước',
+                                    unit: '',
+                                    value: waterLevelHistory.last,
+                                    color: const Color(0xFF4DA6FF),
+                                    icon: Icons.waves_outlined,
+                                    status: waterLevelHistory.last == 1.0
+                                        ? 'Ổn định'
+                                        : 'Cạn nước',
+                                    history: waterLevelHistory,
+                                  ),
+                                ];
+
+                                return _buildTabContent();
+                              },
+                            ),
                     ),
                   ),
                 ],
@@ -985,7 +1037,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (id == '__add__') {
           _showAddPondDialog();
         } else {
-          setState(() => _activePondId = id);
+          setState(() {
+            _activePondId = id;
+            _updateStream();
+          });
           _simulateReload();
         }
       },
@@ -1099,6 +1154,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final items = [
       {'icon': Icons.home_rounded, 'label': 'Tổng quan'},
       {'icon': Icons.analytics_rounded, 'label': 'Cảm biến'},
+      {'icon': Icons.power_settings_new_rounded, 'label': 'Điều khiển'},
       {'icon': Icons.notifications_rounded, 'label': 'Cảnh báo'},
     ];
 
@@ -1125,7 +1181,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: List.generate(items.length, (i) {
               final isSelected = _selectedTab == i;
               return GestureDetector(
-                onTap: () => setState(() => _selectedTab = i),
+                onTap: () {
+                  setState(() => _selectedTab = i);
+                  // Reset badge khi bấm vào tab Cảnh báo
+                  if (i == 3) {
+                    setState(() => _unreadAlertCount = 0);
+                  }
+                },
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
@@ -1149,12 +1211,47 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        items[i]['icon'] as IconData,
-                        size: 22,
-                        color: isSelected
-                            ? const Color(0xFF00A896)
-                            : Colors.white.withOpacity(0.3),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            items[i]['icon'] as IconData,
+                            size: 22,
+                            color: isSelected
+                                ? const Color(0xFF00A896)
+                                : Colors.white.withOpacity(0.3),
+                          ),
+                          // Badge cho tab Cảnh báo
+                          if (i == 3 && _unreadAlertCount > 0)
+                            Positioned(
+                              right: -8,
+                              top: -4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF6B6B),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFF6B6B).withOpacity(0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  _unreadAlertCount > 99 ? '99+' : '$_unreadAlertCount',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1183,16 +1280,15 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ─────────────── TAB CONTENT ─────────────────────────────
   Widget _buildTabContent() {
-    switch (_selectedTab) {
-      case 0:
-        return _buildOverviewTab();
-      case 1:
-        return _buildSensorsTab();
-      case 2:
-        return _buildAlertsTab();
-      default:
-        return _buildOverviewTab();
-    }
+    return IndexedStack(
+      index: _selectedTab,
+      children: [
+        _buildOverviewTab(),
+        _buildSensorsTab(),
+        ControlScreen(tankId: _activePondId),
+        _buildAlertsTab(),
+      ],
+    );
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1263,6 +1359,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ),
+        if (_alertsStream != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: AlertsPieChart(
+                tankId: _activePondId,
+                alertsStream: _alertsStream!,
+              ),
+            ),
+          ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
@@ -1347,14 +1453,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   //                   TAB: CẢNH BÁO
   // ══════════════════════════════════════════════════════════
   Widget _buildAlertsTab() {
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-      itemCount: alertList.length,
-      itemBuilder: (ctx, i) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: AlertCard(alert: alertList[i]),
-      ),
+    return AlertsScreen(
+      key: ValueKey(_activePondId),
+      tankId: _activePondId,
     );
   }
 }
@@ -1888,90 +1989,3 @@ class SensorDetailCard extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//                     ALERT CARD
-// ════════════════════════════════════════════════════════════
-class AlertCard extends StatelessWidget {
-  final AlertItem alert;
-  const AlertCard({super.key, required this.alert});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.9),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: alert.color.withOpacity(0.15), width: 1),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: alert.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(alert.icon, color: alert.color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        alert.title,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: alert.color,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: alert.color.withOpacity(0.4),
-                            blurRadius: 6,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  alert.message,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Colors.white.withOpacity(0.4),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  alert.time,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: alert.color.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
