@@ -185,3 +185,22 @@ ADD COLUMN IF NOT EXISTS light_on_time TEXT DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS light_off_time TEXT DEFAULT NULL;
 
 ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
+
+-- Thêm các trường phục vụ quá trình Calib cho bảng devices
+ALTER TABLE public.devices 
+ADD COLUMN IF NOT EXISTS calib_ph_status TEXT DEFAULT 'ready' CHECK (calib_ph_status IN ('ready', 'request_7.0', 'request_4.0', 'processing', 'done', 'failed')),
+ADD COLUMN IF NOT EXISTS calib_tds_status TEXT DEFAULT 'ready' CHECK (calib_tds_status IN ('ready', 'request_standard', 'processing', 'done', 'failed')),
+
+-- Cột lưu hệ số sai lệch (Offset) sau khi calib xong để app/web hiển thị hoặc debug nếu cần
+ADD COLUMN IF NOT EXISTS ph_offset DECIMAL(5,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS tds_calib_factor DECIMAL(5,2) DEFAULT 1.00;
+
+ALTER TABLE public.devices 
+-- Thêm cột lưu ngày giờ hiệu chuẩn (calib) gần đây nhất cho từng cảm biến
+ADD COLUMN IF NOT EXISTS last_calib_ph TIMESTAMPTZ DEFAULT NOW(),
+ADD COLUMN IF NOT EXISTS last_calib_tds TIMESTAMPTZ DEFAULT NOW();
+
+-- 1. Thêm cột is_simulator vào bảng devices
+-- Mặc định là TRUE (để khi tạo mới hồ cá, nó sẽ mặc định ở chế độ giả lập)
+ALTER TABLE public.devices 
+ADD COLUMN IF NOT EXISTS is_simulator BOOLEAN DEFAULT TRUE;

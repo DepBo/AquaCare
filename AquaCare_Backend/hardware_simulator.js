@@ -53,7 +53,8 @@ async function fetchActiveDevices() {
     const { data, error } = await supabase
       .from('devices')
       .select('id, mac_address, tank_id')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('is_simulator', true);
 
     if (error) {
       console.error('Lỗi khi lấy danh sách thiết bị:', error.message);
@@ -70,7 +71,7 @@ async function fetchActiveDevices() {
 async function checkAndInsertAlerts(device, state) {
   if (!device.tank_id) return; // Chỉ lưu lịch sử cho máy đã gán vào bể
   const alerts = [];
-  
+
   if (state.ph < 6.5 || state.ph > 7.5) {
     alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'pH', actual_value: Number(state.ph.toFixed(2)), alert_message: `Cảnh báo pH: Đang ở mức ${state.ph.toFixed(2)}` });
   }
