@@ -139,7 +139,7 @@ mqttClient.on('message', async (topic, message) => {
     if (fetchErr || !devices || devices.length === 0) {
       return; // Bỏ qua nếu thiết bị chưa đăng ký hoặc đang tắt
     }
-    
+
     const device = devices[0];
 
     console.log(`\n📥 [HARDWARE DATA] Nhận được dữ liệu thật từ MAC: ${mac}`);
@@ -178,8 +178,8 @@ mqttClient.on('message', async (topic, message) => {
     if (insertErr) {
       console.error('❌ Lỗi insert dữ liệu thật vào DB:', insertErr.message);
       return; // Nếu lỗi thì không chạy tiếp phần update
-    } 
-    
+    }
+
     console.log(`✅ Đã lưu dữ liệu phần cứng lên Supabase! (Temp: ${state.temp} | pH: ${state.ph} | TDS: ${state.tds} | Water: ${state.water_level_ok})`);
 
     // TỰ ĐỘNG HÓA: Nếu thiết bị đang ở mode simulator, chuyển nó thành mode phần cứng (false)
