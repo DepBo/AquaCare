@@ -251,9 +251,12 @@ export default function AdminPage() {
     fetchData()
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
+    localStorage.removeItem('user_info')
+    localStorage.removeItem('access_token')
     navigate('/')
   }
 

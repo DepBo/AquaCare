@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "184096169998",
+    "project_id": "gen-lang-client-0024606252",
+    "storage_bucket": "gen-lang-client-0024606252.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184096169998:android:9d2f314171c50734395c5f",
+        "android_client_info": {
+          "package_name": "com.aquacare.aquacare_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184096169998-sh9sp263bcg5rhfsg4iuvg7u3a6st3sn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aquacare.aquacare_app",
+            "certificate_hash": "6d5218c57cb186715e9c2e1388448cfb1128e6c1"
+          }
+        },
+        {
+          "client_id": "184096169998-40s8fv9eg9jlhuhsqvlspsopai1k1rgn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpYiCcTlCb-qcCTpeNADfeydLuVkOKxfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184096169998-40s8fv9eg9jlhuhsqvlspsopai1k1rgn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

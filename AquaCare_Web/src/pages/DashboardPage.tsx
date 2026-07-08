@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft,
+  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, SlidersHorizontal, Lightbulb, Power, ArrowLeft, ArrowRight,
   Sun, Moon
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
@@ -166,11 +166,12 @@ function Dialog({
 
 // ── Pond Dropdown ────────────────────────────────────────────
 function PondDropdown({
-  ponds, activeDevice, onSelect, onEdit, onDelete, onAdd
+  ponds, activeDevice, onSelect, onEdit, onSettings, onDelete, onAdd
 }: {
   ponds: Pond[]; activeDevice: number | null
   onSelect: (id: number) => void
   onEdit: (pond: Pond) => void
+  onSettings: (pond: Pond) => void
   onDelete: (pond: Pond) => void
   onAdd: () => void
 }) {
@@ -245,6 +246,14 @@ function PondDropdown({
                 </button>
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                  <button onClick={e => { e.stopPropagation(); onSettings(pond); setOpen(false) }} style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
+                    color: 'var(--text-muted)', transition: 'all 140ms',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,179,71,0.12)'; e.currentTarget.style.color = '#FFB347' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                    title="Cài đặt cảnh báo"
+                  ><SlidersHorizontal size={11} /></button>
                   <button onClick={e => { e.stopPropagation(); onEdit(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
                     color: 'var(--text-muted)', transition: 'all 140ms',
@@ -289,6 +298,330 @@ function PondDropdown({
   )
 }
 
+// ── DrillDownHistory Component ────────────────────────────────
+function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selectedSensor: keyof SensorData, activeDevice: number | null, selectedCfg: any }) {
+  const [filter, setFilter] = useState<'today' | 'yesterday' | '7days' | 'custom'>('today');
+  const [customStart, setCustomStart] = useState(new Date().toISOString().split('T')[0]);
+  const [customEnd, setCustomEnd] = useState(new Date().toISOString().split('T')[0]);
+  const [page, setPage] = useState(1);
+  const [dataL1, setDataL1] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [dataL2, setDataL2] = useState<any[]>([]);
+  const [loadingL1, setLoadingL1] = useState(false);
+  const [loadingL2, setLoadingL2] = useState(false);
+
+  useEffect(() => {
+    if (!activeDevice) return;
+    const fetchL1 = async () => {
+      setLoadingL1(true);
+      const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+      if (!devices || devices.length === 0) {
+        setLoadingL1(false);
+        return;
+      }
+      const deviceId = devices[0].id;
+
+      let start = new Date();
+      let end = new Date();
+
+      if (filter === 'today') {
+        start.setHours(0, 0, 0, 0);
+      } else if (filter === 'yesterday') {
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+      } else if (filter === '7days') {
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+      } else if (filter === 'custom') {
+        if (!customStart || !customEnd) {
+          setLoadingL1(false);
+          return;
+        }
+        start = new Date(customStart);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(customEnd);
+        end.setHours(23, 59, 59, 999);
+      }
+
+      const { data } = await supabase.from('telemetry_logs')
+        .select(`recorded_at, temp, ph, tds, water_level_ok`)
+        .eq('device_id', deviceId)
+        .gte('recorded_at', start.toISOString())
+        .lte('recorded_at', end.toISOString())
+        .order('recorded_at', { ascending: false });
+
+      if (data) {
+        const groups: Record<string, any[]> = {};
+        data.forEach(row => {
+          const d = new Date(row.recorded_at);
+          const dStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+          const hourKey = `${dStr} ${d.getHours().toString().padStart(2, '0')}:00`;
+          if (!groups[hourKey]) groups[hourKey] = [];
+          const val = selectedSensor === 'waterLevel' ? (row.water_level_ok ? 1 : 0) : Number(row[selectedSensor]);
+          groups[hourKey].push(val);
+        });
+
+        const l1 = Object.entries(groups).map(([time, vals]) => {
+          const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+          const max = Math.max(...vals);
+          const min = Math.min(...vals);
+
+          let finalSc = statusColor(avg, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+          let finalSl = statusLabel(avg, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+
+          if (selectedSensor === 'waterLevel') {
+            const hasDanger = vals.some(v => v === 0);
+            finalSc = statusColor(hasDanger ? 0 : 1, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+            finalSl = statusLabel(hasDanger ? 0 : 1, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+          } else {
+            const allLabels = vals.map(v => statusLabel(v, selectedCfg.good, selectedCfg.warn, selectedCfg.key));
+
+            if (allLabels.includes('Nguy hiểm')) {
+              finalSl = 'Nguy hiểm';
+              finalSc = '#FF6B6B';
+            } else if (allLabels.includes('Cảnh báo')) {
+              finalSl = 'Cảnh báo';
+              finalSc = '#FFB347';
+            } else {
+              finalSl = 'Tốt';
+              finalSc = '#00A896';
+            }
+          }
+
+          const [dPart, hPart] = time.split(' ');
+          const h = parseInt(hPart.split(':')[0]);
+          const nextH = (h + 1).toString().padStart(2, '0');
+          const hStr = h.toString().padStart(2, '0');
+
+          let displayTime = `${hStr}:00 - ${nextH}:00`;
+          if (filter !== 'today') {
+            displayTime = `${dPart} ${displayTime}`;
+          }
+
+          return { time, displayTime, avg, max, min, sc: finalSc, sl: finalSl };
+        });
+
+        l1.sort((a, b) => {
+          const parseTime = (t: string) => {
+            const [dPart, hPart] = t.split(' ');
+            const [d, m, y] = dPart.split('/');
+            const [h] = hPart.split(':');
+            return new Date(Number(y), Number(m) - 1, Number(d), Number(h)).getTime();
+          };
+          return parseTime(b.time) - parseTime(a.time);
+        });
+        setDataL1(l1);
+        setPage(1);
+        setExpanded(null);
+      }
+      setLoadingL1(false);
+    };
+    fetchL1();
+  }, [filter, activeDevice, selectedSensor, customStart, customEnd, selectedCfg]);
+
+  useEffect(() => {
+    if (!expanded || !activeDevice) return;
+    const fetchL2 = async () => {
+      setLoadingL2(true);
+      const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+      if (!devices || devices.length === 0) return;
+      const deviceId = devices[0].id;
+
+      const [datePart, timePart] = expanded.split(' ');
+      const [day, month, year] = datePart.split('/');
+      const [hour] = timePart.split(':');
+
+      const start = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0);
+      const end = new Date(start);
+      end.setHours(start.getHours() + 1);
+
+      const { data } = await supabase.from('telemetry_logs')
+        .select(`recorded_at, temp, ph, tds, water_level_ok`)
+        .eq('device_id', deviceId)
+        .gte('recorded_at', start.toISOString())
+        .lt('recorded_at', end.toISOString())
+        .order('recorded_at', { ascending: true });
+
+      if (data) {
+        const l2 = data.map(row => {
+          const d = new Date(row.recorded_at);
+          const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          const val = selectedSensor === 'waterLevel' ? (row.water_level_ok ? 1 : 0) : Number(row[selectedSensor]);
+          return { time, value: val };
+        });
+        setDataL2(l2);
+      }
+      setLoadingL2(false);
+    };
+    fetchL2();
+  }, [expanded, activeDevice, selectedSensor]);
+
+  const itemsPerPage = 12;
+  const totalPages = Math.ceil(dataL1.length / itemsPerPage) || 1;
+  const currentData = dataL1.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  const toggleExpand = (time: string) => {
+    if (expanded === time) {
+      setExpanded(null);
+    } else {
+      setExpanded(time);
+      setDataL2([]);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 24, padding: 24, borderRadius: 20, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Lịch sử dữ liệu</h3>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-btn-cancel)', padding: '4px 12px', borderRadius: 20, border: filter === 'custom' ? '1px solid #00A896' : '1px solid transparent', transition: 'all 200ms' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Từ:</span>
+            <input type="date" value={customStart} onChange={e => { setCustomStart(e.target.value); setFilter('custom'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }} />
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>đến:</span>
+            <input type="date" value={customEnd} onChange={e => { setCustomEnd(e.target.value); setFilter('custom'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { id: 'today', label: 'Hôm nay' },
+              { id: 'yesterday', label: 'Hôm qua' },
+              { id: '7days', label: '7 ngày qua' }
+            ].map(f => (
+              <button key={f.id} onClick={() => setFilter(f.id as any)} style={{
+                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 200ms',
+                background: filter === f.id ? '#00A896' : 'var(--bg-btn-cancel)',
+                color: filter === f.id ? '#fff' : 'var(--text-secondary)'
+              }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {loadingL1 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Đang tải dữ liệu...</div>
+      ) : dataL1.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Không có dữ liệu trong khoảng thời gian này.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: selectedSensor === 'waterLevel' ? '40px 2fr 1fr' : '40px 1.5fr 1fr 1fr 1fr 1fr', padding: '0 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            <div></div>
+            <div>Thời gian</div>
+            {selectedSensor !== 'waterLevel' && (
+              <>
+                <div>Trung bình</div>
+                <div>Cao nhất</div>
+                <div>Thấp nhất</div>
+              </>
+            )}
+            <div>Trạng thái</div>
+          </div>
+
+          {currentData.map(row => {
+            const isExpanded = expanded === row.time;
+            const sc = row.sc;
+            const sl = row.sl;
+
+            return (
+              <div key={row.time} style={{ display: 'flex', flexDirection: 'column', background: isExpanded ? 'var(--bg-btn-cancel)' : 'transparent', borderRadius: 12, transition: 'background 200ms' }}>
+                <div
+                  onClick={() => toggleExpand(row.time)}
+                  style={{ display: 'grid', gridTemplateColumns: selectedSensor === 'waterLevel' ? '40px 2fr 1fr' : '40px 1.5fr 1fr 1fr 1fr 1fr', alignItems: 'center', padding: '14px 16px', cursor: 'pointer', borderBottom: isExpanded ? 'none' : '1px solid var(--border-color)', transition: 'all 200ms' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-btn-cancel)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div>
+                    <ChevronDown size={16} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 200ms' }} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{row.displayTime}</div>
+                  {selectedSensor !== 'waterLevel' && (
+                    <>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{row.avg.toFixed(selectedSensor === 'ph' ? 2 : 1)} {selectedCfg.unit}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{row.max.toFixed(selectedSensor === 'ph' ? 2 : 1)} {selectedCfg.unit}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{row.min.toFixed(selectedSensor === 'ph' ? 2 : 1)} {selectedCfg.unit}</div>
+                    </>
+                  )}
+                  <div>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '4px 8px', borderRadius: 6, background: `${sc}18`, color: sc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sl}</span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div style={{ background: 'transparent', padding: '16px 16px 16px 40px', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+                    {loadingL2 ? (
+                      <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Đang tải chi tiết...</div>
+                    ) : dataL2.length === 0 ? (
+                      <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Không có dữ liệu chi tiết.</div>
+                    ) : (
+                      <>
+                        <div style={{ marginBottom: 16 }}>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-secondary)' }}>Biểu đồ chi tiết ({dataL2.length} phút)</h4>
+                          <Sparkline data={dataL2} color={selectedCfg.color} height={60} />
+                        </div>
+                        <div className="custom-scrollbar" style={{ maxHeight: 250, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border-color)', padding: '8px 12px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>Thời gian</th>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>Giá trị</th>
+                                <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>Trạng thái</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dataL2.map((d, i) => {
+                                const c = statusColor(d.value, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+                                const l = statusLabel(d.value, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
+                                return (
+                                  <tr key={i}>
+                                    <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)' }}>{d.time}</td>
+                                    <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, borderBottom: '1px solid var(--border-color)' }}>
+                                      {selectedSensor === 'waterLevel' ? (d.value === 1 ? 'Đầy nước' : 'Cạn nước') : `${d.value.toFixed(selectedSensor === 'ph' ? 2 : 1)} ${selectedCfg.unit}`}
+                                    </td>
+                                    <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)' }}>
+                                      <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: `${c}15`, color: c }}>{l}</span>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 16 }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{ background: 'var(--bg-btn-cancel)', border: 'none', padding: '6px', borderRadius: 6, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1, color: 'var(--text-primary)' }}
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Trang {page} / {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                style={{ background: 'var(--bg-btn-cancel)', border: 'none', padding: '6px', borderRadius: 6, cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1, color: 'var(--text-primary)' }}
+              >
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Component chính ───────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -300,11 +633,12 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<AlertItem[]>([])
   const [alertHistory, setAlertHistory] = useState<any[]>([])
   const [alertStats, setAlertStats] = useState<{ name: string, value: number }[]>([])
-  const [historyCursors, setHistoryCursors] = useState<number[]>([0])
   const [currentHistoryPage, setCurrentHistoryPage] = useState(0)
   const [historyHasNext, setHistoryHasNext] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyTotalRecords, setHistoryTotalRecords] = useState(0)
   const currentHistoryPageRef = useRef(0)
+  const [pageInput, setPageInput] = useState("1")
 
   const [activePieIndex, setActivePieIndex] = useState(0)
   const onPieEnter = (_: any, index: number) => {
@@ -313,6 +647,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     currentHistoryPageRef.current = currentHistoryPage
+    setPageInput((currentHistoryPage + 1).toString())
   }, [currentHistoryPage])
 
   const [activeTab, setActiveTab] = useState<'overview' | 'control' | 'sensors' | 'alerts'>('overview')
@@ -357,6 +692,12 @@ export default function DashboardPage() {
   const [editSpeciesId, setEditSpeciesId] = useState<number>(0)
   const [editMacAddress, setEditMacAddress] = useState('')
   const [deleteDialog, setDeleteDialog] = useState<Pond | null>(null)
+  const [notificationDialog, setNotificationDialog] = useState<Pond | null>(null)
+  const [notifyViaEmail, setNotifyViaEmail] = useState(false)
+  const [notifyViaWebPush, setNotifyViaWebPush] = useState(false)
+  const [notifyViaAppNoti, setNotifyViaAppNoti] = useState(false)
+  const [alertCooldown, setAlertCooldown] = useState<number>(0)
+  const [alertSeverity, setAlertSeverity] = useState<string>('both')
   const [dialogError, setDialogError] = useState('')
 
   // Bảo vệ route
@@ -486,21 +827,30 @@ export default function DashboardPage() {
       ph: mapMetric('phSum', 'phCount'),
       tds: mapMetric('tdsSum', 'tdsCount'),
       temp: mapMetric('tempSum', 'tempCount'),
-      waterLevel: mapMetric('waterSum', 'waterCount'),
+      waterLevel: Object.keys(buckets).map(time => {
+        const b = buckets[time] as any;
+        return {
+          time,
+          value: (b.waterCount > 0 && b.waterSum === b.waterCount) ? 1 : 0
+        };
+      })
     })
   }
 
-  const fetchAlertHistoryPage = async (pageIndex: number, deviceId: number, cursors: number[]) => {
+  const fetchAlertHistoryPage = async (pageIndex: number, deviceId: number) => {
     setHistoryLoading(true);
-    const cursor = cursors[pageIndex];
+    const startIndex = pageIndex * 10;
     let query = supabase.from('alerts_history')
       .select('*')
       .eq('tank_id', deviceId)
       .order('id', { ascending: false })
-      .limit(11);
+      .range(startIndex, startIndex + 10);
 
-    if (cursor > 0) {
-      query = query.lt('id', cursor);
+    if (pageIndex === 0) {
+      const { count } = await supabase.from('alerts_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('tank_id', deviceId);
+      setHistoryTotalRecords(count || 0);
     }
 
     const { data } = await query;
@@ -509,10 +859,6 @@ export default function DashboardPage() {
       const items = data.slice(0, 10);
       setAlertHistory(items);
       setHistoryHasNext(hasNext);
-
-      if (hasNext && cursors.length === pageIndex + 1) {
-        setHistoryCursors(prev => [...prev, items[items.length - 1].id]);
-      }
       setCurrentHistoryPage(pageIndex);
     }
     setHistoryLoading(false);
@@ -549,9 +895,8 @@ export default function DashboardPage() {
         setAlertStats(Object.entries(counts).map(([name, value]) => ({ name, value })));
       }
 
-      setHistoryCursors([0])
       setCurrentHistoryPage(0)
-      await fetchAlertHistoryPage(0, activeDevice, [0])
+      await fetchAlertHistoryPage(0, activeDevice)
 
       // 3. Đăng ký Realtime
       channel = supabase.channel(`telemetry_logs_device_${deviceId}`)
@@ -597,6 +942,7 @@ export default function DashboardPage() {
                 return [...prev, { name: newAlert.alert_type, value: 1 }];
               }
             });
+            setHistoryTotalRecords(prev => prev + 1);
             if (currentHistoryPageRef.current === 0) {
               setAlertHistory(prev => {
                 const updated = [newAlert, ...prev];
@@ -657,8 +1003,12 @@ export default function DashboardPage() {
     setAlerts(newAlerts)
   }, [tick])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
+    localStorage.removeItem('cs_role')
+    localStorage.removeItem('user_info')
+    localStorage.removeItem('access_token')
     navigate('/login')
   }
 
@@ -913,6 +1263,17 @@ export default function DashboardPage() {
             <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {alerts.length > 0 && (
+              <button
+                onClick={() => setActiveTab('alerts')}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: alertGlobalBg, border: `1px solid ${alertGlobalColor}40`, fontSize: 11, color: alertGlobalColor, fontFamily: 'inherit', fontWeight: 600, transition: 'all 200ms' }}
+                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.9)'}
+                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+              >
+                <AlertTriangle size={13} /> {alerts.length} cảnh báo
+              </button>
+            )}
+
             {/* Custom Pond Dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Bể cá:</span>
@@ -920,6 +1281,24 @@ export default function DashboardPage() {
                 ponds={ponds}
                 activeDevice={activeDevice}
                 onSelect={handleSelectPond}
+                onSettings={async pond => {
+                  setDialogError('');
+                  const { data } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', pond.id).single();
+                  if (data) {
+                    setNotifyViaEmail(data.notify_via_email ?? false);
+                    setNotifyViaWebPush(data.notify_via_web_push ?? false);
+                    setNotifyViaAppNoti(data.notify_via_app_noti ?? false);
+                    setAlertCooldown(data.alert_cooldown_minutes ?? 0);
+                    setAlertSeverity(data.alert_severity_preference ?? 'both');
+                  } else {
+                    setNotifyViaEmail(false);
+                    setNotifyViaWebPush(false);
+                    setNotifyViaAppNoti(false);
+                    setAlertCooldown(0);
+                    setAlertSeverity('both');
+                  }
+                  setNotificationDialog(pond);
+                }}
                 onEdit={pond => {
                   setEditDialog(pond);
                   setEditName(pond.name);
@@ -941,11 +1320,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {alerts.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: alertGlobalBg, border: `1px solid ${alertGlobalColor}40`, fontSize: 11, color: alertGlobalColor }}>
-                <AlertTriangle size={13} /> {alerts.length} cảnh báo
-              </div>
-            )}
+            {/* Removed alerts from here */}
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: loading ? '#FFB347' : '#00A896', boxShadow: `0 0 8px ${loading ? '#FFB347' : '#00A896'}`, animation: 'pulse 2s ease-in-out infinite' }} />
             <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{loading ? 'Sync...' : 'Live'}</span>
             {/* Theme Toggle Button */}
@@ -1048,41 +1423,77 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div style={{ height: 160, width: '100%', marginTop: 10 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
-                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                      >
-                        <XAxis
-                          dataKey="time"
-                          fontSize={10}
-                          tick={{ fill: 'var(--text-secondary)' }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          domain={['auto', 'auto']}
-                          tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
-                          axisLine={false}
-                          tickLine={false}
-                          width={25}
-                          tickFormatter={(val) => val.toFixed(1)}
-                        />
-                        <Tooltip
-                          cursor={{ fill: 'rgba(0,0,0,0.1)' }}
-                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                          formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
-                          labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
-                          itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
-                        />
-                        <Bar
-                          dataKey="value"
-                          fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
-                          radius={[4, 4, 0, 0]}
-                          barSize={30}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {hourlyActiveTab === 'waterLevel' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0', height: '100%', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+                          {(hourlySensorData['waterLevel'].length > 0
+                            ? hourlySensorData['waterLevel']
+                            : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
+                          ).map((d, i) => (
+                            <div
+                              key={i}
+                              title={`${d.time} - ${d.value === 1 ? 'Ổn định' : 'Có khoảnh khắc cạn nước'}`}
+                              style={{
+                                flex: 1,
+                                height: 40,
+                                borderRadius: 6,
+                                background: d.value === 1 ? '#00A896' : '#FF6B6B',
+                                transition: 'transform 150ms',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+                          {(hourlySensorData['waterLevel'].length > 0
+                            ? hourlySensorData['waterLevel']
+                            : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
+                          ).map((d, i) => (
+                            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)' }}>
+                              {d.time}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        >
+                          <XAxis
+                            dataKey="time"
+                            fontSize={10}
+                            tick={{ fill: 'var(--text-secondary)' }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            domain={['auto', 'auto']}
+                            tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={35}
+                            tickFormatter={(val) => val.toFixed(1)}
+                          />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(0,0,0,0.1)' }}
+                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
+                            labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                            itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
+                          />
+                          <Bar
+                            dataKey="value"
+                            fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
+                            radius={[4, 4, 0, 0]}
+                            barSize={30}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
                 <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
@@ -1555,6 +1966,9 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
+
+              {/* Lịch sử dữ liệu Drill-down */}
+              <DrillDownHistory selectedSensor={selectedSensor} activeDevice={activeDevice} selectedCfg={selectedCfg} />
             </>
           )}
 
@@ -1705,18 +2119,61 @@ export default function DashboardPage() {
                 <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
                     <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>
                       <button
-                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice, historyCursors) }}
+                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice) }}
                         disabled={currentHistoryPage === 0 || historyLoading}
-                        style={{ background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: currentHistoryPage === 0 ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'var(--text-primary)', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
-                      >Trang trước</button>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trang {currentHistoryPage + 1}</span>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: currentHistoryPage === 0 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                        onMouseEnter={e => { if (currentHistoryPage !== 0 && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <ArrowLeft size={14} />
+                      </button>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Trang</span>
+                        <input
+                          value={pageInput}
+                          onChange={e => setPageInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              let p = parseInt(pageInput);
+                              const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
+                              if (isNaN(p) || p < 1) p = 1;
+                              if (p > maxP) p = maxP;
+                              setPageInput(p.toString());
+                              if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
+                            }
+                          }}
+                          onBlur={() => {
+                            let p = parseInt(pageInput);
+                            const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
+                            if (isNaN(p) || p < 1) p = 1;
+                            if (p > maxP) p = maxP;
+                            setPageInput(p.toString());
+                            if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
+                          }}
+                          style={{
+                            background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 6,
+                            padding: '3px 0', width: 36, textAlign: 'center', fontWeight: 600, color: 'var(--text-primary)', outline: 'none'
+                          }}
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>của {Math.max(1, Math.ceil(historyTotalRecords / 10))}</span>
+                      </div>
+
                       <button
-                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage + 1, activeDevice, historyCursors) }}
+                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage + 1, activeDevice) }}
                         disabled={!historyHasNext || historyLoading}
-                        style={{ background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: !historyHasNext ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'var(--text-primary)', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', fontSize: 11, transition: 'all 200ms' }}
-                      >Trang sau</button>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: !historyHasNext ? 'var(--text-muted)' : 'var(--text-primary)', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                        onMouseEnter={e => { if (historyHasNext && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <ArrowRight size={14} />
+                      </button>
+
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12, marginLeft: 4 }}>
+                        {historyTotalRecords} cảnh báo
+                      </span>
                     </div>
                   </div>
                   <div className="custom-scrollbar" style={{ background: theme === 'dark' ? 'var(--bg-card)' : '#F2F4F7', borderRadius: 12, border: '1px solid var(--border-color)', flex: 1, overflowY: 'auto' }}>
@@ -1933,6 +2390,108 @@ export default function DashboardPage() {
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
               onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
+          </div>
+        </Dialog>
+      )}
+
+      {/* ── Dialog: Cài đặt cảnh báo ── */}
+      {notificationDialog && (
+        <Dialog
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><SlidersHorizontal size={18} color="#00A896" /> Cài đặt cảnh báo: {notificationDialog.name}</div>}
+          confirmText="Lưu cấu hình"
+          error={dialogError}
+          onConfirm={async () => {
+            setDialogError('');
+            const payload = {
+              notify_via_email: notifyViaEmail,
+              notify_via_web_push: notifyViaWebPush,
+              notify_via_app_noti: notifyViaAppNoti,
+              alert_cooldown_minutes: alertCooldown,
+              alert_severity_preference: alertSeverity
+            };
+            const { data: existing } = await supabase.from('tank_notification_settings').select('tank_id').eq('tank_id', notificationDialog.id).single();
+            let error;
+            if (existing) {
+              const res = await supabase.from('tank_notification_settings').update(payload).eq('tank_id', notificationDialog.id);
+              error = res.error;
+            } else {
+              const res = await supabase.from('tank_notification_settings').insert({ tank_id: notificationDialog.id, ...payload });
+              error = res.error;
+            }
+            
+            if (error) {
+              setDialogError('Lỗi khi lưu cấu hình');
+            } else {
+              showNotification("Đã lưu cấu hình thông báo thành công!");
+              setNotificationDialog(null);
+            }
+          }}
+          onCancel={() => setNotificationDialog(null)}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 12 }}>
+              Kênh nhận thông báo
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={notifyViaEmail} onChange={e => setNotifyViaEmail(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
+                Gửi qua Email
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={notifyViaWebPush} onChange={e => setNotifyViaWebPush(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
+                Gửi qua Trình duyệt Web
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={notifyViaAppNoti} onChange={e => setNotifyViaAppNoti(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
+                Gửi qua App di động
+              </label>
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Thời gian khóa Cooldown (Nhắc lại)
+            </label>
+            <select
+              value={alertCooldown}
+              onChange={e => setAlertCooldown(Number(e.target.value))}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms', appearance: 'none'
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
+            >
+              <option value={15} style={{ color: '#000' }}>15 phút</option>
+              <option value={30} style={{ color: '#000' }}>30 phút</option>
+              <option value={60} style={{ color: '#000' }}>1 tiếng</option>
+              <option value={0} style={{ color: '#000' }}>Không nhắc lại</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              Bộ lọc mức độ nghiêm trọng
+            </label>
+            <select
+              value={alertSeverity}
+              onChange={e => setAlertSeverity(e.target.value)}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
+                transition: 'border-color 200ms', appearance: 'none'
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
+            >
+              <option value="both" style={{ color: '#000' }}>Nhận tất cả cảnh báo</option>
+              <option value="critical_only" style={{ color: '#000' }}>Chỉ nhận khi Nguy kịch (Critical)</option>
+              <option value="warning_only" style={{ color: '#000' }}>Chỉ nhận Cảnh báo sớm (Warning)</option>
+              <option value="none" style={{ color: '#000' }}>Tắt nhận thông báo</option>
+            </select>
           </div>
         </Dialog>
       )}

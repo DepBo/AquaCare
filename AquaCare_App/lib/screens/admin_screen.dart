@@ -56,9 +56,11 @@ class AdminScreen extends StatelessWidget {
             ),
             // ── Grid pattern ──
             Positioned.fill(
-              child: CustomPaint(painter: _DotGridPainter(
-                color: const Color(0xFF8B5CF6).withOpacity(0.04),
-              )),
+              child: CustomPaint(
+                painter: _DotGridPainter(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.04),
+                ),
+              ),
             ),
 
             // ── Logout button top-right ──
@@ -134,7 +136,10 @@ class AdminScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Coming soon badge
-                  _FeatureBadge(color: const Color(0xFF8B5CF6), label: 'COMING SOON'),
+                  _FeatureBadge(
+                    color: const Color(0xFF8B5CF6),
+                    label: 'COMING SOON',
+                  ),
                   const SizedBox(height: 52),
 
                   // Feature cards row
@@ -143,11 +148,23 @@ class AdminScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _FeatureCard(icon: Icons.people_outline_rounded,   label: 'Quản lý\nUsers',   color: const Color(0xFF8B5CF6)),
+                        _FeatureCard(
+                          icon: Icons.people_outline_rounded,
+                          label: 'Quản lý\nUsers',
+                          color: const Color(0xFF8B5CF6),
+                        ),
                         const SizedBox(width: 14),
-                        _FeatureCard(icon: Icons.settings_outlined,        label: 'Hệ thống',          color: const Color(0xFF8B5CF6)),
+                        _FeatureCard(
+                          icon: Icons.settings_outlined,
+                          label: 'Hệ thống',
+                          color: const Color(0xFF8B5CF6),
+                        ),
                         const SizedBox(width: 14),
-                        _FeatureCard(icon: Icons.bar_chart_rounded,        label: 'Thống kê',           color: const Color(0xFF8B5CF6)),
+                        _FeatureCard(
+                          icon: Icons.bar_chart_rounded,
+                          label: 'Thống kê',
+                          color: const Color(0xFF8B5CF6),
+                        ),
                       ],
                     ),
                   ),
@@ -217,9 +234,11 @@ class StaffScreen extends StatelessWidget {
             ),
             // ── Dot grid ──
             Positioned.fill(
-              child: CustomPaint(painter: _DotGridPainter(
-                color: const Color(0xFF00E5A0).withOpacity(0.04),
-              )),
+              child: CustomPaint(
+                painter: _DotGridPainter(
+                  color: const Color(0xFF00E5A0).withOpacity(0.04),
+                ),
+              ),
             ),
 
             // ── Logout button top-right ──
@@ -298,7 +317,10 @@ class StaffScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Coming soon badge
-                  _FeatureBadge(color: const Color(0xFF00E5A0), label: 'COMING SOON'),
+                  _FeatureBadge(
+                    color: const Color(0xFF00E5A0),
+                    label: 'COMING SOON',
+                  ),
                   const SizedBox(height: 52),
 
                   // Feature cards row
@@ -307,11 +329,23 @@ class StaffScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _FeatureCard(icon: Icons.set_meal_outlined,        label: 'Ao nuôi',            color: const Color(0xFF00A896)),
+                        _FeatureCard(
+                          icon: Icons.set_meal_outlined,
+                          label: 'Ao nuôi',
+                          color: const Color(0xFF00A896),
+                        ),
                         const SizedBox(width: 14),
-                        _FeatureCard(icon: Icons.assignment_outlined,      label: 'Báo cáo',            color: const Color(0xFF00A896)),
+                        _FeatureCard(
+                          icon: Icons.assignment_outlined,
+                          label: 'Báo cáo',
+                          color: const Color(0xFF00A896),
+                        ),
                         const SizedBox(width: 14),
-                        _FeatureCard(icon: Icons.calendar_month_outlined,  label: 'Lịch trực',          color: const Color(0xFF00A896)),
+                        _FeatureCard(
+                          icon: Icons.calendar_month_outlined,
+                          label: 'Lịch trực',
+                          color: const Color(0xFF00A896),
+                        ),
                       ],
                     ),
                   ),
@@ -333,7 +367,11 @@ class _GlowBlob extends StatelessWidget {
   final double size;
   final Color color;
   final double opacity;
-  const _GlowBlob({required this.size, required this.color, required this.opacity});
+  const _GlowBlob({
+    required this.size,
+    required this.color,
+    required this.opacity,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +471,9 @@ class _ComingSoonBadge extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)],
+              boxShadow: [
+                BoxShadow(color: color.withOpacity(0.5), blurRadius: 6),
+              ],
             ),
           ),
           const SizedBox(width: 7),
@@ -482,7 +522,11 @@ class _FeatureCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  const _FeatureCard({required this.icon, required this.label, required this.color});
+  const _FeatureCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

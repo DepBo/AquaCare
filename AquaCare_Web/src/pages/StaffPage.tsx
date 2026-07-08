@@ -6,6 +6,11 @@ import {
   User, CalendarClock, ListChecks, ArrowRight, ArrowLeft, Layout,
   MessageSquare, Mail, Send, AlertTriangle, Pin,
 } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ─── Design tokens & Theme variables ─────────────────────────────────────────
 // Using a dynamic <style> injection to handle Light/Dark mode while keeping inline styling.
@@ -546,9 +551,12 @@ export default function StaffPage() {
     localStorage.setItem('dashboard_theme', theme)
   }, [theme])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
+    localStorage.removeItem('user_info')
+    localStorage.removeItem('access_token')
     navigate('/login')
   }
 

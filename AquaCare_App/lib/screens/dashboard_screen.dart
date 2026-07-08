@@ -174,9 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _telemetryStream = SupabaseService.instance.getTelemetryStream(
         _activePondId,
       );
-      _alertsStream = SupabaseService.instance.getAlertsStream(
-        _activePondId,
-      );
+      _alertsStream = SupabaseService.instance.getAlertsStream(_activePondId);
     }
   }
 
@@ -229,7 +227,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     ),
   ];
 
-  final List<String> _tabTitles = ['Tổng quan', 'Cảm biến', 'Điều khiển', 'Cảnh báo'];
+  final List<String> _tabTitles = [
+    'Tổng quan',
+    'Cảm biến',
+    'Điều khiển',
+    'Cảnh báo',
+  ];
 
   @override
   void initState() {
@@ -1236,13 +1239,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFFF6B6B).withOpacity(0.4),
+                                      color: const Color(
+                                        0xFFFF6B6B,
+                                      ).withOpacity(0.4),
                                       blurRadius: 6,
                                     ),
                                   ],
                                 ),
                                 child: Text(
-                                  _unreadAlertCount > 99 ? '99+' : '$_unreadAlertCount',
+                                  _unreadAlertCount > 99
+                                      ? '99+'
+                                      : '$_unreadAlertCount',
                                   style: GoogleFonts.inter(
                                     fontSize: 8,
                                     fontWeight: FontWeight.w700,
@@ -1453,10 +1460,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   //                   TAB: CẢNH BÁO
   // ══════════════════════════════════════════════════════════
   Widget _buildAlertsTab() {
-    return AlertsScreen(
-      key: ValueKey(_activePondId),
-      tankId: _activePondId,
-    );
+    return AlertsScreen(key: ValueKey(_activePondId), tankId: _activePondId);
   }
 }
 
@@ -1988,4 +1992,3 @@ class SensorDetailCard extends StatelessWidget {
     );
   }
 }
-

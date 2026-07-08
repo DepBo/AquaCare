@@ -204,3 +204,118 @@ ADD COLUMN IF NOT EXISTS last_calib_tds TIMESTAMPTZ DEFAULT NOW();
 -- Mặc định là TRUE (để khi tạo mới hồ cá, nó sẽ mặc định ở chế độ giả lập)
 ALTER TABLE public.devices 
 ADD COLUMN IF NOT EXISTS is_simulator BOOLEAN DEFAULT TRUE;
+
+INSERT INTO public.devices (
+    mac_address, 
+    is_simulator, 
+    is_active, 
+    sampling_interval_seconds
+) 
+VALUES (
+    'A0:B7:65:CD:A8:88', -- MAC của phần cứng V2
+    FALSE,               -- is_simulator = FALSE (đây là thiết bị thật)
+    TRUE,                -- is_active = TRUE
+    30                   -- sampling interval
+);
+
+-- BƯỚC 2: Tái cấu trúc hàm trigger handle_new_user() chống bẫy UNIQUE chuỗi rỗng
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER   -- Chạy với quyền tối cao để có thể ghi vào public.users
+SET search_path = public
+AS $$
+DECLARE
+    user_phone TEXT;
+BEGIN
+    -- Kiểm tra số điện thoại từ metadata của Google, nếu không có thì gán NULL tuyệt đối
+    user_phone := NEW.raw_user_meta_data->>'phone';
+    IF user_phone = '' THEN
+        user_phone := NULL;
+    END IF;
+
+    INSERT INTO public.users (id, full_name, email, phone, role)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
+        NEW.email,
+        user_phone,  -- Lưu NULL nếu không có SĐT để không bị lỗi UNIQUE khi có nhiều user Google
+        'user'
+    )
+    -- Đồng bộ cập nhật họ tên nếu user thay đổi thông tin trên Google Account
+    ON CONFLICT (id) DO UPDATE 
+    SET 
+        full_name = EXCLUDED.full_name,
+        updated_at = NOW();
+
+    RETURN NEW;
+END;
+$$;
+
+-- BƯỚC 3: Khởi tạo Trigger liên kết hệ thống Auth
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- ── 1. TẠO BẢNG CẤU HÌNH THÔNG BÁO RIÊNG BIỆT (PROFESSIONAL ARCHITECTURE) ──
+CREATE TABLE public.tank_notification_settings (
+    tank_id INTEGER PRIMARY KEY REFERENCES public.tanks(id) ON DELETE CASCADE, -- Mỗi bể có 1 bộ cấu hình riêng
+    
+    -- Các kênh nhận thông báo (Mặc định bật hết)
+    notify_via_email BOOLEAN DEFAULT TRUE,
+    notify_via_web_push BOOLEAN DEFAULT TRUE,
+    notify_via_app_noti BOOLEAN DEFAULT TRUE,
+    
+    -- Tần suất lặp lại (Cooldown chặn spam - Đơn vị: Phút)
+    alert_cooldown_minutes INTEGER DEFAULT 30, -- Giá trị có thể chọn: 15, 30, 60, hoặc 0 nếu tắt lặp
+    
+    -- Lọc mức độ nghiêm trọng muốn nhận
+    -- 'both': Nhận tất cả | 'critical_only': Chỉ nhận Danger | 'warning_only': Chỉ nhận Warn | 'none': Tắt thông báo ra ngoài
+    alert_severity_preference VARCHAR(20) DEFAULT 'both' 
+        CHECK (alert_severity_preference IN ('both', 'critical_only', 'warning_only', 'none')),
+        
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── 2. TẠO CỘT THEO DÕI THỜI GIAN GỬI CẢNH BÁO GẦN NHẤT TRÊN BẢNG TANKS ──
+-- Cột này lưu mốc thời gian cuối cùng hệ thống bắn cảnh báo ra ngoài của riêng bể đó
+-- Backend Node.js sẽ lấy (Thời gian hiện tại - last_alert_sent_at) để đối chiếu với alert_cooldown_minutes
+ALTER TABLE public.tanks
+ADD COLUMN IF NOT EXISTS last_alert_sent_at TIMESTAMPTZ DEFAULT NULL;
+
+-- ── 3. TỰ ĐỘNG HÓA (AUTOMATION TRIGGER) ──────────────────────────────────
+-- Để hệ thống vận hành chuyên nghiệp hoàn toàn, khi người dùng tạo mới một bể cá (Tanks),
+-- Hệ thống phải tự động tạo kèm một dòng cấu hình mặc định trong bảng tank_notification_settings
+-- Nhờ vậy Front-end hoặc Backend không bao giờ bị lỗi NuLL dữ liệu cấu hình.
+
+CREATE OR REPLACE FUNCTION public.handle_new_tank_settings()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    INSERT INTO public.tank_notification_settings (tank_id)
+    VALUES (NEW.id);
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_tank_created ON public.tanks;
+
+CREATE TRIGGER on_tank_created
+    AFTER INSERT ON public.tanks
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_tank_settings();
+
+-- ── 4. KHỞI TẠO CẤU HÌNH CHO CÁC BỂ CÁ ĐANG CÓ SẴN TRONG HỆ THỐNG ─────────
+-- Chạy dòng này để bù đắp cấu hình cho những bể cá bạn đã tạo trước đó
+INSERT INTO public.tank_notification_settings (tank_id)
+SELECT id FROM public.tanks
+ON CONFLICT (tank_id) DO NOTHING;
+
+-- ── 5. CẤP QUYỀN HỆ THỐNG ────────────────────────────────────────────────
+GRANT ALL PRIVILEGES ON TABLE public.tank_notification_settings TO postgres, anon, authenticated, service_role;

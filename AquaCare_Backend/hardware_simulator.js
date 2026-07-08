@@ -69,26 +69,84 @@ async function fetchActiveDevices() {
 }
 
 async function checkAndInsertAlerts(device, state) {
-  if (!device.tank_id) return; // Chỉ lưu lịch sử cho máy đã gán vào bể
-  const alerts = [];
+  if (!device.tank_id) return;
 
-  if (state.ph < 6.5 || state.ph > 7.5) {
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'pH', actual_value: Number(state.ph.toFixed(2)), alert_message: `Cảnh báo pH: Đang ở mức ${state.ph.toFixed(2)}` });
+  const alerts = [];
+  const rawAlerts = [];
+
+  const checkSeverity = (val, good, warn) => {
+    if (val < warn[0] || val > warn[1]) return 'Danger';
+    if (val < good[0] || val > good[1]) return 'Warn';
+    return 'Good';
+  };
+
+  const phSev = checkSeverity(state.ph, [6.5, 7.5], [6.0, 8.0]);
+  if (phSev !== 'Good') {
+    const msg = `pH ở mức ${state.ph.toFixed(2)}`;
+    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'pH', actual_value: Number(state.ph.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
+    rawAlerts.push({ label: 'pH', severity: phSev, msg });
   }
-  if (state.temp < 24.0 || state.temp > 28.0) {
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Nhiệt độ', actual_value: Number(state.temp.toFixed(2)), alert_message: `Cảnh báo Nhiệt độ: Đang ở mức ${state.temp.toFixed(2)}°C` });
+
+  const tempSev = checkSeverity(state.temp, [24, 28], [22, 30]);
+  if (tempSev !== 'Good') {
+    const msg = `Nhiệt độ ở mức ${state.temp.toFixed(2)}°C`;
+    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Nhiệt độ', actual_value: Number(state.temp.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
+    rawAlerts.push({ label: 'Nhiệt độ', severity: tempSev, msg });
   }
-  if (state.tds < 150 || state.tds > 300) {
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'TDS', actual_value: Number(state.tds.toFixed(0)), alert_message: `Cảnh báo TDS: Đang ở mức ${state.tds.toFixed(0)} ppm` });
+
+  const tdsSev = checkSeverity(state.tds, [150, 300], [100, 400]);
+  if (tdsSev !== 'Good') {
+    const msg = `TDS ở mức ${state.tds.toFixed(0)} ppm`;
+    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'TDS', actual_value: Number(state.tds.toFixed(0)), alert_message: `Cảnh báo: ${msg}` });
+    rawAlerts.push({ label: 'TDS', severity: tdsSev, msg });
   }
+
   if (!state.water_level_ok) {
     alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Mực nước', actual_value: 0, alert_message: `Cảnh báo: Bể cạn nước!` });
+    rawAlerts.push({ label: 'Mực nước', severity: 'Danger', msg: 'Bể bị cạn nước' });
   }
 
   if (alerts.length > 0) {
-    const { error } = await supabase.from('alerts_history').insert(alerts);
-    if (error) console.error('❌ Lỗi lưu lịch sử cảnh báo:', error.message);
-    else console.log(`[!] Đã tự động lưu ${alerts.length} cảnh báo vào Lịch sử.`);
+    const { error: insertAlertErr } = await supabase.from('alerts_history').insert(alerts);
+    if (insertAlertErr) console.error('❌ Lỗi lưu lịch sử cảnh báo:', insertAlertErr.message);
+    else console.log(`[!] Đã tự động lưu ${alerts.length} cảnh báo cho thiết bị (ID: ${device.id}).`);
+
+    const { data: config } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', device.tank_id).single();
+    const { data: tankData } = await supabase.from('tanks').select('last_alert_sent_at').eq('id', device.tank_id).single();
+
+    if (config && config.alert_severity_preference !== 'none') {
+      const hasDanger = rawAlerts.some(a => a.severity === 'Danger');
+
+      if (config.alert_severity_preference === 'critical_only' && !hasDanger) return;
+      if (config.alert_severity_preference === 'warning_only' && hasDanger) return;
+
+      let canSend = true;
+      if (tankData && tankData.last_alert_sent_at && Number(config.alert_cooldown_minutes) > 0) {
+        const lastSent = new Date(tankData.last_alert_sent_at).getTime();
+        const now = Date.now();
+        const diffMinutes = (now - lastSent) / (1000 * 60);
+        if (diffMinutes < Number(config.alert_cooldown_minutes)) canSend = false;
+      }
+
+      if (canSend) {
+        const aggregatedDetails = rawAlerts.map(a => `${a.label} đang ${a.severity === 'Danger' ? 'Nguy hiểm' : 'Cảnh báo'} (${a.msg})`).join(' đồng thời ');
+        const aggregatedMsg = `Hồ cá của bạn đang có sự cố song song: ${aggregatedDetails}.`;
+        
+        console.log(`\n========================================`);
+        console.log(`🔔 KÍCH HOẠT THÔNG BÁO TỪ SIMULATOR CHO BỂ [${device.tank_id}]`);
+        console.log(`Nội dung: ${aggregatedMsg}`);
+        
+        if (config.notify_via_email) console.log(`[Email] -> Đã gửi từ hệ thống AquaCare`);
+        if (config.notify_via_web_push) console.log(`[Web Push] -> Đã kích hoạt thông báo đẩy trình duyệt`);
+        if (config.notify_via_app_noti) console.log(`[App Notification] -> Đã gửi tới ứng dụng di động`);
+        console.log(`========================================\n`);
+
+        const currentMilli = new Date().toISOString();
+        await supabase.from('tanks').update({ last_alert_sent_at: currentMilli }).eq('id', device.tank_id);
+      } else {
+        console.log(`⏳ Đang trong thời gian Cooldown chặn Spam (${config.alert_cooldown_minutes} phút), KHÔNG bắn thông báo ra ngoài.`);
+      }
+    }
   }
 }
 

@@ -8,9 +8,15 @@ import 'screens/staff_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await GoogleSignIn.instance.initialize(
+    serverClientId: '184096169998-40s8fv9eg9jlhuhsqvlspsopai1k1rgn.apps.googleusercontent.com',
+  );
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,

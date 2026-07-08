@@ -6,6 +6,7 @@ import 'admin_screen.dart';
 import 'staff_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _showPassword = false;
   bool _loading = false;
   bool _rememberMe = false;
+  bool _googleLoading = false;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -79,14 +81,18 @@ class _LoginScreenState extends State<LoginScreen>
         final data = jsonDecode(res.body);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', data['access_token']);
-        
+
         final refreshToken = data['refresh_token'];
         if (refreshToken != null) {
           await prefs.setString('refresh_token', refreshToken);
           try {
-            final authResponse = await Supabase.instance.client.auth.setSession(refreshToken);
+            final authResponse = await Supabase.instance.client.auth.setSession(
+              refreshToken,
+            );
             debugPrint('🔑 Session sau set: ${authResponse.session?.user.id}');
-            debugPrint('✅ [SUCCESS]: Đã đồng bộ session Supabase thành công từ refresh_token.');
+            debugPrint(
+              '✅ [SUCCESS]: Đã đồng bộ session Supabase thành công từ refresh_token.',
+            );
           } catch (e) {
             debugPrint('❌ [ERROR]: Lỗi khi gọi setSession: $e');
           }
@@ -122,6 +128,92 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _loading = false);
       if (!mounted) return;
       _showError('Lỗi kết nối máy chủ');
+    }
+  }
+
+  Future<void> _handleGoogleAuth() async {
+    setState(() => _googleLoading = true);
+    try {
+      final googleUser = await GoogleSignIn.instance.authenticate();
+
+      final googleAuth = googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw 'Missing Google ID Token';
+      }
+
+      final AuthResponse res =
+          await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
+
+      final user = res.user;
+      if (user == null) {
+        _showError('Đăng nhập Supabase thất bại.');
+        setState(() => _googleLoading = false);
+        return;
+      }
+
+      // Query role
+      final userData = await Supabase.instance.client
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      String role = 'user';
+      if (userData == null) {
+        // Insert new user
+        role = 'user';
+        final fullName = user.userMetadata?['full_name'] ??
+            user.userMetadata?['name'] ??
+            '';
+        await Supabase.instance.client.from('users').insert({
+          'id': user.id,
+          'email': user.email,
+          'full_name': fullName,
+          'role': role,
+        });
+      } else {
+        role = userData['role'] ?? 'user';
+      }
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', role);
+      if (res.session?.accessToken != null) {
+        await prefs.setString('access_token', res.session!.accessToken);
+      }
+      if (res.session?.refreshToken != null) {
+        await prefs.setString('refresh_token', res.session!.refreshToken!);
+      }
+
+      setState(() => _googleLoading = false);
+      if (!mounted) return;
+
+      Widget destination;
+      if (role == 'admin') {
+        destination = const AdminScreen();
+      } else if (role == 'staff') {
+        destination = const StaffScreen();
+      } else {
+        destination = const DashboardScreen();
+      }
+
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => destination,
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+      );
+    } catch (e) {
+      setState(() => _googleLoading = false);
+      _showError('Lỗi đăng nhập Google: $e');
     }
   }
 
@@ -616,7 +708,7 @@ class _LoginScreenState extends State<LoginScreen>
       width: double.infinity,
       height: 50,
       child: OutlinedButton(
-        onPressed: () {},
+        onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white.withOpacity(0.04),
           side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1),
@@ -624,25 +716,34 @@ class _LoginScreenState extends State<LoginScreen>
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CustomPaint(painter: GoogleLogoPainter()),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Đăng nhập bằng Google',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withOpacity(0.75),
+        child: _googleLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CustomPaint(painter: GoogleLogoPainter()),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Đăng nhập bằng Google',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.75),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

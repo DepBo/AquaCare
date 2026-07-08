@@ -3,8 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart' show GoogleLogoPainter;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-const String apiUrl = 'http://10.0.2.2:5000/api/auth';
+import 'dashboard_screen.dart';
+import 'admin_screen.dart';
+import 'staff_screen.dart';
+
+const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -25,6 +32,7 @@ class _SignupScreenState extends State<SignupScreen>
   bool _showConfirm = false;
   bool _loading = false;
   bool _agreeTerms = false;
+  bool _googleLoading = false;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -59,7 +67,9 @@ class _SignupScreenState extends State<SignupScreen>
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeTerms) {
-      _showError('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật!');
+      _showError(
+        'Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật!',
+      );
       return;
     }
 
@@ -100,6 +110,91 @@ class _SignupScreenState extends State<SignupScreen>
     }
   }
 
+  Future<void> _handleGoogleAuth() async {
+    setState(() => _googleLoading = true);
+    try {
+      final googleUser = await GoogleSignIn.instance.authenticate();
+
+      final googleAuth = googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw 'Missing Google ID Token';
+      }
+
+      final AuthResponse res =
+          await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
+
+      final user = res.user;
+      if (user == null) {
+        _showError('Đăng nhập Supabase thất bại.');
+        setState(() => _googleLoading = false);
+        return;
+      }
+
+      // Query role
+      final userData = await Supabase.instance.client
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      String role = 'user';
+      if (userData == null) {
+        // Insert new user
+        role = 'user';
+        final fullName =
+            user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
+        await Supabase.instance.client.from('users').insert({
+          'id': user.id,
+          'email': user.email,
+          'full_name': fullName,
+          'role': role,
+        });
+      } else {
+        role = userData['role'] ?? 'user';
+      }
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', role);
+      if (res.session?.accessToken != null) {
+        await prefs.setString('access_token', res.session!.accessToken);
+      }
+      if (res.session?.refreshToken != null) {
+        await prefs.setString('refresh_token', res.session!.refreshToken!);
+      }
+
+      setState(() => _googleLoading = false);
+      if (!mounted) return;
+
+      Widget destination;
+      if (role == 'admin') {
+        destination = const AdminScreen();
+      } else if (role == 'staff') {
+        destination = const StaffScreen();
+      } else {
+        destination = const DashboardScreen();
+      }
+
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => destination,
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+      );
+    } catch (e) {
+      setState(() => _googleLoading = false);
+      _showError('Lỗi đăng ký Google: $e');
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -112,7 +207,11 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         content: Row(
           children: [
-            const Icon(Icons.warning_rounded, color: Color(0xFFFF6B6B), size: 18),
+            const Icon(
+              Icons.warning_rounded,
+              color: Color(0xFFFF6B6B),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -143,7 +242,11 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Color(0xFF00A896), size: 18),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Color(0xFF00A896),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -222,8 +325,8 @@ class _SignupScreenState extends State<SignupScreen>
                                   icon: Icons.person_outline,
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
-                                          ? 'Vui lòng nhập họ tên'
-                                          : null,
+                                      ? 'Vui lòng nhập họ tên'
+                                      : null,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildField(
@@ -249,8 +352,8 @@ class _SignupScreenState extends State<SignupScreen>
                                   keyboardType: TextInputType.phone,
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
-                                          ? 'Vui lòng nhập số điện thoại'
-                                          : null,
+                                      ? 'Vui lòng nhập số điện thoại'
+                                      : null,
                                 ),
                                 const SizedBox(height: 16),
                                 _buildPasswordField(
@@ -259,7 +362,8 @@ class _SignupScreenState extends State<SignupScreen>
                                   hint: '••••••••',
                                   showPass: _showPassword,
                                   onToggle: () => setState(
-                                      () => _showPassword = !_showPassword),
+                                    () => _showPassword = !_showPassword,
+                                  ),
                                   validator: (v) {
                                     if (v == null || v.isEmpty)
                                       return 'Vui lòng nhập mật khẩu';
@@ -275,7 +379,8 @@ class _SignupScreenState extends State<SignupScreen>
                                   hint: '••••••••',
                                   showPass: _showConfirm,
                                   onToggle: () => setState(
-                                      () => _showConfirm = !_showConfirm),
+                                    () => _showConfirm = !_showConfirm,
+                                  ),
                                   validator: (v) {
                                     if (v == null || v.isEmpty)
                                       return 'Vui lòng xác nhận mật khẩu';
@@ -288,36 +393,51 @@ class _SignupScreenState extends State<SignupScreen>
 
                                 // ── Điều khoản & Chính sách ──
                                 GestureDetector(
-                                  onTap: () => setState(() => _agreeTerms = !_agreeTerms),
+                                  onTap: () => setState(
+                                    () => _agreeTerms = !_agreeTerms,
+                                  ),
                                   behavior: HitTestBehavior.opaque,
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Transform.scale(
                                         scale: 0.85,
                                         child: Checkbox(
                                           value: _agreeTerms,
-                                          onChanged: (v) => setState(() => _agreeTerms = v ?? false),
+                                          onChanged: (v) => setState(
+                                            () => _agreeTerms = v ?? false,
+                                          ),
                                           activeColor: const Color(0xFF00A896),
                                           checkColor: Colors.white,
-                                          side: const BorderSide(color: Colors.white24, width: 1.5),
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          side: const BorderSide(
+                                            color: Colors.white24,
+                                            width: 1.5,
+                                          ),
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(top: 11),
+                                          padding: const EdgeInsets.only(
+                                            top: 11,
+                                          ),
                                           child: RichText(
                                             text: TextSpan(
                                               style: GoogleFonts.inter(
                                                 fontSize: 11,
-                                                color: Colors.white.withOpacity(0.35),
+                                                color: Colors.white.withOpacity(
+                                                  0.35,
+                                                ),
                                                 height: 1.5,
                                               ),
                                               children: const [
-                                                TextSpan(text: 'Tôi đồng ý với '),
+                                                TextSpan(
+                                                  text: 'Tôi đồng ý với ',
+                                                ),
                                                 TextSpan(
                                                   text: 'Điều khoản dịch vụ',
                                                   style: TextStyle(
@@ -347,22 +467,38 @@ class _SignupScreenState extends State<SignupScreen>
 
                                 // ── Divider ──
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 24),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24,
+                                  ),
                                   child: Row(
                                     children: [
-                                      Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.06))),
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: Colors.white.withOpacity(0.06),
+                                        ),
+                                      ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                        ),
                                         child: Text(
                                           'hoặc',
                                           style: GoogleFonts.inter(
                                             fontSize: 11,
-                                            color: Colors.white.withOpacity(0.25),
+                                            color: Colors.white.withOpacity(
+                                              0.25,
+                                            ),
                                             letterSpacing: 0.5,
                                           ),
                                         ),
                                       ),
-                                      Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.06))),
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: Colors.white.withOpacity(0.06),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -384,8 +520,8 @@ class _SignupScreenState extends State<SignupScreen>
                                     TextSpan(
                                       text: 'Đã có tài khoản? ',
                                       style: TextStyle(
-                                          color:
-                                              Colors.white.withOpacity(0.35)),
+                                        color: Colors.white.withOpacity(0.35),
+                                      ),
                                     ),
                                     const TextSpan(
                                       text: 'Đăng nhập',
@@ -529,28 +665,34 @@ class _SignupScreenState extends State<SignupScreen>
   InputDecoration _fieldDecoration(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.2)),
-      prefixIcon:
-          Icon(icon, size: 18, color: Colors.white.withOpacity(0.2)),
+      hintStyle: GoogleFonts.inter(
+        fontSize: 13,
+        color: Colors.white.withOpacity(0.2),
+      ),
+      prefixIcon: Icon(icon, size: 18, color: Colors.white.withOpacity(0.2)),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(255, 255, 255, 0.08), width: 1),
+          color: Color.fromRGBO(255, 255, 255, 0.08),
+          width: 1,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(255, 255, 255, 0.08), width: 1),
+          color: Color.fromRGBO(255, 255, 255, 0.08),
+          width: 1,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-            color: Color.fromRGBO(0, 229, 160, 0.3), width: 1),
+          color: Color.fromRGBO(0, 229, 160, 0.3),
+          width: 1,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -560,8 +702,10 @@ class _SignupScreenState extends State<SignupScreen>
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1),
       ),
-      errorStyle:
-          GoogleFonts.inter(fontSize: 11, color: const Color(0xFFFF6B6B)),
+      errorStyle: GoogleFonts.inter(
+        fontSize: 11,
+        color: const Color(0xFFFF6B6B),
+      ),
     );
   }
 
@@ -615,43 +759,50 @@ class _SignupScreenState extends State<SignupScreen>
       ),
     );
   }
+
   // ── Google Button ───────────────────────────────────────
   Widget _buildGoogleButton() {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: OutlinedButton(
-        onPressed: () {},
+        onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white.withOpacity(0.04),
-          side: BorderSide(
-            color: Colors.white.withOpacity(0.12),
-            width: 1,
-          ),
+          side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           overlayColor: Colors.white,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CustomPaint(painter: GoogleLogoPainter()),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Đăng ký bằng Google',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withOpacity(0.75),
+        child: _googleLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CustomPaint(painter: GoogleLogoPainter()),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Đăng ký bằng Google',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.75),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
