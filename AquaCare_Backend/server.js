@@ -62,6 +62,7 @@ try {
 // ==========================================
 const mqtt = require('mqtt');
 const supabase = require('./config/supabase'); // Sử dụng chung supabase instance có sẵn
+const { sendAlertEmail } = require('./config/mailer');
 
 const MQTT_HOST = '8263ee975ee9413ca344b39c068b3dbc.s1.eu.hivemq.cloud';
 const MQTT_PORT = 8883;
@@ -125,7 +126,7 @@ async function checkAndInsertAlerts(device, state) {
 
     // 1. Đọc chính xác dữ liệu cấu hình thông báo và mốc thời gian gửi cũ từ DB
     const { data: config } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', device.tank_id).single();
-    const { data: tankData } = await supabase.from('tanks').select('last_alert_sent_at').eq('id', device.tank_id).single();
+    const { data: tankData } = await supabase.from('tanks').select('last_alert_sent_at, tank_name, users(email)').eq('id', device.tank_id).single();
 
     if (config && config.alert_severity_preference !== 'none') {
       const hasDanger = rawAlerts.some(a => a.severity === 'Danger');
@@ -159,7 +160,10 @@ async function checkAndInsertAlerts(device, state) {
         console.log(`🔔 KÍCH HOẠT THÔNG BÁO CHO BỂ [${device.tank_id}]`);
         console.log(`Nội dung: ${aggregatedMsg}`);
         
-        if (config.notify_via_email) console.log(`[Email] -> Đã gửi từ hệ thống AquaCare`);
+        if (config.notify_via_email && tankData.users && tankData.users.email) {
+          console.log(`[Email] -> Đang tiến hành gửi email tới ${tankData.users.email}...`);
+          await sendAlertEmail(tankData.users.email, tankData.tank_name, aggregatedMsg);
+        }
         if (config.notify_via_web_push) console.log(`[Web Push] -> Đã kích hoạt thông báo đẩy trình duyệt`);
         if (config.notify_via_app_noti) console.log(`[App Notification] -> Đã gửi tới ứng dụng di động`);
         console.log(`========================================\n`);
