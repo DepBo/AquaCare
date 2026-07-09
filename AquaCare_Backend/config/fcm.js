@@ -23,11 +23,9 @@ async function sendWebPush(fcmToken, pondName, alertContent) {
       title: `⚠️ Cảnh báo khẩn cấp: ${pondName}`,
       body: alertContent
     },
-    webpush: {
-      notification: {
-        icon: '/logo.png', // Thay bằng đường dẫn icon của bạn nếu có
-        requireInteraction: true // Thông báo sẽ không tự biến mất cho đến khi user click
-      }
+    data: {
+      type: 'warning',
+      pondName: pondName
     }
   };
 

@@ -7,7 +7,8 @@ import {
   Sun, Moon
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
-import { requestNotificationPermission } from '../config/firebase'
+import { requestNotificationPermission, messaging } from '../config/firebase'
+import { onMessage } from 'firebase/messaging'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector, BarChart, Bar } from 'recharts'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
@@ -721,6 +722,21 @@ export default function DashboardPage() {
           if (error) console.error("Lỗi lưu FCM Token tự động:", error.message);
           else console.log("✅ Đã lưu/cập nhật FCM Token tự động vào CSDL.");
         }
+      }
+
+      // Lắng nghe thông báo khi Web đang mở (Foreground)
+      if (messaging) {
+        console.log("🎧 Đã đăng ký lắng nghe onMessage(Foreground)...");
+        onMessage(messaging, (payload) => {
+          console.log("🔔 [Foreground] Nhận thông báo:", payload);
+          const { title, body } = payload.notification || {};
+          if (title) {
+            new Notification(title, {
+              body,
+              icon: '/favicon.svg'
+            });
+          }
+        });
       }
     };
     initFCM();
