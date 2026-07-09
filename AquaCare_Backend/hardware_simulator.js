@@ -2,6 +2,7 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const readline = require('readline');
 const { sendAlertEmail } = require('./config/mailer');
+const { sendWebPush } = require('./config/fcm');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -113,7 +114,8 @@ async function checkAndInsertAlerts(device, state) {
     else console.log(`[!] Đã tự động lưu ${alerts.length} cảnh báo cho thiết bị (ID: ${device.id}).`);
 
     const { data: config } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', device.tank_id).single();
-    const { data: tankData } = await supabase.from('tanks').select('last_alert_sent_at, tank_name, users(email)').eq('id', device.tank_id).single();
+    const { data: tankData, error: tankErr } = await supabase.from('tanks').select('last_alert_sent_at, tank_name, users(email, web_fcm_token, app_fcm_token)').eq('id', device.tank_id).single();
+    if (tankErr) { console.error('❌ Lỗi lấy dữ liệu bể:', tankErr.message); return; }
 
     if (config && config.alert_severity_preference !== 'none') {
       const hasDanger = rawAlerts.some(a => a.severity === 'Danger');
@@ -137,12 +139,26 @@ async function checkAndInsertAlerts(device, state) {
         console.log(`🔔 KÍCH HOẠT THÔNG BÁO TỪ SIMULATOR CHO BỂ [${device.tank_id}]`);
         console.log(`Nội dung: ${aggregatedMsg}`);
         
-        if (config.notify_via_email && tankData.users && tankData.users.email) {
+        if (config.notify_via_email && tankData && tankData.users && tankData.users.email) {
           console.log(`[Email] -> Đang tiến hành gửi email tới ${tankData.users.email}...`);
           await sendAlertEmail(tankData.users.email, tankData.tank_name, aggregatedMsg);
         }
-        if (config.notify_via_web_push) console.log(`[Web Push] -> Đã kích hoạt thông báo đẩy trình duyệt`);
-        if (config.notify_via_app_noti) console.log(`[App Notification] -> Đã gửi tới ứng dụng di động`);
+        if (config.notify_via_web_push) {
+          if (tankData && tankData.users && tankData.users.web_fcm_token) {
+            console.log(`[Web Push] -> Đang tiến hành gửi Push Notification tới Trình duyệt...`);
+            await sendWebPush(tankData.users.web_fcm_token, tankData.tank_name, aggregatedMsg);
+          } else {
+            console.log(`[Web Push] -> Trình duyệt chưa cấp quyền FCM Token.`);
+          }
+        }
+        if (config.notify_via_app_noti) {
+          if (tankData && tankData.users && tankData.users.app_fcm_token) {
+            console.log(`[App Notification] -> Đang tiến hành gửi Push Notification tới App di động...`);
+            await sendWebPush(tankData.users.app_fcm_token, tankData.tank_name, aggregatedMsg);
+          } else {
+            console.log(`[App Notification] -> App chưa đăng ký FCM Token.`);
+          }
+        }
         console.log(`========================================\n`);
 
         const currentMilli = new Date().toISOString();

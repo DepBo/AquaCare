@@ -7,6 +7,7 @@ import {
   Sun, Moon
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import { requestNotificationPermission } from '../config/firebase'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector, BarChart, Bar } from 'recharts'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
@@ -704,6 +705,26 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!localStorage.getItem('cs_auth')) navigate('/login')
   }, [navigate])
+
+  // Tự động kiểm tra và xin quyền Web Push khi truy cập Dashboard
+  useEffect(() => {
+    const initFCM = async () => {
+      const userInfoStr = localStorage.getItem('user_info');
+      if (!userInfoStr) return;
+      const currentUser = JSON.parse(userInfoStr);
+      if (!currentUser.id) return;
+
+      if ("Notification" in window && Notification.permission !== "denied") {
+        const token = await requestNotificationPermission();
+        if (token) {
+          const { error } = await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
+          if (error) console.error("Lỗi lưu FCM Token tự động:", error.message);
+          else console.log("✅ Đã lưu/cập nhật FCM Token tự động vào CSDL.");
+        }
+      }
+    };
+    initFCM();
+  }, []);
 
   // ── Load Initial Data ─────────────────────────
   useEffect(() => {
@@ -2438,7 +2459,24 @@ export default function DashboardPage() {
                 Gửi qua Email
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                <input type="checkbox" checked={notifyViaWebPush} onChange={e => setNotifyViaWebPush(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
+                <input type="checkbox" checked={notifyViaWebPush} onChange={async e => {
+                  const checked = e.target.checked;
+                  setNotifyViaWebPush(checked);
+                  if (checked) {
+                    const token = await requestNotificationPermission();
+                    if (token) {
+                      const userInfoStr = localStorage.getItem('user_info');
+                      if (userInfoStr) {
+                        const currentUser = JSON.parse(userInfoStr);
+                        if (currentUser.id) {
+                          const { error } = await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
+                          if (error) console.error("Lỗi lưu FCM Token:", error.message);
+                          else console.log("✅ Đã lưu FCM Token vào CSDL (bảng users).");
+                        }
+                      }
+                    }
+                  }
+                }} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
                 Gửi qua Trình duyệt Web
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
@@ -2464,6 +2502,7 @@ export default function DashboardPage() {
               onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
               onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             >
+              <option value={1} style={{ color: '#000' }}>1 phút (Dành cho Test)</option>
               <option value={15} style={{ color: '#000' }}>15 phút</option>
               <option value={30} style={{ color: '#000' }}>30 phút</option>
               <option value={60} style={{ color: '#000' }}>1 tiếng</option>

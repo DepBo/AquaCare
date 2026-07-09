@@ -319,3 +319,10 @@ ON CONFLICT (tank_id) DO NOTHING;
 
 -- ── 5. CẤP QUYỀN HỆ THỐNG ────────────────────────────────────────────────
 GRANT ALL PRIVILEGES ON TABLE public.tank_notification_settings TO postgres, anon, authenticated, service_role;
+
+-------------------------------------------------
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS fcm_token TEXT DEFAULT NULL;
+
+-- Tách ra thành 2 cột riêng biệt: web_fcm_token và app_fcm_token. Backend sẽ gửi song song đến cả 2 token.
+ALTER TABLE public.users RENAME COLUMN fcm_token TO web_fcm_token;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS app_fcm_token TEXT DEFAULT NULL;

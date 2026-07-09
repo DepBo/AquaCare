@@ -5,26 +5,37 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/staff_screen.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/fcm_service.dart';
+
+// Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  await Firebase.initializeApp();
+  FCMService.instance.initPushNotifications();
+
   await GoogleSignIn.instance.initialize(
-    serverClientId: '184096169998-40s8fv9eg9jlhuhsqvlspsopai1k1rgn.apps.googleusercontent.com',
+    serverClientId:
+        '184096169998-40s8fv9eg9jlhuhsqvlspsopai1k1rgn.apps.googleusercontent.com',
   );
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
 
   await Supabase.initialize(
     url: 'https://nwmeysspxfgqxtvxeuil.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53bWV5c3NweGZncXh0dnhldWlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjIwNTM4NSwiZXhwIjoyMDk3NzgxMzg1fQ.mZUzdQH9Hj7faBB9SuOYXYc4YEU5-ttmscbjEH_C5-I',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53bWV5c3NweGZncXh0dnhldWlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjIwNTM4NSwiZXhwIjoyMDk3NzgxMzg1fQ.mZUzdQH9Hj7faBB9SuOYXYc4YEU5-ttmscbjEH_C5-I',
   );
 
   final prefs = await SharedPreferences.getInstance();
@@ -35,7 +46,13 @@ void main() async {
   if (refreshToken != null && refreshToken.isNotEmpty) {
     try {
       await Supabase.instance.client.auth.setSession(refreshToken);
-      debugPrint('✅ [SUCCESS]: Khôi phục Supabase session từ main.dart thành công.');
+      debugPrint(
+        '✅ [SUCCESS]: Khôi phục Supabase session từ main.dart thành công.',
+      );
+      
+      // Đồng bộ FCM Token lên database sau khi đã đăng nhập
+      await FCMService.instance.syncTokenToSupabase();
+
       if (role == 'admin') {
         initialScreen = const AdminScreen();
       } else if (role == 'staff') {
@@ -60,6 +77,7 @@ class AquaCareApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AquaCare',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
