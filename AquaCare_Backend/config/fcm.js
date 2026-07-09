@@ -1,6 +1,14 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getMessaging } = require('firebase-admin/messaging');
-const serviceAccount = require('./firebase-service-account.json');
+
+// Ưu tiên đọc từ biến môi trường (Production/Render)
+// Nếu không có, fallback về file JSON trên máy local
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+  serviceAccount = require('./firebase-service-account.json');
+}
 
 initializeApp({
   credential: cert(serviceAccount)
