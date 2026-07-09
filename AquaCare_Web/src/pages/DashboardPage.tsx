@@ -895,13 +895,17 @@ export default function DashboardPage() {
     if (userInfo?.id) {
       // Khôi phục avatar_url nếu backend login không trả về
       if (!userInfo.avatar_url) {
-        supabase.from('users').select('avatar_url').eq('id', userInfo.id).single().then(({ data }) => {
+        supabase.from('users').select('avatar_url').eq('id', userInfo.id).single().then(({ data, error }) => {
+          if (error) {
+            console.log('Error fetching avatar:', error)
+            return
+          }
           if (data?.avatar_url) {
             const updated = { ...userInfo, avatar_url: data.avatar_url }
             localStorage.setItem('user_info', JSON.stringify(updated))
             setCurrentUserInfo(updated)
           }
-        }).catch(err => console.log('Error fetching avatar:', err))
+        })
       }
 
       supabase.from('tanks').select('*, fish_species(*), devices(mac_address)').eq('user_id', userInfo.id).then(({ data }) => {
