@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'services/fcm_service.dart';
 
 // Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
@@ -17,8 +18,10 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
-  FCMService.instance.initPushNotifications();
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    FCMService.instance.initPushNotifications();
+  }
 
   await GoogleSignIn.instance.initialize(
     serverClientId:
@@ -50,8 +53,10 @@ void main() async {
         '✅ [SUCCESS]: Khôi phục Supabase session từ main.dart thành công.',
       );
       
-      // Đồng bộ FCM Token lên database sau khi đã đăng nhập
-      await FCMService.instance.syncTokenToSupabase();
+      // Đồng bộ FCM Token lên database sau khi đã đăng nhập (chỉ mobile)
+      if (!kIsWeb) {
+        await FCMService.instance.syncTokenToSupabase();
+      }
 
       if (role == 'admin') {
         initialScreen = const AdminScreen();
