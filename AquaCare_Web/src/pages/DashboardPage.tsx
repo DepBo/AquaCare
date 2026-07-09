@@ -4,7 +4,7 @@ import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, SlidersHorizontal, Lightbulb, Power, ArrowLeft, ArrowRight,
-  Sun, Moon
+  Sun, Moon, Wind
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { requestNotificationPermission, messaging } from '../config/firebase'
@@ -303,14 +303,15 @@ function PondDropdown({
 // ── DrillDownHistory Component ────────────────────────────────
 function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selectedSensor: keyof SensorData, activeDevice: number | null, selectedCfg: any }) {
   const [filter, setFilter] = useState<'today' | 'yesterday' | '7days' | 'custom'>('today');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Tốt' | 'Cảnh báo' | 'Nguy hiểm'>('all');
   const [customStart, setCustomStart] = useState(new Date().toISOString().split('T')[0]);
   const [customEnd, setCustomEnd] = useState(new Date().toISOString().split('T')[0]);
   const [page, setPage] = useState(1);
   const [dataL1, setDataL1] = useState<any[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [dataL2, setDataL2] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<string[]>([]);
+  const [dataL2, setDataL2] = useState<Record<string, any[]>>({});
   const [loadingL1, setLoadingL1] = useState(false);
-  const [loadingL2, setLoadingL2] = useState(false);
+  const [loadingL2, setLoadingL2] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!activeDevice) return;
@@ -416,60 +417,67 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
         });
         setDataL1(l1);
         setPage(1);
-        setExpanded(null);
+        setExpanded([]);
+        setDataL2({});
       }
       setLoadingL1(false);
     };
     fetchL1();
   }, [filter, activeDevice, selectedSensor, customStart, customEnd, selectedCfg]);
 
-  useEffect(() => {
-    if (!expanded || !activeDevice) return;
-    const fetchL2 = async () => {
-      setLoadingL2(true);
-      const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
-      if (!devices || devices.length === 0) return;
-      const deviceId = devices[0].id;
+  const fetchL2 = async (time: string) => {
+    setLoadingL2(prev => ({ ...prev, [time]: true }));
+    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+    if (!devices || devices.length === 0) return;
+    const deviceId = devices[0].id;
 
-      const [datePart, timePart] = expanded.split(' ');
-      const [day, month, year] = datePart.split('/');
-      const [hour] = timePart.split(':');
+    const [datePart, timePart] = time.split(' ');
+    const [day, month, year] = datePart.split('/');
+    const [hour] = timePart.split(':');
 
-      const start = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0);
-      const end = new Date(start);
-      end.setHours(start.getHours() + 1);
+    const start = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
 
-      const { data } = await supabase.from('telemetry_logs')
-        .select(`recorded_at, temp, ph, tds, water_level_ok`)
-        .eq('device_id', deviceId)
-        .gte('recorded_at', start.toISOString())
-        .lt('recorded_at', end.toISOString())
-        .order('recorded_at', { ascending: true });
+    const { data } = await supabase.from('telemetry_logs')
+      .select(`recorded_at, temp, ph, tds, water_level_ok`)
+      .eq('device_id', deviceId)
+      .gte('recorded_at', start.toISOString())
+      .lt('recorded_at', end.toISOString())
+      .order('recorded_at', { ascending: true });
 
-      if (data) {
-        const l2 = data.map(row => {
-          const d = new Date(row.recorded_at);
-          const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          const val = selectedSensor === 'waterLevel' ? (row.water_level_ok ? 1 : 0) : Number(row[selectedSensor]);
-          return { time, value: val };
-        });
-        setDataL2(l2);
-      }
-      setLoadingL2(false);
-    };
-    fetchL2();
-  }, [expanded, activeDevice, selectedSensor]);
+    if (data) {
+      const l2 = data.map(row => {
+        const d = new Date(row.recorded_at);
+        const t = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const val = selectedSensor === 'waterLevel' ? (row.water_level_ok ? 1 : 0) : Number(row[selectedSensor]);
+        return { time: t, value: val };
+      });
+      setDataL2(prev => ({ ...prev, [time]: l2 }));
+    }
+    setLoadingL2(prev => ({ ...prev, [time]: false }));
+  };
+
+  const filteredDataL1 = dataL1.filter(row => {
+    if (statusFilter === 'all') return true;
+    let mappedLabel = row.sl;
+    if (mappedLabel === 'Ổn định') mappedLabel = 'Tốt';
+    if (mappedLabel === 'Cạn nước') mappedLabel = 'Nguy hiểm';
+    return mappedLabel === statusFilter;
+  });
 
   const itemsPerPage = 12;
-  const totalPages = Math.ceil(dataL1.length / itemsPerPage) || 1;
-  const currentData = dataL1.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const totalPages = Math.ceil(filteredDataL1.length / itemsPerPage) || 1;
+  const currentData = filteredDataL1.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const toggleExpand = (time: string) => {
-    if (expanded === time) {
-      setExpanded(null);
+    if (expanded.includes(time)) {
+      setExpanded(expanded.filter(t => t !== time));
     } else {
-      setExpanded(time);
-      setDataL2([]);
+      setExpanded([...expanded, time]);
+      if (!dataL2[time]) {
+        fetchL2(time);
+      }
     }
   };
 
@@ -483,6 +491,23 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
             <input type="date" value={customStart} onChange={e => { setCustomStart(e.target.value); setFilter('custom'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }} />
             <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>đến:</span>
             <input type="date" value={customEnd} onChange={e => { setCustomEnd(e.target.value); setFilter('custom'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'Tốt', label: 'Tốt' },
+              { id: 'Cảnh báo', label: 'Cảnh báo' },
+              { id: 'Nguy hiểm', label: 'Nguy hiểm' }
+            ].map(f => (
+              <button key={f.id} onClick={() => { setStatusFilter(f.id as any); setPage(1); }} style={{
+                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 200ms',
+                background: statusFilter === f.id ? (f.id === 'Tốt' ? '#00A896' : f.id === 'Cảnh báo' ? '#FFB347' : f.id === 'Nguy hiểm' ? '#FF6B6B' : '#3B82F6') : 'var(--bg-btn-cancel)',
+                color: statusFilter === f.id ? '#fff' : 'var(--text-secondary)'
+              }}>
+                {f.label}
+              </button>
+            ))}
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -523,9 +548,11 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
           </div>
 
           {currentData.map(row => {
-            const isExpanded = expanded === row.time;
+            const isExpanded = expanded.includes(row.time);
             const sc = row.sc;
             const sl = row.sl;
+            const l2Data = dataL2[row.time] || [];
+            const isLoading = loadingL2[row.time];
 
             return (
               <div key={row.time} style={{ display: 'flex', flexDirection: 'column', background: isExpanded ? 'var(--bg-btn-cancel)' : 'transparent', borderRadius: 12, transition: 'background 200ms' }}>
@@ -553,15 +580,15 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
 
                 {isExpanded && (
                   <div style={{ background: 'transparent', padding: '16px 16px 16px 40px', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
-                    {loadingL2 ? (
+                    {isLoading ? (
                       <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Đang tải chi tiết...</div>
-                    ) : dataL2.length === 0 ? (
+                    ) : l2Data.length === 0 ? (
                       <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>Không có dữ liệu chi tiết.</div>
                     ) : (
                       <>
                         <div style={{ marginBottom: 16 }}>
-                          <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-secondary)' }}>Biểu đồ chi tiết ({dataL2.length} phút)</h4>
-                          <Sparkline data={dataL2} color={selectedCfg.color} height={60} />
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-secondary)' }}>Biểu đồ chi tiết ({l2Data.length} phút)</h4>
+                          <Sparkline data={l2Data} color={selectedCfg.color} height={60} />
                         </div>
                         <div className="custom-scrollbar" style={{ maxHeight: 250, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border-color)', padding: '8px 12px' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -573,7 +600,7 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
                               </tr>
                             </thead>
                             <tbody>
-                              {dataL2.map((d, i) => {
+                              {l2Data.map((d: any, i: number) => {
                                 const c = statusColor(d.value, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
                                 const l = statusLabel(d.value, selectedCfg.good, selectedCfg.warn, selectedCfg.key);
                                 return (
@@ -655,10 +682,13 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'control' | 'sensors' | 'alerts'>('overview')
   const [pumpState, setPumpState] = useState(false)
   const [lightState, setLightState] = useState(false)
+  const [oxyState, setOxyState] = useState(false)
   const [pumpOnTime, setPumpOnTime] = useState('')
   const [pumpOffTime, setPumpOffTime] = useState('')
   const [lightOnTime, setLightOnTime] = useState('')
   const [lightOffTime, setLightOffTime] = useState('')
+  const [oxyOnTime, setOxyOnTime] = useState('')
+  const [oxyOffTime, setOxyOffTime] = useState('')
   const [ponds, setPonds] = useState<Pond[]>([])
   const [fishSpecies, setFishSpecies] = useState<FishSpecies[]>([])
   const [activeDevice, setActiveDevice] = useState<number | null>(null)
@@ -912,15 +942,18 @@ export default function DashboardPage() {
       await fetchSensorData();
 
       // 2. Lấy device_id tương ứng với bể cá
-      const { data: devices } = await supabase.from('devices').select('id, relay_pump_state, relay_light_state, pump_on_time, pump_off_time, light_on_time, light_off_time').eq('tank_id', activeDevice);
+      const { data: devices } = await supabase.from('devices').select('id, relay_pump_state, relay_light_state, relay_aerator_state, pump_on_time, pump_off_time, light_on_time, light_off_time, aerator_on_time, aerator_off_time').eq('tank_id', activeDevice);
       if (!devices || devices.length === 0) return;
       const deviceId = devices[0].id;
       setPumpState(Boolean(devices[0].relay_pump_state));
       setLightState(Boolean(devices[0].relay_light_state));
+      setOxyState(Boolean(devices[0].relay_aerator_state));
       setPumpOnTime(devices[0].pump_on_time || '');
       setPumpOffTime(devices[0].pump_off_time || '');
       setLightOnTime(devices[0].light_on_time || '');
       setLightOffTime(devices[0].light_off_time || '');
+      setOxyOnTime(devices[0].aerator_on_time || '');
+      setOxyOffTime(devices[0].aerator_off_time || '');
 
       // Lấy tất cả loại cảnh báo để thống kê
       const { data: statsData } = await supabase.from('alerts_history').select('alert_type').eq('tank_id', activeDevice)
@@ -1002,10 +1035,13 @@ export default function DashboardPage() {
             // Cập nhật lại các State của nút bấm và cấu hình giờ
             setPumpState(Boolean(newData.relay_pump_state));
             setLightState(Boolean(newData.relay_light_state));
+            setOxyState(Boolean(newData.relay_aerator_state));
             setPumpOnTime(newData.pump_on_time || '');
             setPumpOffTime(newData.pump_off_time || '');
             setLightOnTime(newData.light_on_time || '');
             setLightOffTime(newData.light_off_time || '');
+            setOxyOnTime(newData.aerator_on_time || '');
+            setOxyOffTime(newData.aerator_off_time || '');
           }
         )
         .subscribe();
@@ -1559,7 +1595,7 @@ export default function DashboardPage() {
 
           {/* ═══ TAB: CONTROL ═══ */}
           {activeTab === 'control' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24 }}>
 
               {/* Máy bơm nước */}
               <div style={{
@@ -1889,6 +1925,172 @@ export default function DashboardPage() {
                     onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500'}
                   >
                     Lưu hẹn giờ Đèn thủy sinh
+                  </button>
+                </div>
+              </div>
+
+              {/* Máy sục oxy */}
+              <div style={{
+                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
+                border: `1px solid ${oxyState ? '#3B82F6' : 'rgba(26,45,74,0.5)'}`,
+                transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 12,
+                      background: oxyState ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                      display: 'flex', justifyContent: 'center', alignItems: 'center',
+                      transition: 'all 200ms'
+                    }}>
+                      <Wind size={24} color={oxyState ? '#3B82F6' : 'var(--text-muted)'} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy sục oxy</h3>
+                      <p style={{ fontSize: 13, margin: 0, color: oxyState ? '#3B82F6' : 'var(--text-muted)', transition: 'color 200ms' }}>
+                        {oxyState ? 'Đang hoạt động' : 'Đang tắt'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const newState = !oxyState;
+                      const { data: dev, error } = await supabase.from('devices')
+                        .update({ relay_aerator_state: newState })
+                        .eq('tank_id', activeDevice)
+                        .select('id')
+                        .single();
+                      if (!error && dev) {
+                        setOxyState(newState);
+                        await supabase.from('relay_logs').insert({
+                          device_id: dev.id,
+                          relay_name: 'Aerator',
+                          action: newState ? 'ON' : 'OFF',
+                          triggered_by: 'USER'
+                        });
+                      }
+                    }}
+                    style={{
+                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                      background: oxyState ? '#3B82F6' : 'var(--btn-power-bg)',
+                      boxShadow: oxyState ? '0 0 20px rgba(59,130,246,0.4)' : 'none',
+                      display: 'flex', justifyContent: 'center', alignItems: 'center',
+                      transition: 'all 200ms', flexShrink: 0
+                    }}
+                  >
+                    <Power size={24} color={oxyState ? '#fff' : 'var(--text-secondary)'} />
+                  </button>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                  {(oxyOnTime || oxyOffTime) && (
+                    <div style={{
+                      background: 'var(--bg-btn-cancel)', border: '1px dashed #3B82F6', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                    }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                          Lịch tự động:
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                          {oxyOnTime && `Bật ${oxyOnTime}`}
+                          {oxyOnTime && oxyOffTime && ' - '}
+                          {oxyOffTime && `Tắt ${oxyOffTime}`}
+                        </span>
+                      </div>
+                      <button onClick={async () => {
+                        const { error } = await supabase.from('devices').update({ aerator_on_time: null, aerator_off_time: null }).eq('tank_id', activeDevice);
+                        if (!error) {
+                          setOxyOnTime('');
+                          setOxyOffTime('');
+                          showNotification('Đã hủy lịch hẹn Máy sục oxy');
+                        }
+                      }} style={{
+                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                      }}
+                      >Hủy lịch</button>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {['07:00', '09:00', '12:00'].map(t => (
+                        <button key={t} onClick={() => setOxyOnTime(t)} style={{
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOnTime === t ? '#3B82F6' : 'var(--border-color)'}`,
+                          background: oxyOnTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                          color: oxyOnTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                        }}>{t}</button>
+                      ))}
+                      <input type="time" value={oxyOnTime} onChange={e => setOxyOnTime(e.target.value)} style={{
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                      }}
+                        onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                      {['08:00', '10:00'].map(t => (
+                        <button key={t} onClick={() => setOxyOffTime(t)} style={{
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOffTime === t ? '#3B82F6' : 'var(--border-color)'}`,
+                          background: oxyOffTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                          color: oxyOffTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                        }}>{t}</button>
+                      ))}
+                      <input type="time" value={oxyOffTime} onChange={e => setOxyOffTime(e.target.value)} style={{
+                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                      }}
+                        onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
+                        <button key={item.l} onClick={() => {
+                          const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
+                          setOxyOffTime(d.toTimeString().slice(0, 5));
+                        }} style={{
+                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                        >{item.l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={async () => {
+                    const { error, data: dev } = await supabase.from('devices').update({
+                      aerator_on_time: oxyOnTime || null,
+                      aerator_off_time: oxyOffTime || null
+                    }).eq('tank_id', activeDevice).select('id').single();
+                    if (!error && dev) {
+                      await supabase.from('relay_logs').insert({
+                        device_id: dev.id,
+                        relay_name: 'Aerator',
+                        action: 'ON',
+                        triggered_by: 'AUTO'
+                      });
+                      showNotification('Đã lưu cấu hình thành công!');
+                    }
+                  }} style={{
+                    width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    background: theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6',
+                    border: theme === 'dark' ? '1px solid rgba(59,130,246,0.4)' : 'none',
+                    color: theme === 'dark' ? '#3B82F6' : '#fff',
+                    cursor: 'pointer', transition: 'all 200ms'
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.35)' : '#2563EB'}
+                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6'}
+                  >
+                    Lưu hẹn giờ Máy sục oxy
                   </button>
                 </div>
               </div>

@@ -148,7 +148,7 @@ class _SignupScreenState extends State<SignupScreen>
         role = 'user';
         final fullName =
             user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
-        await Supabase.instance.client.from('users').insert({
+        await Supabase.instance.client.from('users').upsert({
           'id': user.id,
           'email': user.email,
           'full_name': fullName,

@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'alerts_screen.dart';
 import '../widgets/alerts_pie_chart.dart';
 import 'control_screen.dart';
+import '../widgets/sensor_history_drill_down.dart';
+import 'package:intl/intl.dart';
 
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
@@ -144,6 +146,7 @@ final List<AlertItem> alertList = [
 ];
 
 // ──────────────────── DASHBOARD SCREEN ──────────────────────
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -161,6 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _currentTime = '';
   bool _liveDot = true;
   bool _isLoading = false;
+  int _selectedSensorIndex = 0;
 
   // ── Pond State ────────────────────────────────────────────
   List<Pond> _ponds = [];
@@ -1445,14 +1449,82 @@ class _DashboardScreenState extends State<DashboardScreen>
   //                   TAB: CẢM BIẾN
   // ══════════════════════════════════════════════════════════
   Widget _buildSensorsTab() {
-    return ListView.builder(
+    if (_currentSensors.isEmpty) return const SizedBox();
+    
+    return CustomScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-      itemCount: _currentSensors.length,
-      itemBuilder: (ctx, i) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: SensorDetailCard(sensor: _currentSensors[i]),
-      ),
+      slivers: [
+        // Thanh bộ lọc ngang các cảm biến
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _currentSensors.length,
+                itemBuilder: (ctx, i) {
+                  final s = _currentSensors[i];
+                  final isSelected = i == _selectedSensorIndex;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedSensorIndex = i;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isSelected ? s.color.withOpacity(0.15) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? s.color : Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        children: [
+                          Icon(s.icon, size: 16, color: isSelected ? s.color : Colors.white54),
+                          const SizedBox(width: 6),
+                          Text(
+                            s.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected ? s.color : Colors.white54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        
+        // Thẻ cảm biến được chọn
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SensorDetailCard(sensor: _currentSensors[_selectedSensorIndex]),
+          ),
+        ),
+
+        // Lịch sử dữ liệu Drill-down
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: SensorHistoryDrillDown(
+              activePondId: _activePondId,
+              sensor: _currentSensors[_selectedSensorIndex],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

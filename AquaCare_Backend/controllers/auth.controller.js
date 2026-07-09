@@ -25,13 +25,11 @@ exports.register = async (req, res) => {
       return res.status(500).json({ error: 'Không thể tạo người dùng trong hệ thống Auth' });
     }
 
-    // Bước 2: Insert thông tin vào bảng users
-    const { error: dbError } = await supabase.from('users').insert([{
-      id: user.id,
+    // Bước 2: Cập nhật thông tin vào bảng users (vì trigger db đã tự động tạo)
+    const { error: dbError } = await supabase.from('users').update({
       full_name: fullName,
-      email: email,
       phone: phone
-    }]);
+    }).eq('id', user.id);
 
     if (dbError) {
       // Rollback: Xóa user khỏi bảng auth.users nếu insert user thất bại
