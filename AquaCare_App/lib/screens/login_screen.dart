@@ -101,6 +101,7 @@ class _LoginScreenState extends State<LoginScreen>
         final userInfo = data['user_info'];
         final role = userInfo['role'];
         await prefs.setString('role', role);
+        await prefs.setString('user_info', jsonEncode(userInfo));
 
         Widget destination;
         if (role == 'admin') {
@@ -183,6 +184,17 @@ class _LoginScreenState extends State<LoginScreen>
       // Save to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('role', role);
+
+      // Lưu user_info (dùng lại biến user đã lấy từ res.user phía trên)
+      final userInfo = {
+        'id': user.id,
+        'email': user.email,
+        'full_name': user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '',
+        'avatar_url': user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        'role': role
+      };
+      await prefs.setString('user_info', jsonEncode(userInfo));
+
       if (res.session?.accessToken != null) {
         await prefs.setString('access_token', res.session!.accessToken);
       }
@@ -486,25 +498,14 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildBrandHeader() {
     return Row(
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF00A896).withOpacity(0.3),
-                blurRadius: 16,
-                spreadRadius: 0,
-              ),
-            ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
           ),
-          child: const Icon(Icons.water, color: Colors.white, size: 24),
         ),
         const SizedBox(width: 14),
         Column(

@@ -133,17 +133,11 @@ export default function SignupPage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
-          <div style={{
+          <img src="/logo.png" alt="AquaCare" style={{
             width: 48, height: 48, borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(135deg, #1B4F72, #00A896)',
-            boxShadow: '0 8px 32px rgba(0,229,160,0.25)',
-          }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22c-4 0-8-2-8-6 0-2 1-4 3-5l-2-3c-.5-.8.1-1.7 1-1.7h12c.9 0 1.5.9 1 1.7l-2 3c2 1 3 3 3 5 0 4-4 6-8 6z" />
-              <circle cx="9" cy="15" r="1" fill="white" /><circle cx="15" cy="15" r="1" fill="white" />
-            </svg>
-          </div>
+            objectFit: 'cover',
+            boxShadow: '0 8px 32px rgba(0, 229, 160, 0.25)',
+          }} />
           <div>
             <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', display: 'block' }}>AQUACARE</span>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Smart IoT Farming</span>

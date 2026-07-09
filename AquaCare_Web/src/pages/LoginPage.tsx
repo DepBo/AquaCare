@@ -52,6 +52,7 @@ export default function LoginPage() {
               id: user.id,
               email: user.email,
               full_name: meta.full_name || meta.name || 'Người dùng Google',
+              avatar_url: meta.avatar_url || meta.picture || '',
               role: 'user'
             })
             .select()
@@ -69,6 +70,7 @@ export default function LoginPage() {
         id: user.id,
         email: user.email,
         full_name: meta.full_name || meta.name || '',
+        avatar_url: meta.avatar_url || meta.picture || '',
         role,
       }))
 
@@ -111,6 +113,18 @@ export default function LoginPage() {
 
       localStorage.setItem('cs_auth', 'true')
       localStorage.setItem('access_token', data.access_token)
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token)
+        // Thiết lập Supabase session để các query có RLS hoạt động
+        try {
+          await supabase.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+          })
+        } catch (e) {
+          console.log('Could not set supabase session:', e)
+        }
+      }
       localStorage.setItem('user_info', JSON.stringify(data.user_info))
       localStorage.setItem('cs_role', data.user_info.role)
 
@@ -164,18 +178,11 @@ export default function LoginPage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
-          <div style={{
+          <img src="/logo.png" alt="AquaCare" style={{
             width: 48, height: 48, borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(135deg, #1B4F72, #00A896)',
-            boxShadow: '0 8px 32px rgba(0,229,160,0.25)',
-          }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22c-4 0-8-2-8-6 0-2 1-4 3-5l-2-3c-.5-.8.1-1.7 1-1.7h12c.9 0 1.5.9 1 1.7l-2 3c2 1 3 3 3 5 0 4-4 6-8 6z" />
-              <circle cx="9" cy="15" r="1" fill="white" />
-              <circle cx="15" cy="15" r="1" fill="white" />
-            </svg>
-          </div>
+            objectFit: 'cover',
+            boxShadow: '0 8px 32px rgba(0, 229, 160, 0.25)',
+          }} />
           <div>
             <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', display: 'block' }}>AQUACARE</span>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Smart IoT Farming</span>

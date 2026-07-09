@@ -45,6 +45,15 @@ interface FishSpecies {
 // ── Sinh dữ liệu giả ─────────────────────────────────────────
 const emptySensor = (): SensorData => ({ ph: [], tds: [], temp: [], waterLevel: [] })
 
+const getInitialsAvatar = (name: string) => {
+  if (!name) return 'U'
+  const words = name.trim().split(/\s+/)
+  if (words.length >= 2) {
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+  }
+  return words[0][0].toUpperCase()
+}
+
 // ── Sparkline ─────────────────────────────────────────────
 function Sparkline({ data, color, height = 60 }: { data: any[]; color: string; height?: number }) {
   if (data.length < 2) return null;
@@ -651,11 +660,108 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
   )
 }
 
+// ── Onboarding Component ──────────────────────────────────────
+function OnboardingContent({ isOverlay, onDismiss, onAddPond }: { isOverlay: boolean; onDismiss?: (neverShowAgain: boolean) => void; onAddPond: () => void }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      zIndex: isOverlay ? 1002 : 1, position: isOverlay ? 'fixed' : 'relative',
+      top: isOverlay ? '50%' : 'auto', left: isOverlay ? '50%' : 'auto',
+      transform: isOverlay ? 'translate(-50%, -50%)' : 'none',
+      width: '100%', maxWidth: 860, padding: 20,
+      margin: isOverlay ? 0 : 'auto'
+    }} onClick={e => e.stopPropagation()}>
+
+      <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <h1 style={{ fontSize: isOverlay ? 44 : 36, fontWeight: 900, margin: '0 0 12px', color: isOverlay ? '#fff' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          Chào mừng đến với AquaCare!
+        </h1>
+        <p style={{ fontSize: 15, color: isOverlay ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)', maxWidth: 540, margin: '0 auto', lineHeight: 1.6 }}>
+          Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 24, width: '100%', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {/* Card 1 */}
+        <div style={{
+          flex: '1 1 300px', background: 'var(--bg-card)', padding: '24px 28px 32px', borderRadius: 20,
+          color: 'var(--text-primary)', position: 'relative', maxWidth: 400,
+          boxShadow: isOverlay ? '0 24px 48px rgba(0,0,0,0.4)' : '0 12px 32px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(0, 168, 150, 0.2)',
+          display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #00A896, #028090)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 800, boxShadow: '0 8px 16px rgba(0,168,150,0.3)' }}>1</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Khám phá tính năng</h3>
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10 }}><div style={{ color: '#00A896', marginTop: 2 }}>❖</div><div><b>Tổng quan:</b> Theo dõi trạng thái chung của toàn hệ thống.</div></div>
+            <div style={{ display: 'flex', gap: 10 }}><div style={{ color: '#00A896', marginTop: 2 }}>❖</div><div><b>Cảm biến:</b> Phân tích biểu đồ dữ liệu chi tiết qua các mốc thời gian.</div></div>
+            <div style={{ display: 'flex', gap: 10 }}><div style={{ color: '#00A896', marginTop: 2 }}>❖</div><div><b>Điều khiển:</b> Điều khiển thiết bị từ xa.</div></div>
+            <div style={{ display: 'flex', gap: 10 }}><div style={{ color: '#00A896', marginTop: 2 }}>❖</div><div><b>Cảnh báo:</b> Quản lý các thông báo và cảnh báo quan trọng.</div></div>
+          </div>
+        </div>
+
+        {/* Card 2 */}
+        <div style={{
+          flex: '1 1 300px', background: 'var(--bg-card)', padding: '24px 28px 32px', borderRadius: 20,
+          color: 'var(--text-primary)', position: 'relative', maxWidth: 400,
+          boxShadow: isOverlay ? '0 24px 48px rgba(0,0,0,0.4)' : '0 12px 32px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(77, 166, 255, 0.2)',
+          display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #4DA6FF, #0066CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 800, boxShadow: '0 8px 16px rgba(77,166,255,0.3)' }}>2</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Bắt đầu sử dụng</h3>
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+            <p style={{ margin: 0 }}>
+              Để trải nghiệm đầy đủ các tính năng, hãy tạo bể cá đầu tiên của bạn. Bạn có thể chọn loại cá, thể tích nước và cấu hình thiết bị phần cứng (MAC Address) để hệ thống bắt đầu thu thập dữ liệu tự động.
+            </p>
+          </div>
+
+          {/* Nút thêm bể cá ngay trong card 2 nếu là Empty State */}
+          {!isOverlay && (
+            <div style={{ marginTop: 'auto', paddingTop: 24 }}>
+              <button onClick={onAddPond} style={{
+                width: '100%', padding: '12px 0', borderRadius: 12, fontSize: 15, fontWeight: 700,
+                background: 'linear-gradient(135deg, #00A896, #028090)', border: 'none', color: '#fff',
+                cursor: 'pointer', transition: 'all 200ms', boxShadow: '0 8px 24px rgba(0,168,150,0.3)'
+              }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                + Thêm bể cá mới
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isOverlay && onDismiss && (
+        <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end', width: '100%', maxWidth: 824, paddingRight: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+            <input type="checkbox" onChange={(e) => {
+              if (e.target.checked) {
+                onDismiss(true);
+              }
+            }} style={{ width: 20, height: 20, cursor: 'pointer', accentColor: '#00A896' }} />
+            Không hiển thị lại
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Component chính ───────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
   const userInfoStr = localStorage.getItem('user_info')
-  const currentUserInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
+  const [currentUserInfo, setCurrentUserInfo] = useState<any>(userInfoStr ? JSON.parse(userInfoStr) : {})
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [pondsLoaded, setPondsLoaded] = useState(false)
+  const [hideOnboarding, setHideOnboarding] = useState(() => localStorage.getItem('hide_onboarding') === 'true')
   const [sensorData, setSensorData] = useState<SensorData>(emptySensor())
   const [selectedSensor, setSelectedSensor] = useState<keyof SensorData>('ph')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -732,9 +838,16 @@ export default function DashboardPage() {
   const [alertSeverity, setAlertSeverity] = useState<string>('both')
   const [dialogError, setDialogError] = useState('')
 
-  // Bảo vệ route
+  // Bảo vệ route & khôi phục Supabase session
   useEffect(() => {
-    if (!localStorage.getItem('cs_auth')) navigate('/login')
+    if (!localStorage.getItem('cs_auth')) { navigate('/login'); return }
+    // Khôi phục Supabase session để các query có RLS hoạt động
+    const accessToken = localStorage.getItem('access_token')
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (accessToken && refreshToken) {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .catch(e => console.log('Could not restore supabase session:', e))
+    }
   }, [navigate])
 
   // Tự động kiểm tra và xin quyền Web Push khi truy cập Dashboard
@@ -780,6 +893,17 @@ export default function DashboardPage() {
 
     const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
     if (userInfo?.id) {
+      // Khôi phục avatar_url nếu backend login không trả về
+      if (!userInfo.avatar_url) {
+        supabase.from('users').select('avatar_url').eq('id', userInfo.id).single().then(({ data }) => {
+          if (data?.avatar_url) {
+            const updated = { ...userInfo, avatar_url: data.avatar_url }
+            localStorage.setItem('user_info', JSON.stringify(updated))
+            setCurrentUserInfo(updated)
+          }
+        }).catch(err => console.log('Error fetching avatar:', err))
+      }
+
       supabase.from('tanks').select('*, fish_species(*), devices(mac_address)').eq('user_id', userInfo.id).then(({ data }) => {
         if (data) {
           const mapped = data.map((t: any) => ({
@@ -793,9 +917,16 @@ export default function DashboardPage() {
           setPonds(mapped)
           if (mapped.length > 0) setActiveDevice(mapped[0].id)
         }
+        setPondsLoaded(true)
       })
+    } else {
+      setPondsLoaded(true)
     }
   }, [])
+
+  const hasTanks = ponds.length > 0;
+  const showFullOverlay = pondsLoaded && !hasTanks && !hideOnboarding;
+  const showEmptyState = pondsLoaded && !hasTanks && hideOnboarding;
 
   // ── Fetch Sensor Data ─────────────────────────
   const fetchSensorData = async () => {
@@ -1254,14 +1385,12 @@ export default function DashboardPage() {
         background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)',
         backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
         transition: 'width 280ms cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden',
-        position: 'sticky', top: 0, height: '100vh',
+        position: 'sticky', top: 0, height: '100vh', zIndex: showFullOverlay ? 1001 : 10,
       }}>
         {/* Logo */}
         <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
           onClick={() => setSidebarOpen(o => !o)}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#1B4F72,#00A896)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,229,160,0.25)' }}>
-            <Fish size={18} color="var(--text-primary)" />
-          </div>
+          <img src="/logo.png" alt="AquaCare" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,229,160,0.25)' }} />
           {sidebarOpen && <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
         </div>
 
@@ -1294,9 +1423,77 @@ export default function DashboardPage() {
         {/* User + Logout */}
         <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {sidebarOpen && (
-            <div style={{ padding: '8px 12px', marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
+            <div style={{ padding: '8px 12px', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ position: 'relative' }}>
+                {currentUserInfo?.avatar_url ? (
+                  <img src={currentUserInfo.avatar_url} alt="Avatar" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,229,160,0.5)' }} />
+                ) : (
+                  <div style={{
+                    width: 40, height: 40, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #1B4F72, #00A896)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, fontWeight: 700, color: '#fff',
+                    border: '2px solid rgba(0,229,160,0.5)'
+                  }}>
+                    {getInitialsAvatar(currentUserInfo?.full_name || currentUserInfo?.name || '')}
+                  </div>
+                )}
+                <label style={{
+                  position: 'absolute', bottom: -2, right: -2,
+                  width: 18, height: 18, borderRadius: '50%', background: '#00A896',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: uploadingAvatar ? 'wait' : 'pointer', border: '2px solid var(--bg-sidebar)',
+                  color: '#fff'
+                }}>
+                  <Pencil size={10} />
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingAvatar} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      setUploadingAvatar(true);
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${currentUserInfo.id}_${Date.now()}.${fileExt}`;
+                      
+                      const { error: uploadError } = await supabase.storage
+                        .from('avatars')
+                        .upload(fileName, file, { upsert: true });
+                        
+                      if (uploadError) throw uploadError;
+                      
+                      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+                      
+                      const { error: updateError } = await supabase.auth.updateUser({
+                        data: { avatar_url: data.publicUrl }
+                      });
+                      
+                      if (updateError && !updateError.message.includes('Auth session missing')) {
+                        throw updateError;
+                      }
+                      
+                      const updatedInfo = { ...currentUserInfo, avatar_url: data.publicUrl };
+                      setCurrentUserInfo(updatedInfo);
+                      localStorage.setItem('user_info', JSON.stringify(updatedInfo));
+                      
+                      // Update public.users as a fallback just in case RLS allows it
+                      const { error: dbError } = await supabase.from('users').update({ avatar_url: data.publicUrl }).eq('id', currentUserInfo.id);
+                      if (dbError) {
+                        console.warn('Could not update public.users directly (expected if RLS blocks it without session):', dbError);
+                      }
+                      
+                    } catch (err: any) {
+                      console.error('Error uploading avatar:', err);
+                      alert('Lỗi: ' + (err.message || JSON.stringify(err)));
+                    } finally {
+                      setUploadingAvatar(false);
+                      if (e.target) e.target.value = '';
+                    }
+                  }} />
+                </label>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
+              </div>
             </div>
           )}
           <Link to="/" style={{
@@ -1325,7 +1522,7 @@ export default function DashboardPage() {
       <main style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* Top bar */}
-        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-topbar)', backdropFilter: 'blur(8px)', flexShrink: 0, zIndex: 10 }}>
+        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-topbar)', backdropFilter: showFullOverlay ? 'none' : 'blur(8px)', flexShrink: 0, zIndex: showFullOverlay ? 'auto' : 10, position: 'relative' }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               {activeTab === 'overview' && <><Home size={20} color="#00A896" /> Tổng quan hệ thống</>}
@@ -1348,7 +1545,7 @@ export default function DashboardPage() {
             )}
 
             {/* Custom Pond Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: showFullOverlay ? 1001 : 'auto', background: showFullOverlay ? 'var(--bg-card)' : 'transparent', padding: showFullOverlay ? '8px 12px' : 0, borderRadius: 12, boxShadow: showFullOverlay ? '0 0 0 4px rgba(0, 168, 150, 0.2), 0 0 24px rgba(0, 168, 150, 0.4)' : 'none', transition: 'all 300ms' }}>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Bể cá:</span>
               <PondDropdown
                 ponds={ponds}
@@ -1416,1040 +1613,1051 @@ export default function DashboardPage() {
 
         <div className="custom-scrollbar" style={{ padding: '24px 28px', opacity: loading ? 0.5 : 1, transition: 'opacity 300ms', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
 
-          {/* ═══ TAB: OVERVIEW ═══ */}
-          {activeTab === 'overview' && (
+          {(showEmptyState || showFullOverlay) ? (
+            showEmptyState && (
+              <OnboardingContent
+                isOverlay={false}
+                onAddPond={() => { setAddName(''); setAddVolume(''); setAddSpeciesId(0); setAddMacAddress(''); setDialogError(''); setAddDialog(true) }}
+              />
+            )
+          ) : (
             <>
-              {/* 4 Sensor Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
-                {SENSOR_CFG.map(cfg => {
-                  const val = latest[cfg.key]
-                  const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
-                  const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
-                  const histData = sensorData[cfg.key]
-                  const hist = histData.map(d => d.value)
-                  const prev = hist.at(-2) ?? val
-                  const delta = val - prev
-                  return (
-                    <div key={cfg.key}
-                      onClick={() => { setSelectedSensor(cfg.key); setActiveTab('sensors') }}
-                      style={{ padding: '20px', borderRadius: 16, background: 'var(--bg-card)', border: `1px solid ${cfg.color}18`, cursor: 'pointer', transition: 'all 220ms', position: 'relative', overflow: 'hidden' }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = `${cfg.color}40`; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = `${cfg.color}18`; e.currentTarget.style.transform = 'translateY(0)' }}
-                    >
-                      <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${cfg.color}08 0%, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <cfg.icon size={16} color={cfg.color} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{cfg.label}</div>
-                            <div style={{ fontSize: 9, color: sc, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{sl}</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: delta >= 0 ? '#00A896' : '#FF6B6B' }}>
-                          {delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                          {delta >= 0 ? '+' : ''}{delta.toFixed(2)}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 32, fontWeight: 700, color: sc, marginBottom: 12, letterSpacing: '-0.02em' }}>
-                        {cfg.key === 'waterLevel' ? '' : `${val}${cfg.unit}`}
-                      </div>
-                      {cfg.key === 'waterLevel' ? (
-                        <div style={{ marginTop: 16, height: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          <Droplets size={28} color={sc} />
-                          <span style={{ fontSize: 16, fontWeight: 600, color: sc, letterSpacing: '0.02em' }}>
-                            {val === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
-                          </span>
-                        </div>
-                      ) : (
-                        <>
-                          <Sparkline data={sensorData[cfg.key]} color={cfg.color} height={75} />
-                          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'var(--bg-btn-cancel)', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
-                            </div>
-                            <span style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
 
-              {/* Bottom charts row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Hoạt động 12 giờ qua</h3>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {SENSOR_CFG.map(cfg => (
-                        <button key={cfg.key} onClick={() => setHourlyActiveTab(cfg.key)} style={{
-                          padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, fontFamily: F, border: 'none', cursor: 'pointer', transition: 'all 150ms',
-                          background: hourlyActiveTab === cfg.key ? `${cfg.color}20` : 'transparent',
-                          color: hourlyActiveTab === cfg.key ? cfg.color : 'var(--text-muted)'
-                        }}>
-                          {cfg.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ height: 160, width: '100%', marginTop: 10 }}>
-                    {hourlyActiveTab === 'waterLevel' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0', height: '100%', justifyContent: 'center' }}>
-                        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                          {(hourlySensorData['waterLevel'].length > 0
-                            ? hourlySensorData['waterLevel']
-                            : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
-                          ).map((d, i) => (
-                            <div
-                              key={i}
-                              title={`${d.time} - ${d.value === 1 ? 'Ổn định' : 'Có khoảnh khắc cạn nước'}`}
-                              style={{
-                                flex: 1,
-                                height: 40,
-                                borderRadius: 6,
-                                background: d.value === 1 ? '#00A896' : '#FF6B6B',
-                                transition: 'transform 150ms',
-                                cursor: 'pointer'
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                            />
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                          {(hourlySensorData['waterLevel'].length > 0
-                            ? hourlySensorData['waterLevel']
-                            : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
-                          ).map((d, i) => (
-                            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)' }}>
-                              {d.time}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
-                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              {/* ═══ TAB: OVERVIEW ═══ */}
+              {activeTab === 'overview' && (
+                <>
+                  {/* 4 Sensor Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
+                    {SENSOR_CFG.map(cfg => {
+                      const val = latest[cfg.key]
+                      const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
+                      const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
+                      const histData = sensorData[cfg.key]
+                      const hist = histData.map(d => d.value)
+                      const prev = hist.at(-2) ?? val
+                      const delta = val - prev
+                      return (
+                        <div key={cfg.key}
+                          onClick={() => { setSelectedSensor(cfg.key); setActiveTab('sensors') }}
+                          style={{ padding: '20px', borderRadius: 16, background: 'var(--bg-card)', border: `1px solid ${cfg.color}18`, cursor: 'pointer', transition: 'all 220ms', position: 'relative', overflow: 'hidden' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = `${cfg.color}40`; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = `${cfg.color}18`; e.currentTarget.style.transform = 'translateY(0)' }}
                         >
-                          <XAxis
-                            dataKey="time"
-                            fontSize={10}
-                            tick={{ fill: 'var(--text-secondary)' }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            domain={['auto', 'auto']}
-                            tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            width={35}
-                            tickFormatter={(val) => val.toFixed(1)}
-                          />
-                          <Tooltip
-                            cursor={{ fill: 'rgba(0,0,0,0.1)' }}
-                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                            formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
-                            labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
-                            itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
-                          />
-                          <Bar
-                            dataKey="value"
-                            fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
-                            radius={[4, 4, 0, 0]}
-                            barSize={30}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-                <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
-                  {SENSOR_CFG.map(cfg => {
-                    const val = latest[cfg.key]
-                    const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
-                    const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
-                    return (
-                      <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <cfg.icon size={13} color={cfg.color} />
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cfg.label}</span>
+                          <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${cfg.color}08 0%, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <cfg.icon size={16} color={cfg.color} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{cfg.label}</div>
+                                <div style={{ fontSize: 9, color: sc, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{sl}</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: delta >= 0 ? '#00A896' : '#FF6B6B' }}>
+                              {delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                              {delta >= 0 ? '+' : ''}{delta.toFixed(2)}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 32, fontWeight: 700, color: sc, marginBottom: 12, letterSpacing: '-0.02em' }}>
+                            {cfg.key === 'waterLevel' ? '' : `${val}${cfg.unit}`}
+                          </div>
+                          {cfg.key === 'waterLevel' ? (
+                            <div style={{ marginTop: 16, height: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                              <Droplets size={28} color={sc} />
+                              <span style={{ fontSize: 16, fontWeight: 600, color: sc, letterSpacing: '0.02em' }}>
+                                {val === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <Sparkline data={sensorData[cfg.key]} color={cfg.color} height={75} />
+                              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'var(--bg-btn-cancel)', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
+                                </div>
+                                <span style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{val}{cfg.unit}</span>
-                          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: `${sc}18`, color: sc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sl}</span>
+                      )
+                    })}
+                  </div>
+
+                  {/* Bottom charts row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Hoạt động 12 giờ qua</h3>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {SENSOR_CFG.map(cfg => (
+                            <button key={cfg.key} onClick={() => setHourlyActiveTab(cfg.key)} style={{
+                              padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, fontFamily: F, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                              background: hourlyActiveTab === cfg.key ? `${cfg.color}20` : 'transparent',
+                              color: hourlyActiveTab === cfg.key ? cfg.color : 'var(--text-muted)'
+                            }}>
+                              {cfg.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ═══ TAB: CONTROL ═══ */}
-          {activeTab === 'control' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24 }}>
-
-              {/* Máy bơm nước */}
-              <div style={{
-                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                border: `1px solid ${pumpState ? '#00A896' : 'rgba(26,45,74,0.5)'}`,
-                transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 48, height: 48, borderRadius: 12,
-                      background: pumpState ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms'
-                    }}>
-                      <Droplets size={24} color={pumpState ? '#00A896' : 'var(--text-muted)'} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy bơm nước</h3>
-                      <p style={{ fontSize: 13, margin: 0, color: pumpState ? '#00A896' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                        {pumpState ? 'Đang hoạt động' : 'Đang tắt'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const newState = !pumpState;
-                      const { data: dev, error } = await supabase.from('devices')
-                        .update({ relay_pump_state: newState })
-                        .eq('tank_id', activeDevice)
-                        .select('id')
-                        .single();
-                      if (!error && dev) {
-                        setPumpState(newState);
-                        await supabase.from('relay_logs').insert({
-                          device_id: dev.id,
-                          relay_name: 'Pump',
-                          action: newState ? 'ON' : 'OFF',
-                          triggered_by: 'USER'
-                        });
-                      }
-                    }}
-                    style={{
-                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                      background: pumpState ? '#00A896' : 'var(--btn-power-bg)',
-                      boxShadow: pumpState ? '0 0 20px rgba(0,168,150,0.4)' : 'none',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms', flexShrink: 0
-                    }}
-                  >
-                    <Power size={24} color={pumpState ? '#fff' : 'var(--text-secondary)'} />
-                  </button>
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                  {(pumpOnTime || pumpOffTime) && (
-                    <div style={{
-                      background: 'var(--bg-btn-cancel)', border: '1px dashed #00A896', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                    }}>
-                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                          Lịch tự động:
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {pumpOnTime && `Bật ${pumpOnTime}`}
-                          {pumpOnTime && pumpOffTime && ' - '}
-                          {pumpOffTime && `Tắt ${pumpOffTime}`}
-                        </span>
+                      <div style={{ height: 160, width: '100%', marginTop: 10 }}>
+                        {hourlyActiveTab === 'waterLevel' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0', height: '100%', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+                              {(hourlySensorData['waterLevel'].length > 0
+                                ? hourlySensorData['waterLevel']
+                                : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
+                              ).map((d, i) => (
+                                <div
+                                  key={i}
+                                  title={`${d.time} - ${d.value === 1 ? 'Ổn định' : 'Có khoảnh khắc cạn nước'}`}
+                                  style={{
+                                    flex: 1,
+                                    height: 40,
+                                    borderRadius: 6,
+                                    background: d.value === 1 ? '#00A896' : '#FF6B6B',
+                                    transition: 'transform 150ms',
+                                    cursor: 'pointer'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                />
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+                              {(hourlySensorData['waterLevel'].length > 0
+                                ? hourlySensorData['waterLevel']
+                                : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
+                              ).map((d, i) => (
+                                <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)' }}>
+                                  {d.time}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
+                              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                            >
+                              <XAxis
+                                dataKey="time"
+                                fontSize={10}
+                                tick={{ fill: 'var(--text-secondary)' }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                domain={['auto', 'auto']}
+                                tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={35}
+                                tickFormatter={(val) => val.toFixed(1)}
+                              />
+                              <Tooltip
+                                cursor={{ fill: 'rgba(0,0,0,0.1)' }}
+                                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
+                                labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                                itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
+                              />
+                              <Bar
+                                dataKey="value"
+                                fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
+                                radius={[4, 4, 0, 0]}
+                                barSize={30}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
                       </div>
-                      <button onClick={async () => {
-                        const { error } = await supabase.from('devices').update({ pump_on_time: null, pump_off_time: null }).eq('tank_id', activeDevice);
-                        if (!error) {
-                          setPumpOnTime('');
-                          setPumpOffTime('');
-                          showNotification('Đã hủy lịch hẹn Máy bơm');
-                        }
-                      }} style={{
-                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                      }}
-                      >Hủy lịch</button>
                     </div>
-                  )}
-
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {['07:00', '09:00', '12:00'].map(t => (
-                        <button key={t} onClick={() => setPumpOnTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOnTime === t ? '#00A896' : 'var(--border-color)'}`,
-                          background: pumpOnTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                          color: pumpOnTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={pumpOnTime} onChange={e => setPumpOnTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
+                    <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                      <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
+                      {SENSOR_CFG.map(cfg => {
+                        const val = latest[cfg.key]
+                        const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
+                        const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
+                        return (
+                          <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <cfg.icon size={13} color={cfg.color} />
+                              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cfg.label}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{val}{cfg.unit}</span>
+                              <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: `${sc}18`, color: sc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sl}</span>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
+                </>
+              )}
 
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                      {['08:00', '10:00'].map(t => (
-                        <button key={t} onClick={() => setPumpOffTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOffTime === t ? '#00A896' : 'var(--border-color)'}`,
-                          background: pumpOffTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                          color: pumpOffTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={pumpOffTime} onChange={e => setPumpOffTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                        <button key={item.l} onClick={() => {
-                          const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                          setPumpOffTime(d.toTimeString().slice(0, 5));
-                        }} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                        >{item.l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <button onClick={async () => {
-                    const { error, data: dev } = await supabase.from('devices').update({
-                      pump_on_time: pumpOnTime || null,
-                      pump_off_time: pumpOffTime || null
-                    }).eq('tank_id', activeDevice).select('id').single();
-                    if (!error && dev) {
-                      await supabase.from('relay_logs').insert({
-                        device_id: dev.id,
-                        relay_name: 'Pump',
-                        action: 'ON',
-                        triggered_by: 'AUTO'
-                      });
-                      showNotification('Đã lưu cấu hình thành công!');
-                    }
-                  }} style={{
-                    width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    background: theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896',
-                    border: theme === 'dark' ? '1px solid rgba(0,168,150,0.4)' : 'none',
-                    color: theme === 'dark' ? '#00A896' : '#fff',
-                    cursor: 'pointer', transition: 'all 200ms'
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.35)' : '#008F80'}
-                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896'}
-                  >
-                    Lưu hẹn giờ Máy bơm
-                  </button>
-                </div>
-              </div>
+              {/* ═══ TAB: CONTROL ═══ */}
+              {activeTab === 'control' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24 }}>
 
-              {/* Đèn thủy sinh */}
-              <div style={{
-                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                border: `1px solid ${lightState ? '#FFB347' : 'rgba(26,45,74,0.5)'}`,
-                transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 48, height: 48, borderRadius: 12,
-                      background: lightState ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms'
-                    }}>
-                      <Lightbulb size={24} color={lightState ? '#FFB347' : 'var(--text-muted)'} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Đèn thủy sinh</h3>
-                      <p style={{ fontSize: 13, margin: 0, color: lightState ? '#FFB347' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                        {lightState ? 'Đang hoạt động' : 'Đang tắt'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const newState = !lightState;
-                      const { data: dev, error } = await supabase.from('devices')
-                        .update({ relay_light_state: newState })
-                        .eq('tank_id', activeDevice)
-                        .select('id')
-                        .single();
-                      if (!error && dev) {
-                        setLightState(newState);
-                        await supabase.from('relay_logs').insert({
-                          device_id: dev.id,
-                          relay_name: 'Light',
-                          action: newState ? 'ON' : 'OFF',
-                          triggered_by: 'USER'
-                        });
-                      }
-                    }}
-                    style={{
-                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                      background: lightState ? '#FFB347' : 'var(--btn-power-bg)',
-                      boxShadow: lightState ? '0 0 20px rgba(255,179,71,0.4)' : 'none',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms', flexShrink: 0
-                    }}
-                  >
-                    <Power size={24} color={lightState ? '#fff' : 'var(--text-secondary)'} />
-                  </button>
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                  {(lightOnTime || lightOffTime) && (
-                    <div style={{
-                      background: 'var(--bg-btn-cancel)', border: '1px dashed #FFB347', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                    }}>
-                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                          Lịch tự động:
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {lightOnTime && `Bật ${lightOnTime}`}
-                          {lightOnTime && lightOffTime && ' - '}
-                          {lightOffTime && `Tắt ${lightOffTime}`}
-                        </span>
+                  {/* Máy bơm nước */}
+                  <div style={{
+                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
+                    border: `1px solid ${pumpState ? '#00A896' : 'rgba(26,45,74,0.5)'}`,
+                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 12,
+                          background: pumpState ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms'
+                        }}>
+                          <Droplets size={24} color={pumpState ? '#00A896' : 'var(--text-muted)'} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy bơm nước</h3>
+                          <p style={{ fontSize: 13, margin: 0, color: pumpState ? '#00A896' : 'var(--text-muted)', transition: 'color 200ms' }}>
+                            {pumpState ? 'Đang hoạt động' : 'Đang tắt'}
+                          </p>
+                        </div>
                       </div>
-                      <button onClick={async () => {
-                        const { error } = await supabase.from('devices').update({ light_on_time: null, light_off_time: null }).eq('tank_id', activeDevice);
-                        if (!error) {
-                          setLightOnTime('');
-                          setLightOffTime('');
-                          showNotification('Đã hủy lịch hẹn Đèn thủy sinh');
-                        }
-                      }} style={{
-                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                      }}
-                      >Hủy lịch</button>
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {['07:00', '09:00', '12:00'].map(t => (
-                        <button key={t} onClick={() => setLightOnTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOnTime === t ? '#FFB347' : 'var(--border-color)'}`,
-                          background: lightOnTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                          color: lightOnTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={lightOnTime} onChange={e => setLightOnTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                      {['08:00', '10:00'].map(t => (
-                        <button key={t} onClick={() => setLightOffTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOffTime === t ? '#FFB347' : 'var(--border-color)'}`,
-                          background: lightOffTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                          color: lightOffTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={lightOffTime} onChange={e => setLightOffTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                        <button key={item.l} onClick={() => {
-                          const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                          setLightOffTime(d.toTimeString().slice(0, 5));
-                        }} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                      <button
+                        onClick={async () => {
+                          const newState = !pumpState;
+                          const { data: dev, error } = await supabase.from('devices')
+                            .update({ relay_pump_state: newState })
+                            .eq('tank_id', activeDevice)
+                            .select('id')
+                            .single();
+                          if (!error && dev) {
+                            setPumpState(newState);
+                            await supabase.from('relay_logs').insert({
+                              device_id: dev.id,
+                              relay_name: 'Pump',
+                              action: newState ? 'ON' : 'OFF',
+                              triggered_by: 'USER'
+                            });
+                          }
                         }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                        >{item.l}</button>
-                      ))}
+                        style={{
+                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                          background: pumpState ? '#00A896' : 'var(--btn-power-bg)',
+                          boxShadow: pumpState ? '0 0 20px rgba(0,168,150,0.4)' : 'none',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms', flexShrink: 0
+                        }}
+                      >
+                        <Power size={24} color={pumpState ? '#fff' : 'var(--text-secondary)'} />
+                      </button>
                     </div>
-                  </div>
-                  <button onClick={async () => {
-                    const { error, data: dev } = await supabase.from('devices').update({
-                      light_on_time: lightOnTime || null,
-                      light_off_time: lightOffTime || null
-                    }).eq('tank_id', activeDevice).select('id').single();
-                    if (!error && dev) {
-                      await supabase.from('relay_logs').insert({
-                        device_id: dev.id,
-                        relay_name: 'Light',
-                        action: 'ON',
-                        triggered_by: 'AUTO'
-                      });
-                      showNotification('Đã lưu cấu hình thành công!');
-                    }
-                  }} style={{
-                    width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    background: theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500',
-                    border: theme === 'dark' ? '1px solid rgba(255,179,71,0.4)' : 'none',
-                    color: theme === 'dark' ? '#FFB347' : '#fff',
-                    cursor: 'pointer', transition: 'all 200ms'
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.35)' : '#E08300'}
-                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500'}
-                  >
-                    Lưu hẹn giờ Đèn thủy sinh
-                  </button>
-                </div>
-              </div>
 
-              {/* Máy sục oxy */}
-              <div style={{
-                padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                border: `1px solid ${oxyState ? '#3B82F6' : 'rgba(26,45,74,0.5)'}`,
-                transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 48, height: 48, borderRadius: 12,
-                      background: oxyState ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms'
-                    }}>
-                      <Wind size={24} color={oxyState ? '#3B82F6' : 'var(--text-muted)'} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy sục oxy</h3>
-                      <p style={{ fontSize: 13, margin: 0, color: oxyState ? '#3B82F6' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                        {oxyState ? 'Đang hoạt động' : 'Đang tắt'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const newState = !oxyState;
-                      const { data: dev, error } = await supabase.from('devices')
-                        .update({ relay_aerator_state: newState })
-                        .eq('tank_id', activeDevice)
-                        .select('id')
-                        .single();
-                      if (!error && dev) {
-                        setOxyState(newState);
-                        await supabase.from('relay_logs').insert({
-                          device_id: dev.id,
-                          relay_name: 'Aerator',
-                          action: newState ? 'ON' : 'OFF',
-                          triggered_by: 'USER'
-                        });
-                      }
-                    }}
-                    style={{
-                      width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                      background: oxyState ? '#3B82F6' : 'var(--btn-power-bg)',
-                      boxShadow: oxyState ? '0 0 20px rgba(59,130,246,0.4)' : 'none',
-                      display: 'flex', justifyContent: 'center', alignItems: 'center',
-                      transition: 'all 200ms', flexShrink: 0
-                    }}
-                  >
-                    <Power size={24} color={oxyState ? '#fff' : 'var(--text-secondary)'} />
-                  </button>
-                </div>
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                      {(pumpOnTime || pumpOffTime) && (
+                        <div style={{
+                          background: 'var(--bg-btn-cancel)', border: '1px dashed #00A896', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                              Lịch tự động:
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {pumpOnTime && `Bật ${pumpOnTime}`}
+                              {pumpOnTime && pumpOffTime && ' - '}
+                              {pumpOffTime && `Tắt ${pumpOffTime}`}
+                            </span>
+                          </div>
+                          <button onClick={async () => {
+                            const { error } = await supabase.from('devices').update({ pump_on_time: null, pump_off_time: null }).eq('tank_id', activeDevice);
+                            if (!error) {
+                              setPumpOnTime('');
+                              setPumpOffTime('');
+                              showNotification('Đã hủy lịch hẹn Máy bơm');
+                            }
+                          }} style={{
+                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                          }}
+                          >Hủy lịch</button>
+                        </div>
+                      )}
 
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                  {(oxyOnTime || oxyOffTime) && (
-                    <div style={{
-                      background: 'var(--bg-btn-cancel)', border: '1px dashed #3B82F6', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                    }}>
-                      <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                          Lịch tự động:
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {oxyOnTime && `Bật ${oxyOnTime}`}
-                          {oxyOnTime && oxyOffTime && ' - '}
-                          {oxyOffTime && `Tắt ${oxyOffTime}`}
-                        </span>
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {['07:00', '09:00', '12:00'].map(t => (
+                            <button key={t} onClick={() => setPumpOnTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOnTime === t ? '#00A896' : 'var(--border-color)'}`,
+                              background: pumpOnTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
+                              color: pumpOnTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={pumpOnTime} onChange={e => setPumpOnTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
+                        </div>
                       </div>
-                      <button onClick={async () => {
-                        const { error } = await supabase.from('devices').update({ aerator_on_time: null, aerator_off_time: null }).eq('tank_id', activeDevice);
-                        if (!error) {
-                          setOxyOnTime('');
-                          setOxyOffTime('');
-                          showNotification('Đã hủy lịch hẹn Máy sục oxy');
-                        }
-                      }} style={{
-                        background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                      }}
-                      >Hủy lịch</button>
-                    </div>
-                  )}
 
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {['07:00', '09:00', '12:00'].map(t => (
-                        <button key={t} onClick={() => setOxyOnTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOnTime === t ? '#3B82F6' : 'var(--border-color)'}`,
-                          background: oxyOnTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                          color: oxyOnTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={oxyOnTime} onChange={e => setOxyOnTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                      {['08:00', '10:00'].map(t => (
-                        <button key={t} onClick={() => setOxyOffTime(t)} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOffTime === t ? '#3B82F6' : 'var(--border-color)'}`,
-                          background: oxyOffTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                          color: oxyOffTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}>{t}</button>
-                      ))}
-                      <input type="time" value={oxyOffTime} onChange={e => setOxyOffTime(e.target.value)} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                        background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                      }}
-                        onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                        <button key={item.l} onClick={() => {
-                          const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                          setOxyOffTime(d.toTimeString().slice(0, 5));
-                        }} style={{
-                          padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                          background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                        >{item.l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <button onClick={async () => {
-                    const { error, data: dev } = await supabase.from('devices').update({
-                      aerator_on_time: oxyOnTime || null,
-                      aerator_off_time: oxyOffTime || null
-                    }).eq('tank_id', activeDevice).select('id').single();
-                    if (!error && dev) {
-                      await supabase.from('relay_logs').insert({
-                        device_id: dev.id,
-                        relay_name: 'Aerator',
-                        action: 'ON',
-                        triggered_by: 'AUTO'
-                      });
-                      showNotification('Đã lưu cấu hình thành công!');
-                    }
-                  }} style={{
-                    width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                    background: theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6',
-                    border: theme === 'dark' ? '1px solid rgba(59,130,246,0.4)' : 'none',
-                    color: theme === 'dark' ? '#3B82F6' : '#fff',
-                    cursor: 'pointer', transition: 'all 200ms'
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.35)' : '#2563EB'}
-                    onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6'}
-                  >
-                    Lưu hẹn giờ Máy sục oxy
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* ═══ TAB: SENSORS ═══ */}
-          {activeTab === 'sensors' && (
-            <>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-                {SENSOR_CFG.map(cfg => (
-                  <button key={cfg.key}
-                    onClick={() => setSelectedSensor(cfg.key)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${selectedSensor === cfg.key ? cfg.color : 'var(--border-color)'}`, background: selectedSensor === cfg.key ? `${cfg.color}15` : 'var(--bg-btn-cancel)', color: selectedSensor === cfg.key ? cfg.color : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'all 180ms' }}
-                  >
-                    <cfg.icon size={13} />
-                    {cfg.label}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ padding: 24, borderRadius: 20, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}20`, marginBottom: 20 }}>
-                {selectedSensor === 'waterLevel' ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, flexDirection: 'column' }}>
-                    <selectedCfg.icon size={64} color={latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B'} style={{ marginBottom: 16 }} />
-                    <h2 style={{ fontSize: 24, fontWeight: 700, color: latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B' }}>
-                      {latest[selectedSensor] === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
-                    </h2>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                          <selectedCfg.icon size={18} color={selectedCfg.color} />
-                          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{selectedCfg.label}</h2>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                          {['08:00', '10:00'].map(t => (
+                            <button key={t} onClick={() => setPumpOffTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOffTime === t ? '#00A896' : 'var(--border-color)'}`,
+                              background: pumpOffTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
+                              color: pumpOffTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={pumpOffTime} onChange={e => setPumpOffTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
                         </div>
-                        <div style={{ fontSize: 38, fontWeight: 800, color: selectedCfg.color, letterSpacing: '-0.03em' }}>
-                          {latest[selectedSensor]}{selectedCfg.unit}
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
+                            <button key={item.l} onClick={() => {
+                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
+                              setPumpOffTime(d.toTimeString().slice(0, 5));
+                            }} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                            >{item.l}</button>
+                          ))}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Khoảng an toàn</div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: selectedCfg.color }}>{selectedCfg.good[0]}–{selectedCfg.good[1]}{selectedCfg.unit}</div>
+                      <button onClick={async () => {
+                        const { error, data: dev } = await supabase.from('devices').update({
+                          pump_on_time: pumpOnTime || null,
+                          pump_off_time: pumpOffTime || null
+                        }).eq('tank_id', activeDevice).select('id').single();
+                        if (!error && dev) {
+                          await supabase.from('relay_logs').insert({
+                            device_id: dev.id,
+                            relay_name: 'Pump',
+                            action: 'ON',
+                            triggered_by: 'AUTO'
+                          });
+                          showNotification('Đã lưu cấu hình thành công!');
+                        }
+                      }} style={{
+                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
+                        background: theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896',
+                        border: theme === 'dark' ? '1px solid rgba(0,168,150,0.4)' : 'none',
+                        color: theme === 'dark' ? '#00A896' : '#fff',
+                        cursor: 'pointer', transition: 'all 200ms'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.35)' : '#008F80'}
+                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896'}
+                      >
+                        Lưu hẹn giờ Máy bơm
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Đèn thủy sinh */}
+                  <div style={{
+                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
+                    border: `1px solid ${lightState ? '#FFB347' : 'rgba(26,45,74,0.5)'}`,
+                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 12,
+                          background: lightState ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms'
+                        }}>
+                          <Lightbulb size={24} color={lightState ? '#FFB347' : 'var(--text-muted)'} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Đèn thủy sinh</h3>
+                          <p style={{ fontSize: 13, margin: 0, color: lightState ? '#FFB347' : 'var(--text-muted)', transition: 'color 200ms' }}>
+                            {lightState ? 'Đang hoạt động' : 'Đang tắt'}
+                          </p>
+                        </div>
                       </div>
+                      <button
+                        onClick={async () => {
+                          const newState = !lightState;
+                          const { data: dev, error } = await supabase.from('devices')
+                            .update({ relay_light_state: newState })
+                            .eq('tank_id', activeDevice)
+                            .select('id')
+                            .single();
+                          if (!error && dev) {
+                            setLightState(newState);
+                            await supabase.from('relay_logs').insert({
+                              device_id: dev.id,
+                              relay_name: 'Light',
+                              action: newState ? 'ON' : 'OFF',
+                              triggered_by: 'USER'
+                            });
+                          }
+                        }}
+                        style={{
+                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                          background: lightState ? '#FFB347' : 'var(--btn-power-bg)',
+                          boxShadow: lightState ? '0 0 20px rgba(255,179,71,0.4)' : 'none',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms', flexShrink: 0
+                        }}
+                      >
+                        <Power size={24} color={lightState ? '#fff' : 'var(--text-secondary)'} />
+                      </button>
                     </div>
 
-                    <div style={{ height: 250, width: '100%', marginTop: 20 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={selectedHistory} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                          <defs>
-                            <linearGradient id="colorBig" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={selectedCfg.color} stopOpacity={0.4} />
-                              <stop offset="95%" stopColor={selectedCfg.color} stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={true} />
-                          <XAxis
-                            dataKey="time"
-                            stroke="var(--text-primary)"
-                            fontSize={11}
-                            tickMargin={12}
-                            minTickGap={15}
-                            tick={{ fill: 'var(--text-primary)' }}
-                            axisLine={{ stroke: 'var(--border-color)' }}
-                          />
-                          <YAxis
-                            stroke="var(--text-primary)"
-                            fontSize={11}
-                            domain={['dataMin', 'dataMax']}
-                            tickFormatter={(val) => val.toFixed(selectedCfg.key === 'ph' ? 2 : 1)}
-                            tick={{ fill: 'var(--text-primary)' }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <Tooltip
-                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                            formatter={(value: any) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
-                            labelFormatter={(label) => `Lúc ${label}`}
-                            labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
-                            itemStyle={{ color: selectedCfg.color, fontWeight: 700 }}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke={selectedCfg.color}
-                            fillOpacity={1}
-                            fill="url(#colorBig)"
-                            strokeWidth={3}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: selectedCfg.color }}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </>
-                )}
-              </div>
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                      {(lightOnTime || lightOffTime) && (
+                        <div style={{
+                          background: 'var(--bg-btn-cancel)', border: '1px dashed #FFB347', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                              Lịch tự động:
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {lightOnTime && `Bật ${lightOnTime}`}
+                              {lightOnTime && lightOffTime && ' - '}
+                              {lightOffTime && `Tắt ${lightOffTime}`}
+                            </span>
+                          </div>
+                          <button onClick={async () => {
+                            const { error } = await supabase.from('devices').update({ light_on_time: null, light_off_time: null }).eq('tank_id', activeDevice);
+                            if (!error) {
+                              setLightOnTime('');
+                              setLightOffTime('');
+                              showNotification('Đã hủy lịch hẹn Đèn thủy sinh');
+                            }
+                          }} style={{
+                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                          }}
+                          >Hủy lịch</button>
+                        </div>
+                      )}
 
-              {selectedSensor !== 'waterLevel' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-                  {[
-                    { label: 'Hiện tại', value: `${latest[selectedSensor]}${selectedCfg.unit}` },
-                    { label: 'Trung bình', value: `${(selectedHistory.reduce((a, d) => a + d.value, 0) / selectedHistory.length).toFixed(2)}${selectedCfg.unit}` },
-                    { label: 'Cao nhất', value: `${Math.max(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
-                    { label: 'Thấp nhất', value: `${Math.min(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
-                  ].map(s => (
-                    <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: selectedCfg.color }}>{s.value}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {['07:00', '09:00', '12:00'].map(t => (
+                            <button key={t} onClick={() => setLightOnTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOnTime === t ? '#FFB347' : 'var(--border-color)'}`,
+                              background: lightOnTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
+                              color: lightOnTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={lightOnTime} onChange={e => setLightOnTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                          {['08:00', '10:00'].map(t => (
+                            <button key={t} onClick={() => setLightOffTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOffTime === t ? '#FFB347' : 'var(--border-color)'}`,
+                              background: lightOffTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
+                              color: lightOffTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={lightOffTime} onChange={e => setLightOffTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
+                            <button key={item.l} onClick={() => {
+                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
+                              setLightOffTime(d.toTimeString().slice(0, 5));
+                            }} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                            >{item.l}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        const { error, data: dev } = await supabase.from('devices').update({
+                          light_on_time: lightOnTime || null,
+                          light_off_time: lightOffTime || null
+                        }).eq('tank_id', activeDevice).select('id').single();
+                        if (!error && dev) {
+                          await supabase.from('relay_logs').insert({
+                            device_id: dev.id,
+                            relay_name: 'Light',
+                            action: 'ON',
+                            triggered_by: 'AUTO'
+                          });
+                          showNotification('Đã lưu cấu hình thành công!');
+                        }
+                      }} style={{
+                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
+                        background: theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500',
+                        border: theme === 'dark' ? '1px solid rgba(255,179,71,0.4)' : 'none',
+                        color: theme === 'dark' ? '#FFB347' : '#fff',
+                        cursor: 'pointer', transition: 'all 200ms'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.35)' : '#E08300'}
+                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500'}
+                      >
+                        Lưu hẹn giờ Đèn thủy sinh
+                      </button>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Máy sục oxy */}
+                  <div style={{
+                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
+                    border: `1px solid ${oxyState ? '#3B82F6' : 'rgba(26,45,74,0.5)'}`,
+                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 12,
+                          background: oxyState ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms'
+                        }}>
+                          <Wind size={24} color={oxyState ? '#3B82F6' : 'var(--text-muted)'} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy sục oxy</h3>
+                          <p style={{ fontSize: 13, margin: 0, color: oxyState ? '#3B82F6' : 'var(--text-muted)', transition: 'color 200ms' }}>
+                            {oxyState ? 'Đang hoạt động' : 'Đang tắt'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const newState = !oxyState;
+                          const { data: dev, error } = await supabase.from('devices')
+                            .update({ relay_aerator_state: newState })
+                            .eq('tank_id', activeDevice)
+                            .select('id')
+                            .single();
+                          if (!error && dev) {
+                            setOxyState(newState);
+                            await supabase.from('relay_logs').insert({
+                              device_id: dev.id,
+                              relay_name: 'Aerator',
+                              action: newState ? 'ON' : 'OFF',
+                              triggered_by: 'USER'
+                            });
+                          }
+                        }}
+                        style={{
+                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
+                          background: oxyState ? '#3B82F6' : 'var(--btn-power-bg)',
+                          boxShadow: oxyState ? '0 0 20px rgba(59,130,246,0.4)' : 'none',
+                          display: 'flex', justifyContent: 'center', alignItems: 'center',
+                          transition: 'all 200ms', flexShrink: 0
+                        }}
+                      >
+                        <Power size={24} color={oxyState ? '#fff' : 'var(--text-secondary)'} />
+                      </button>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                      {(oxyOnTime || oxyOffTime) && (
+                        <div style={{
+                          background: 'var(--bg-btn-cancel)', border: '1px dashed #3B82F6', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                              Lịch tự động:
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {oxyOnTime && `Bật ${oxyOnTime}`}
+                              {oxyOnTime && oxyOffTime && ' - '}
+                              {oxyOffTime && `Tắt ${oxyOffTime}`}
+                            </span>
+                          </div>
+                          <button onClick={async () => {
+                            const { error } = await supabase.from('devices').update({ aerator_on_time: null, aerator_off_time: null }).eq('tank_id', activeDevice);
+                            if (!error) {
+                              setOxyOnTime('');
+                              setOxyOffTime('');
+                              showNotification('Đã hủy lịch hẹn Máy sục oxy');
+                            }
+                          }} style={{
+                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
+                          }}
+                          >Hủy lịch</button>
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {['07:00', '09:00', '12:00'].map(t => (
+                            <button key={t} onClick={() => setOxyOnTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOnTime === t ? '#3B82F6' : 'var(--border-color)'}`,
+                              background: oxyOnTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                              color: oxyOnTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={oxyOnTime} onChange={e => setOxyOnTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                          {['08:00', '10:00'].map(t => (
+                            <button key={t} onClick={() => setOxyOffTime(t)} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOffTime === t ? '#3B82F6' : 'var(--border-color)'}`,
+                              background: oxyOffTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
+                              color: oxyOffTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}>{t}</button>
+                          ))}
+                          <input type="time" value={oxyOffTime} onChange={e => setOxyOffTime(e.target.value)} style={{
+                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
+                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
+                          }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
+                            <button key={item.l} onClick={() => {
+                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
+                              setOxyOffTime(d.toTimeString().slice(0, 5));
+                            }} style={{
+                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
+                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
+                            }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                            >{item.l}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        const { error, data: dev } = await supabase.from('devices').update({
+                          aerator_on_time: oxyOnTime || null,
+                          aerator_off_time: oxyOffTime || null
+                        }).eq('tank_id', activeDevice).select('id').single();
+                        if (!error && dev) {
+                          await supabase.from('relay_logs').insert({
+                            device_id: dev.id,
+                            relay_name: 'Aerator',
+                            action: 'ON',
+                            triggered_by: 'AUTO'
+                          });
+                          showNotification('Đã lưu cấu hình thành công!');
+                        }
+                      }} style={{
+                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
+                        background: theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6',
+                        border: theme === 'dark' ? '1px solid rgba(59,130,246,0.4)' : 'none',
+                        color: theme === 'dark' ? '#3B82F6' : '#fff',
+                        cursor: 'pointer', transition: 'all 200ms'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.35)' : '#2563EB'}
+                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6'}
+                      >
+                        Lưu hẹn giờ Máy sục oxy
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
               )}
 
-              {/* Lịch sử dữ liệu Drill-down */}
-              <DrillDownHistory selectedSensor={selectedSensor} activeDevice={activeDevice} selectedCfg={selectedCfg} />
-            </>
-          )}
-
-          {/* ═══ TAB: ALERTS ═══ */}
-          {activeTab === 'alerts' && (
-            <div className="alerts-grid" style={{ display: 'grid', gap: 24, flex: 1, minHeight: 0 }}>
-              {/* Cột trái: Main Content */}
-              <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, overflowY: 'auto', paddingRight: 8 }}>
-                <div style={{ border: `1px solid ${alertGlobalColor}40`, borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
-                  <div style={{ padding: '16px 20px', background: alertGlobalBg, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {alerts.length
-                      ? <AlertTriangle size={20} color={alertGlobalColor} />
-                      : <CheckCircle size={20} color="#00A896" />}
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: alertGlobalColor }}>
-                        {alerts.length ? `${alerts.length} cảnh báo đang hoạt động` : 'Tất cả thông số trong ngưỡng an toàn'}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Cập nhật mỗi 3 giây</div>
-                    </div>
+              {/* ═══ TAB: SENSORS ═══ */}
+              {activeTab === 'sensors' && (
+                <>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+                    {SENSOR_CFG.map(cfg => (
+                      <button key={cfg.key}
+                        onClick={() => setSelectedSensor(cfg.key)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${selectedSensor === cfg.key ? cfg.color : 'var(--border-color)'}`, background: selectedSensor === cfg.key ? `${cfg.color}15` : 'var(--bg-btn-cancel)', color: selectedSensor === cfg.key ? cfg.color : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'all 180ms' }}
+                      >
+                        <cfg.icon size={13} />
+                        {cfg.label}
+                      </button>
+                    ))}
                   </div>
-                  {alerts.length > 0 && (
-                    <div style={{ padding: 16 }}>
-                      {alerts.map((a, i) => {
-                        const isWarn = a.level === 'warn';
-                        const color = isWarn ? '#FFB347' : '#FF6B6B';
-                        const bg = isWarn ? 'rgba(255,179,71,0.07)' : 'rgba(255,107,107,0.07)';
-                        const border = isWarn ? 'rgba(255,179,71,0.15)' : 'rgba(255,107,107,0.15)';
-                        return (
-                          <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: bg, border: `1px solid ${border}`, marginBottom: i < alerts.length - 1 ? 10 : 0, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <AlertTriangle size={14} color={color} style={{ flexShrink: 0 }} />
-                            {a.msg}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
 
-                <div>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
-                  {alerts.length === 0 ? (
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có cảnh báo nào cần xử lý.</div>
-                  ) : (
-                    alerts.map((a, i) => {
-                      const pondName = activePond?.name || 'Bể cá';
-                      let title = '';
-                      let desc = '';
-                      let AlertIcon = AlertTriangle;
-                      let iconColor = '#FF6B6B';
-
-                      if (a.level === 'warn') {
-                        title = `Cảnh báo sớm: ${a.label}`;
-                        desc = `${pondName} đang có dấu hiệu bất thường về ${a.label}. Vui lòng theo dõi và kiểm tra lại hệ thống.`;
-                        AlertIcon = AlertCircle;
-                        iconColor = '#FFB347';
-                      } else if (a.level === 'danger' && a.key === 'waterLevel') {
-                        title = `Nguy hiểm: Cạn nước`;
-                        desc = `${pondName} CẠN NƯỚC! Hãy kiểm tra van bơm ngay lập tức để cứu cá!`;
-                        AlertIcon = Droplets;
-                        iconColor = '#FF6B6B';
-                      } else {
-                        title = `Nguy hiểm: ${a.label} bất thường`;
-                        desc = `${pondName} đang gặp NGUY HIỂM! ${a.label} đã tụt giảm/tăng vọt bất thường về mức ${a.val}${a.unit}. Hãy đến kiểm tra bể và can thiệp ngay lập tức!`;
-                        AlertIcon = AlertTriangle;
-                        iconColor = '#FF6B6B';
-                      }
-
-                      // Bổ sung Gợi ý xử lý
-                      const cfg = SENSOR_CFG.find(c => c.key === a.key);
-                      if (cfg) {
-                        const isHigh = a.val > cfg.good[1];
-                        const isLow = a.val < cfg.good[0];
-
-                        if (a.key === 'temp') {
-                          if (isHigh) desc += "\nGợi ý: Bạn có thể bật quạt tản nhiệt/chiller hoặc thả đá lạnh (bọc túi nilon) để làm mát hồ cá từ từ.";
-                          else if (isLow) desc += "\nGợi ý: Bạn nên bật máy sưởi hồ cá để nâng nhiệt độ lên từ từ, tránh làm cá sốc nhiệt.";
-                        } else if (a.key === 'ph') {
-                          if (isHigh) desc += "\nGợi ý: Bạn có thể thay 20-30% nước hoặc sử dụng lá bàng/dung dịch giảm pH chuyên dụng.";
-                          else if (isLow) desc += "\nGợi ý: Bạn có thể bổ sung san hô vụn vào bộ lọc hoặc dùng dung dịch tăng pH.";
-                        } else if (a.key === 'tds') {
-                          desc += "\nGợi ý: Vui lòng thay 20-30% nước và kiểm tra lại vật liệu lọc của hệ thống máy bơm.";
-                        } else if (a.key === 'waterLevel') {
-                          desc += "\nGợi ý: Vui lòng châm thêm nước hoặc bật máy bơm. Kiểm tra xem hồ cá có bị rạn nứt hay rò rỉ ở đâu không.";
-                        }
-                      }
-
-                      return (
-                        <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', marginBottom: 8, display: 'flex', gap: 14 }}>
-                          <AlertIcon size={24} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ padding: 24, borderRadius: 20, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}20`, marginBottom: 20 }}>
+                    {selectedSensor === 'waterLevel' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, flexDirection: 'column' }}>
+                        <selectedCfg.icon size={64} color={latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B'} style={{ marginBottom: 16 }} />
+                        <h2 style={{ fontSize: 24, fontWeight: 700, color: latest[selectedSensor] === 1 ? '#00A896' : '#FF6B6B' }}>
+                          {latest[selectedSensor] === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
+                        </h2>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
                           <div>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{title}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                              <selectedCfg.icon size={18} color={selectedCfg.color} />
+                              <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{selectedCfg.label}</h2>
+                            </div>
+                            <div style={{ fontSize: 38, fontWeight: 800, color: selectedCfg.color, letterSpacing: '-0.03em' }}>
+                              {latest[selectedSensor]}{selectedCfg.unit}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Khoảng an toàn</div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: selectedCfg.color }}>{selectedCfg.good[0]}–{selectedCfg.good[1]}{selectedCfg.unit}</div>
                           </div>
                         </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
 
-              {/* Cột phải: Analytics & History */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, height: '100%' }}>
-                {/* Widget Thống kê */}
-                <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
-                  <div style={{ height: 220, width: '100%' }}>
-                    {alertDistData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart margin={{ top: 10, right: 0, bottom: 20, left: 0 }}>
-                          <defs>
-                            <filter id="pie3d" x="-20%" y="-20%" width="140%" height="140%">
-                              <feDropShadow dx="0" dy="6" stdDeviation="5" floodOpacity="0.3" floodColor="#000" />
-                              <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
-                              <feOffset dx="1" dy="2" result="offsetBlur" />
-                              <feComposite in="SourceGraphic" in2="offsetBlur" operator="over" />
-                            </filter>
-                          </defs>
-                          <Pie
-                            {...({ activeIndex: activePieIndex, activeShape: renderActiveShape } as any)}
-                            onMouseEnter={onPieEnter}
-                            data={alertDistData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={68}
-                            paddingAngle={6}
-                            stroke="none"
-                            cornerRadius={4}
-                          >
-                            {alertDistData.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} style={{ filter: theme === 'dark' ? 'url(#pie3d)' : 'none' }} />
-                            ))}
-                          </Pie>
-                          <Legend formatter={(value) => <span style={{ color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#000' }}>{value}</span>} wrapperStyle={{ fontSize: 11, bottom: -4 }} verticalAlign="bottom" height={30} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: 'var(--text-muted)' }}>
-                        Chưa có dữ liệu thống kê
-                      </div>
+                        <div style={{ height: 250, width: '100%', marginTop: 20 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={selectedHistory} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+                              <defs>
+                                <linearGradient id="colorBig" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={selectedCfg.color} stopOpacity={0.4} />
+                                  <stop offset="95%" stopColor={selectedCfg.color} stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={true} />
+                              <XAxis
+                                dataKey="time"
+                                stroke="var(--text-primary)"
+                                fontSize={11}
+                                tickMargin={12}
+                                minTickGap={15}
+                                tick={{ fill: 'var(--text-primary)' }}
+                                axisLine={{ stroke: 'var(--border-color)' }}
+                              />
+                              <YAxis
+                                stroke="var(--text-primary)"
+                                fontSize={11}
+                                domain={['dataMin', 'dataMax']}
+                                tickFormatter={(val) => val.toFixed(selectedCfg.key === 'ph' ? 2 : 1)}
+                                tick={{ fill: 'var(--text-primary)' }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <Tooltip
+                                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                formatter={(value: any) => [`${value} ${selectedCfg.unit}`, selectedCfg.label]}
+                                labelFormatter={(label) => `Lúc ${label}`}
+                                labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                                itemStyle={{ color: selectedCfg.color, fontWeight: 700 }}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke={selectedCfg.color}
+                                fillOpacity={1}
+                                fill="url(#colorBig)"
+                                strokeWidth={3}
+                                activeDot={{ r: 6, strokeWidth: 0, fill: selectedCfg.color }}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
                     )}
                   </div>
-                </div>
 
-                {/* Widget Lịch sử */}
-                <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-                    <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>
-                      <button
-                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice) }}
-                        disabled={currentHistoryPage === 0 || historyLoading}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: currentHistoryPage === 0 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
-                        onMouseEnter={e => { if (currentHistoryPage !== 0 && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                      >
-                        <ArrowLeft size={14} />
-                      </button>
+                  {selectedSensor !== 'waterLevel' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+                      {[
+                        { label: 'Hiện tại', value: `${latest[selectedSensor]}${selectedCfg.unit}` },
+                        { label: 'Trung bình', value: `${(selectedHistory.reduce((a, d) => a + d.value, 0) / selectedHistory.length).toFixed(2)}${selectedCfg.unit}` },
+                        { label: 'Cao nhất', value: `${Math.max(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
+                        { label: 'Thấp nhất', value: `${Math.min(...selectedHistory.map(d => d.value)).toFixed(2)}${selectedCfg.unit}` },
+                      ].map(s => (
+                        <div key={s.label} style={{ padding: '16px', borderRadius: 12, background: 'var(--bg-card)', border: `1px solid ${selectedCfg.color}15`, textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: selectedCfg.color }}>{s.value}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Trang</span>
-                        <input
-                          value={pageInput}
-                          onChange={e => setPageInput(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                              let p = parseInt(pageInput);
-                              const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
-                              if (isNaN(p) || p < 1) p = 1;
-                              if (p > maxP) p = maxP;
-                              setPageInput(p.toString());
-                              if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
-                            }
-                          }}
-                          onBlur={() => {
-                            let p = parseInt(pageInput);
-                            const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
-                            if (isNaN(p) || p < 1) p = 1;
-                            if (p > maxP) p = maxP;
-                            setPageInput(p.toString());
-                            if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
-                          }}
-                          style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 6,
-                            padding: '3px 0', width: 36, textAlign: 'center', fontWeight: 600, color: 'var(--text-primary)', outline: 'none'
-                          }}
-                        />
-                        <span style={{ color: 'var(--text-muted)' }}>của {Math.max(1, Math.ceil(historyTotalRecords / 10))}</span>
+                  {/* Lịch sử dữ liệu Drill-down */}
+                  <DrillDownHistory selectedSensor={selectedSensor} activeDevice={activeDevice} selectedCfg={selectedCfg} />
+                </>
+              )}
+
+              {/* ═══ TAB: ALERTS ═══ */}
+              {activeTab === 'alerts' && (
+                <div className="alerts-grid" style={{ display: 'grid', gap: 24, flex: 1, minHeight: 0 }}>
+                  {/* Cột trái: Main Content */}
+                  <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, overflowY: 'auto', paddingRight: 8 }}>
+                    <div style={{ border: `1px solid ${alertGlobalColor}40`, borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
+                      <div style={{ padding: '16px 20px', background: alertGlobalBg, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {alerts.length
+                          ? <AlertTriangle size={20} color={alertGlobalColor} />
+                          : <CheckCircle size={20} color="#00A896" />}
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: alertGlobalColor }}>
+                            {alerts.length ? `${alerts.length} cảnh báo đang hoạt động` : 'Tất cả thông số trong ngưỡng an toàn'}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Cập nhật mỗi 3 giây</div>
+                        </div>
                       </div>
+                      {alerts.length > 0 && (
+                        <div style={{ padding: 16 }}>
+                          {alerts.map((a, i) => {
+                            const isWarn = a.level === 'warn';
+                            const color = isWarn ? '#FFB347' : '#FF6B6B';
+                            const bg = isWarn ? 'rgba(255,179,71,0.07)' : 'rgba(255,107,107,0.07)';
+                            const border = isWarn ? 'rgba(255,179,71,0.15)' : 'rgba(255,107,107,0.15)';
+                            return (
+                              <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: bg, border: `1px solid ${border}`, marginBottom: i < alerts.length - 1 ? 10 : 0, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <AlertTriangle size={14} color={color} style={{ flexShrink: 0 }} />
+                                {a.msg}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
 
-                      <button
-                        onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage + 1, activeDevice) }}
-                        disabled={!historyHasNext || historyLoading}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: !historyHasNext ? 'var(--text-muted)' : 'var(--text-primary)', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
-                        onMouseEnter={e => { if (historyHasNext && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                      >
-                        <ArrowRight size={14} />
-                      </button>
+                    <div>
+                      <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
+                      {alerts.length === 0 ? (
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có cảnh báo nào cần xử lý.</div>
+                      ) : (
+                        alerts.map((a, i) => {
+                          const pondName = activePond?.name || 'Bể cá';
+                          let title = '';
+                          let desc = '';
+                          let AlertIcon = AlertTriangle;
+                          let iconColor = '#FF6B6B';
 
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12, marginLeft: 4 }}>
-                        {historyTotalRecords} cảnh báo
-                      </span>
+                          if (a.level === 'warn') {
+                            title = `Cảnh báo sớm: ${a.label}`;
+                            desc = `${pondName} đang có dấu hiệu bất thường về ${a.label}. Vui lòng theo dõi và kiểm tra lại hệ thống.`;
+                            AlertIcon = AlertCircle;
+                            iconColor = '#FFB347';
+                          } else if (a.level === 'danger' && a.key === 'waterLevel') {
+                            title = `Nguy hiểm: Cạn nước`;
+                            desc = `${pondName} CẠN NƯỚC! Hãy kiểm tra van bơm ngay lập tức để cứu cá!`;
+                            AlertIcon = Droplets;
+                            iconColor = '#FF6B6B';
+                          } else {
+                            title = `Nguy hiểm: ${a.label} bất thường`;
+                            desc = `${pondName} đang gặp NGUY HIỂM! ${a.label} đã tụt giảm/tăng vọt bất thường về mức ${a.val}${a.unit}. Hãy đến kiểm tra bể và can thiệp ngay lập tức!`;
+                            AlertIcon = AlertTriangle;
+                            iconColor = '#FF6B6B';
+                          }
+
+                          // Bổ sung Gợi ý xử lý
+                          const cfg = SENSOR_CFG.find(c => c.key === a.key);
+                          if (cfg) {
+                            const isHigh = a.val > cfg.good[1];
+                            const isLow = a.val < cfg.good[0];
+
+                            if (a.key === 'temp') {
+                              if (isHigh) desc += "\nGợi ý: Bạn có thể bật quạt tản nhiệt/chiller hoặc thả đá lạnh (bọc túi nilon) để làm mát hồ cá từ từ.";
+                              else if (isLow) desc += "\nGợi ý: Bạn nên bật máy sưởi hồ cá để nâng nhiệt độ lên từ từ, tránh làm cá sốc nhiệt.";
+                            } else if (a.key === 'ph') {
+                              if (isHigh) desc += "\nGợi ý: Bạn có thể thay 20-30% nước hoặc sử dụng lá bàng/dung dịch giảm pH chuyên dụng.";
+                              else if (isLow) desc += "\nGợi ý: Bạn có thể bổ sung san hô vụn vào bộ lọc hoặc dùng dung dịch tăng pH.";
+                            } else if (a.key === 'tds') {
+                              desc += "\nGợi ý: Vui lòng thay 20-30% nước và kiểm tra lại vật liệu lọc của hệ thống máy bơm.";
+                            } else if (a.key === 'waterLevel') {
+                              desc += "\nGợi ý: Vui lòng châm thêm nước hoặc bật máy bơm. Kiểm tra xem hồ cá có bị rạn nứt hay rò rỉ ở đâu không.";
+                            }
+                          }
+
+                          return (
+                            <div key={i} style={{ padding: '14px 18px', borderRadius: 12, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', marginBottom: 8, display: 'flex', gap: 14 }}>
+                              <AlertIcon size={24} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} />
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{title}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
                     </div>
                   </div>
-                  <div className="custom-scrollbar" style={{ background: theme === 'dark' ? 'var(--bg-card)' : '#F2F4F7', borderRadius: 12, border: '1px solid var(--border-color)', flex: 1, overflowY: 'auto' }}>
-                    {alertHistory.length === 0 ? (
-                      <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-                        Chưa có lịch sử cảnh báo nào
+
+                  {/* Cột phải: Analytics & History */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0, height: '100%' }}>
+                    {/* Widget Thống kê */}
+                    <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                      <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Phân bổ cảnh báo</h3>
+                      <div style={{ height: 220, width: '100%' }}>
+                        {alertDistData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart margin={{ top: 10, right: 0, bottom: 20, left: 0 }}>
+                              <defs>
+                                <filter id="pie3d" x="-20%" y="-20%" width="140%" height="140%">
+                                  <feDropShadow dx="0" dy="6" stdDeviation="5" floodOpacity="0.3" floodColor="#000" />
+                                  <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+                                  <feOffset dx="1" dy="2" result="offsetBlur" />
+                                  <feComposite in="SourceGraphic" in2="offsetBlur" operator="over" />
+                                </filter>
+                              </defs>
+                              <Pie
+                                {...({ activeIndex: activePieIndex, activeShape: renderActiveShape } as any)}
+                                onMouseEnter={onPieEnter}
+                                data={alertDistData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={50}
+                                outerRadius={68}
+                                paddingAngle={6}
+                                stroke="none"
+                                cornerRadius={4}
+                              >
+                                {alertDistData.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} style={{ filter: theme === 'dark' ? 'url(#pie3d)' : 'none' }} />
+                                ))}
+                              </Pie>
+                              <Legend formatter={(value) => <span style={{ color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#000' }}>{value}</span>} wrapperStyle={{ fontSize: 11, bottom: -4 }} verticalAlign="bottom" height={30} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: 'var(--text-muted)' }}>
+                            Chưa có dữ liệu thống kê
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                        <thead style={{ position: 'sticky', top: 0, background: '#152441', zIndex: 1 }}>
-                          <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Thời gian</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Loại</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Giá trị</th>
-                            <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Trạng thái</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {alertHistory.map(h => (
-                            <tr key={h.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                              <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{new Date(h.created_at).toLocaleString('vi-VN')}</td>
-                              <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{h.alert_type}</td>
-                              <td style={{ padding: '12px 16px', color: '#FF8C00', fontWeight: 500 }}>{h.actual_value}</td>
-                              <td style={{ padding: '12px 16px', color: h.is_read ? '#00A896' : '#FF6B6B' }}>
-                                {h.is_read ? 'Đã xem' : 'Mới'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                    </div>
+
+                    {/* Widget Lịch sử */}
+                    <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
+                        <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>
+                          <button
+                            onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice) }}
+                            disabled={currentHistoryPage === 0 || historyLoading}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: currentHistoryPage === 0 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: currentHistoryPage === 0 || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                            onMouseEnter={e => { if (currentHistoryPage !== 0 && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                          >
+                            <ArrowLeft size={14} />
+                          </button>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Trang</span>
+                            <input
+                              value={pageInput}
+                              onChange={e => setPageInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  let p = parseInt(pageInput);
+                                  const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
+                                  if (isNaN(p) || p < 1) p = 1;
+                                  if (p > maxP) p = maxP;
+                                  setPageInput(p.toString());
+                                  if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
+                                }
+                              }}
+                              onBlur={() => {
+                                let p = parseInt(pageInput);
+                                const maxP = Math.max(1, Math.ceil(historyTotalRecords / 10));
+                                if (isNaN(p) || p < 1) p = 1;
+                                if (p > maxP) p = maxP;
+                                setPageInput(p.toString());
+                                if (activeDevice && p - 1 !== currentHistoryPage) fetchAlertHistoryPage(p - 1, activeDevice);
+                              }}
+                              style={{
+                                background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 6,
+                                padding: '3px 0', width: 36, textAlign: 'center', fontWeight: 600, color: 'var(--text-primary)', outline: 'none'
+                              }}
+                            />
+                            <span style={{ color: 'var(--text-muted)' }}>của {Math.max(1, Math.ceil(historyTotalRecords / 10))}</span>
+                          </div>
+
+                          <button
+                            onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage + 1, activeDevice) }}
+                            disabled={!historyHasNext || historyLoading}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 6, color: !historyHasNext ? 'var(--text-muted)' : 'var(--text-primary)', cursor: !historyHasNext || historyLoading ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                            onMouseEnter={e => { if (historyHasNext && !historyLoading) e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                          >
+                            <ArrowRight size={14} />
+                          </button>
+
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12, marginLeft: 4 }}>
+                            {historyTotalRecords} cảnh báo
+                          </span>
+                        </div>
+                      </div>
+                      <div className="custom-scrollbar" style={{ background: theme === 'dark' ? 'var(--bg-card)' : '#F2F4F7', borderRadius: 12, border: '1px solid var(--border-color)', flex: 1, overflowY: 'auto' }}>
+                        {alertHistory.length === 0 ? (
+                          <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                            Chưa có lịch sử cảnh báo nào
+                          </div>
+                        ) : (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                            <thead style={{ position: 'sticky', top: 0, background: '#152441', zIndex: 1 }}>
+                              <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Thời gian</th>
+                                <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Loại</th>
+                                <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Giá trị</th>
+                                <th style={{ padding: '10px 16px', textAlign: 'left', color: '#fff', fontWeight: 600 }}>Trạng thái</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {alertHistory.map(h => (
+                                <tr key={h.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                  <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{new Date(h.created_at).toLocaleString('vi-VN')}</td>
+                                  <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{h.alert_type}</td>
+                                  <td style={{ padding: '12px 16px', color: '#FF8C00', fontWeight: 500 }}>{h.actual_value}</td>
+                                  <td style={{ padding: '12px 16px', color: h.is_read ? '#00A896' : '#FF6B6B' }}>
+                                    {h.is_read ? 'Đã xem' : 'Mới'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
-
         </div>
       </main>
 
@@ -2657,7 +2865,7 @@ export default function DashboardPage() {
               const res = await supabase.from('tank_notification_settings').insert({ tank_id: notificationDialog.id, ...payload });
               error = res.error;
             }
-            
+
             if (error) {
               setDialogError('Lỗi khi lưu cấu hình');
             } else {
@@ -2703,7 +2911,7 @@ export default function DashboardPage() {
               </label>
             </div>
           </div>
-          
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Thời gian khóa Cooldown (Nhắc lại)
@@ -2791,6 +2999,43 @@ export default function DashboardPage() {
         <CheckCircle size={18} />
         {notification.msg}
       </div>
+
+      {/* Overlay Hướng dẫn */}
+      {showFullOverlay && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(5, 15, 30, 0.85)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setHideOnboarding(true)}>
+          {/* Arrow 1: To Sidebar */}
+          <svg style={{ position: 'absolute', top: 120, left: sidebarOpen ? 260 : 80, width: 300, height: 200, pointerEvents: 'none', zIndex: 1003 }} viewBox="0 0 300 200">
+            <defs>
+              <marker id="arrow1" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                <path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#00A896" />
+              </marker>
+            </defs>
+            <path d="M 280 180 Q 150 180 20 40" fill="transparent" stroke="#00A896" strokeWidth="3" strokeDasharray="8,8" markerEnd="url(#arrow1)" />
+          </svg>
+
+          {/* Arrow 2: To Header */}
+          <svg style={{ position: 'absolute', top: 80, right: 280, width: 300, height: 200, pointerEvents: 'none', zIndex: 1003 }} viewBox="0 0 300 200">
+            <defs>
+              <marker id="arrow2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                <path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#4DA6FF" />
+              </marker>
+            </defs>
+            <path d="M 20 180 Q 150 180 280 40" fill="transparent" stroke="#4DA6FF" strokeWidth="3" strokeDasharray="8,8" markerEnd="url(#arrow2)" />
+          </svg>
+
+          <OnboardingContent
+            isOverlay={true}
+            onDismiss={(neverShowAgain) => {
+              if (neverShowAgain) localStorage.setItem('hide_onboarding', 'true');
+              setHideOnboarding(true);
+            }}
+            onAddPond={() => { }}
+          />
+        </div>
+      )}
 
       <style>{`
         /* ─── CSS Theme Variables ─── */

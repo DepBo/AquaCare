@@ -11,7 +11,12 @@ import '../widgets/alerts_pie_chart.dart';
 import 'control_screen.dart';
 import '../widgets/sensor_history_drill_down.dart';
 import 'package:intl/intl.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
+import 'dart:convert';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
   String id;
@@ -165,6 +170,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _liveDot = true;
   bool _isLoading = false;
   int _selectedSensorIndex = 0;
+  bool _hideOnboarding = false;
+  Map<String, dynamic>? _userInfo;
+  bool _isUploadingAvatar = false;
 
   // ── Pond State ────────────────────────────────────────────
   List<Pond> _ponds = [];
@@ -262,6 +270,141 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     _loadPonds();
+    _loadOnboardingPref();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userInfoStr = prefs.getString('user_info');
+    if (userInfoStr != null && mounted) {
+      Map<String, dynamic> parsedInfo = jsonDecode(userInfoStr);
+
+      // Nếu full_name rỗng, thử lấy từ Supabase Auth metadata
+      final storedName = (parsedInfo['full_name'] ?? parsedInfo['name'] ?? '') as String;
+      final authUser = Supabase.instance.client.auth.currentUser;
+
+      if (storedName.trim().isEmpty) {
+        final metaName = authUser?.userMetadata?['full_name'] ??
+            authUser?.userMetadata?['name'] ?? '';
+        if (metaName.toString().trim().isNotEmpty) {
+          parsedInfo['full_name'] = metaName;
+        } else {
+          try {
+            final userId = parsedInfo['id'];
+            if (userId != null) {
+              final data = await Supabase.instance.client
+                  .from('users')
+                  .select('full_name')
+                  .eq('id', userId)
+                  .maybeSingle();
+              final dbName = data?['full_name'] ?? '';
+              if (dbName.toString().trim().isNotEmpty) {
+                parsedInfo['full_name'] = dbName;
+              }
+            }
+          } catch (e) {
+            debugPrint('Error fetching full_name from DB: $e');
+          }
+        }
+      }
+
+      // Khôi phục avatar_url nếu backend login không trả về
+      if (parsedInfo['avatar_url'] == null || parsedInfo['avatar_url'].toString().isEmpty) {
+        final metaAvatar = authUser?.userMetadata?['avatar_url'] ?? authUser?.userMetadata?['picture'];
+        if (metaAvatar != null && metaAvatar.toString().isNotEmpty) {
+          parsedInfo['avatar_url'] = metaAvatar;
+        } else {
+          try {
+            final userId = parsedInfo['id'];
+            if (userId != null) {
+              final data = await Supabase.instance.client
+                  .from('users')
+                  .select('avatar_url')
+                  .eq('id', userId)
+                  .maybeSingle();
+              final dbAvatar = data?['avatar_url'] ?? '';
+              if (dbAvatar.toString().trim().isNotEmpty) {
+                parsedInfo['avatar_url'] = dbAvatar;
+              }
+            }
+          } catch (e) {
+            debugPrint('Error fetching avatar_url from DB: $e');
+          }
+        }
+      }
+
+      await prefs.setString('user_info', jsonEncode(parsedInfo));
+
+      setState(() {
+        _userInfo = parsedInfo;
+      });
+    }
+  }
+
+  String getInitialsAvatar(String? name) {
+    if (name == null || name.isEmpty) return 'U';
+    final words = name.trim().split(RegExp(r'\s+'));
+    if (words.length >= 2) {
+      return (words.first[0] + words.last[0]).toUpperCase();
+    }
+    return words.first[0].toUpperCase();
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    if (_userInfo == null) return;
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile == null) return;
+
+      setState(() => _isUploadingAvatar = true);
+
+      final bytes = await pickedFile.readAsBytes();
+      final fileExt = pickedFile.path.split('.').last;
+      final fileName = '${_userInfo!['id']}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+
+      await Supabase.instance.client.storage
+          .from('avatars')
+          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
+
+      final publicUrl = Supabase.instance.client.storage.from('avatars').getPublicUrl(fileName);
+
+      try {
+        await Supabase.instance.client.auth.updateUser(UserAttributes(data: {'avatar_url': publicUrl}));
+      } catch (e) {
+        debugPrint('Auth session missing, ignoring update user metadata');
+      }
+
+      try {
+        await Supabase.instance.client.from('users').update({'avatar_url': publicUrl}).eq('id', _userInfo!['id']);
+      } catch (e) {
+        debugPrint('RLS blocked public.users update');
+      }
+
+      _userInfo!['avatar_url'] = publicUrl;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_info', jsonEncode(_userInfo));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật ảnh đại diện thành công')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tải ảnh lên: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  Future<void> _loadOnboardingPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _hideOnboarding = prefs.getBool('hide_onboarding') ?? false;
+      });
+    }
   }
 
   Future<void> _loadPonds() async {
@@ -719,7 +862,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       opacity: _isLoading ? 0.35 : 1.0,
                       duration: const Duration(milliseconds: 250),
                       child: _activePondId.isEmpty
-                          ? const SizedBox.shrink()
+                          ? _buildOnboardingSection()
                           : StreamBuilder<List<Map<String, dynamic>>>(
                               stream: _telemetryStream,
                               builder: (context, snapshot) {
@@ -853,6 +996,217 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  Widget _buildFeatureRow(String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.widgets, size: 12, color: Color(0xFF00A896)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.5),
+                children: [
+                  TextSpan(text: '$title ', style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+                  TextSpan(text: desc),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnboardingSection() {
+    bool isOverlay = !_hideOnboarding;
+    
+    Widget content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isOverlay) ...[
+          Text('Chào mừng đến với AquaCare!', 
+            style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text('Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.white70, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+        // Card 1
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1A30),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF00A896).withOpacity(0.3)),
+            boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF00A896), Color(0xFF028090)]),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('1', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Khám phá tính năng', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildFeatureRow('Tổng quan:', 'Theo dõi trạng thái chung.'),
+              _buildFeatureRow('Cảm biến:', 'Phân tích biểu đồ dữ liệu.'),
+              _buildFeatureRow('Điều khiển:', 'Điều khiển thiết bị từ xa.'),
+              _buildFeatureRow('Cảnh báo:', 'Quản lý thông báo quan trọng.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Card 2
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1A30),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF4DA6FF).withOpacity(0.3)),
+            boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF4DA6FF), Color(0xFF0066CC)]),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('2', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Bắt đầu sử dụng', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text('Để trải nghiệm đầy đủ các tính năng, hãy tạo bể cá đầu tiên của bạn.',
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.5),
+              ),
+              if (!isOverlay) ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _showAddPondDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00A896),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('+ Thêm bể cá mới', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        
+        if (isOverlay) ...[
+          const SizedBox(height: 32),
+          GestureDetector(
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('hide_onboarding', true);
+              setState(() {
+                _hideOnboarding = true;
+              });
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 20, height: 20,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white54),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text('Không hiển thị lại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+
+    if (!isOverlay) {
+      return Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: content,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      color: Colors.black.withOpacity(0.85),
+      child: Stack(
+        children: [
+          // Arrow up (to "Chọn bể cá")
+          Positioned(
+            top: 10, right: 60,
+            width: 80, height: 60,
+            child: CustomPaint(
+              painter: ArrowPainter(color: const Color(0xFF4DA6FF), pointUp: true),
+            ),
+          ),
+          // Arrow down (to Bottom Tabs)
+          Positioned(
+            bottom: 10, left: 40,
+            width: 80, height: 80,
+            child: CustomPaint(
+              painter: ArrowPainter(color: const Color(0xFF00A896), pointUp: false),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: content,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ───────────────── TOP BAR ──────────────────────────────
   Widget _buildTopBar() {
     return Container(
@@ -868,25 +1222,55 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF00A896).withOpacity(0.3),
-                      blurRadius: 12,
+              // Avatar
+              GestureDetector(
+                onTap: _pickAndUploadAvatar,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF00E5A0).withOpacity(0.5), width: 1.5),
+                        gradient: _userInfo?['avatar_url'] != null ? null : const LinearGradient(
+                          colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        image: _userInfo?['avatar_url'] != null ? DecorationImage(
+                          image: NetworkImage(_userInfo!['avatar_url']),
+                          fit: BoxFit.cover,
+                        ) : null,
+                      ),
+                      child: _userInfo?['avatar_url'] == null ? Center(
+                        child: Text(
+                          getInitialsAvatar(_userInfo?['full_name'] ?? _userInfo?['name']),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ) : null,
                     ),
+                    if (_isUploadingAvatar)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-                child: const Icon(Icons.water, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 12),
 
@@ -2063,4 +2447,59 @@ class SensorDetailCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ════════════════════════════════════════════════════════════
+//                   ARROW PAINTER (ONBOARDING)
+// ════════════════════════════════════════════════════════════
+class ArrowPainter extends CustomPainter {
+  final Color color;
+  final bool pointUp;
+
+  ArrowPainter({required this.color, required this.pointUp});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    if (pointUp) {
+      // Curve up to top right
+      path.moveTo(0, size.height);
+      path.quadraticBezierTo(size.width * 0.5, size.height, size.width, 0);
+      
+      // Draw arrow head at (size.width, 0)
+      final headLength = 12.0;
+      final angle = math.atan2(-size.height, size.width * 0.5); // Approx tangent
+      canvas.drawLine(Offset(size.width, 0), Offset(size.width - headLength * math.cos(angle - math.pi/6), 0 - headLength * math.sin(angle - math.pi/6)), paint);
+      canvas.drawLine(Offset(size.width, 0), Offset(size.width - headLength * math.cos(angle + math.pi/6), 0 - headLength * math.sin(angle + math.pi/6)), paint);
+    } else {
+      // Curve down to bottom left
+      path.moveTo(size.width, 0);
+      path.quadraticBezierTo(size.width * 0.5, 0, 0, size.height);
+      
+      // Draw arrow head at (0, size.height)
+      final headLength = 12.0;
+      final angle = math.atan2(size.height, -size.width * 0.5); // Approx tangent
+      canvas.drawLine(Offset(0, size.height), Offset(0 - headLength * math.cos(angle - math.pi/6), size.height - headLength * math.sin(angle - math.pi/6)), paint);
+      canvas.drawLine(Offset(0, size.height), Offset(0 - headLength * math.cos(angle + math.pi/6), size.height - headLength * math.sin(angle + math.pi/6)), paint);
+    }
+
+    // Draw dashed path
+    double dashWidth = 8, dashSpace = 8, distance = 0;
+    for (ui.PathMetric pathMetric in path.computeMetrics()) {
+      while (distance < pathMetric.length) {
+        final extractPath = pathMetric.extractPath(distance, distance + dashWidth);
+        canvas.drawPath(extractPath, paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

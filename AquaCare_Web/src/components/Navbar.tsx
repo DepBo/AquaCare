@@ -21,11 +21,25 @@ export default function Navbar({ scrollY }: NavbarProps) {
   const { totalItems } = useCart()
   const [isAuth, setIsAuth] = useState(false)
   const [userRole, setUserRole] = useState('')
+  const [userInfo, setUserInfo] = useState<any>(null)
 
   useEffect(() => {
     setIsAuth(!!localStorage.getItem('cs_auth'))
     setUserRole(localStorage.getItem('cs_role') || '')
+    const info = localStorage.getItem('user_info')
+    if (info) {
+      try { setUserInfo(JSON.parse(info)) } catch(e) {}
+    }
   }, [])
+
+  const getInitialsAvatar = (name: string) => {
+    if (!name) return 'U'
+    const words = name.trim().split(/\s+/)
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+    }
+    return words[0][0].toUpperCase()
+  }
 
   const isScrolled = scrollY > 60
 
@@ -58,24 +72,11 @@ export default function Navbar({ scrollY }: NavbarProps) {
         >
           {/* Logo */}
           <a href="#hero" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #1B4F72, #00A896)',
-                boxShadow: '0 4px 15px rgba(0, 229, 160, 0.3)',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22c-4 0-8-2-8-6 0-2 1-4 3-5l-2-3c-.5-.8.1-1.7 1-1.7h12c.9 0 1.5.9 1 1.7l-2 3c2 1 3 3 3 5 0 4-4 6-8 6z" />
-                <circle cx="9" cy="15" r="1" fill="white" />
-                <circle cx="15" cy="15" r="1" fill="white" />
-              </svg>
-            </div>
+            <img src="/logo.png" alt="AquaCare" style={{
+              width: 38, height: 38, borderRadius: 10,
+              objectFit: 'cover',
+              boxShadow: '0 4px 15px rgba(0, 229, 160, 0.3)',
+            }} />
             <div>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', display: 'block', lineHeight: 1.2 }}>
                 AQUACARE
@@ -166,8 +167,8 @@ export default function Navbar({ scrollY }: NavbarProps) {
               <Link
                 to={userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard'}
                 style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
+                  padding: '5px 14px 5px 6px',
+                  borderRadius: 20,
                   fontSize: 10,
                   fontWeight: 600,
                   textTransform: 'uppercase' as const,
@@ -178,10 +179,26 @@ export default function Navbar({ scrollY }: NavbarProps) {
                   background: 'rgba(0,229,160,0.1)',
                   transition: 'all 200ms',
                   whiteSpace: 'nowrap' as const,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.6)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)' }}
               >
+                {userInfo?.avatar_url ? (
+                  <img src={userInfo.avatar_url} alt="Avatar" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(0,229,160,0.5)' }} />
+                ) : (
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #1B4F72, #00A896)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 700, color: '#fff',
+                    border: '1.5px solid rgba(0,229,160,0.5)'
+                  }}>
+                    {getInitialsAvatar(userInfo?.full_name || userInfo?.name || '')}
+                  </div>
+                )}
                 Trang Chủ
               </Link>
             ) : (
