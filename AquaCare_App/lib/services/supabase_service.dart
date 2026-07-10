@@ -11,9 +11,14 @@ class SupabaseService {
     debugPrint('📡 Requesting tanks for user: $userId');
     final response = await client
         .from('tanks')
-        .select('*')
+        .select('*, fish_species(*), devices(mac_address)')
         .eq('user_id', userId);
     debugPrint('📦 Response: $response');
+    return response;
+  }
+
+  Future<List<Map<String, dynamic>>> getFishSpecies() async {
+    final response = await client.from('fish_species').select('*').order('species_name');
     return response;
   }
 

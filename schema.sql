@@ -330,3 +330,101 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS app_fcm_token TEXT DEFAULT NUL
 ---- avt
 ALTER TABLE public.users 
 ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- ── 11. BẢNG DANH MỤC SẢN PHẨM (PRODUCTS) ────────────────────────────
+CREATE TABLE IF NOT EXISTS public.products (
+    id VARCHAR(20) PRIMARY KEY,          -- 'v1', 'v2', 'v3', 'v4'
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    price INTEGER NOT NULL,              -- Đơn vị: VND
+    image_url TEXT,
+    version INTEGER,                     -- 1, 2, 3, 4
+    is_available BOOLEAN DEFAULT TRUE,
+    details JSONB,                       -- Mảng string: danh sách tính năng
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- ── 12. BẢNG ĐƠN HÀNG (ORDERS) ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.orders (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- Thông tin giao hàng (snapshot tại thời điểm đặt)
+    shipping_name VARCHAR(200) NOT NULL,
+    shipping_phone VARCHAR(20) NOT NULL,
+    shipping_address TEXT NOT NULL,
+    
+    -- Trạng thái đơn hàng
+    status VARCHAR(30) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'confirmed', 'shipping', 'delivered', 'cancelled')),
+    
+    -- Tổng tiền
+    total_price INTEGER NOT NULL,        -- Đơn vị: VND
+    
+    -- Ghi chú của khách
+    note TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- ── 13. BẢNG CHI TIẾT ĐƠN HÀNG (ORDER_ITEMS) ─────────────────────────
+CREATE TABLE IF NOT EXISTS public.order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+    product_id VARCHAR(20) NOT NULL REFERENCES public.products(id),
+    
+    -- Snapshot thông tin sản phẩm tại thời điểm đặt
+    product_name VARCHAR(200) NOT NULL,
+    product_price INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0)
+);
+-- ── INDEXES ────────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
+-- ── DỮ LIỆU MẪU: 4 PHIÊN BẢN SẢN PHẨM ───────────────────────────────
+INSERT INTO public.products (id, name, description, price, image_url, version, details)
+VALUES
+('v1', 'AquaCare Starter', 'Giải pháp khởi đầu cho người mới chơi cá.', 890000,
+ '/images/Version1.png', 1,
+ '["1 Cảm biến: Temperature","1 Relay: Water Pump","Realtime monitoring","Cảnh báo cơ bản","Xem lịch sử dữ liệu","Bật/tắt relay thủ công","Hẹn giờ bật/tắt relay"]'),
+('v2', 'AquaCare Basic', 'Bổ sung theo dõi độ pH và mực nước.', 2790000,
+ '/images/Version2.png', 2,
+ '["3 Cảm biến: Temperature, pH, Water Level","1 Relay: Water Pump","Realtime monitoring","Cảnh báo cơ bản","Xem lịch sử dữ liệu","Bật/tắt relay thủ công","Hẹn giờ bật/tắt relay"]'),
+('v3', 'AquaCare Advanced', 'Giám sát toàn diện và điều khiển đa thiết bị.', 3390000,
+ '/images/Version3.png', 3,
+ '["4 Cảm biến: Temperature, pH, TDS, Water Level","3 Relay: Light, Water Pump, Air Pump","Realtime monitoring","Cảnh báo cơ bản","Xem lịch sử dữ liệu","Bật/tắt relay thủ công","Hẹn giờ bật/tắt relay"]'),
+('v4', 'AquaCare Premium', 'Cao cấp nhất với đo điện năng PZEM.', 3990000,
+ '/images/Version4.png', 4,
+ '["5 Cảm biến: Temperature, pH, TDS, Water Level, PZEM","4 Relay: Light, Water Pump, Air Pump, Fan","Realtime monitoring","Đo điện năng tiêu thụ (PZEM Dashboard)","Cảnh báo cơ bản","Xem lịch sử dữ liệu","Bật/tắt relay thủ công","Hẹn giờ bật/tắt relay"]')
+ON CONFLICT (id) DO UPDATE 
+SET name=EXCLUDED.name, price=EXCLUDED.price, updated_at=NOW();
+-- ── CẤP QUYỀN ─────────────────────────────────────────────────────────
+GRANT ALL PRIVILEGES ON TABLE public.products TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON TABLE public.orders TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON TABLE public.order_items TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+-- ── 14. BẢNG GIỎ HÀNG (CART_ITEMS) ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.cart_items (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    product_id VARCHAR(20) NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, product_id) -- Mỗi user chỉ có tối đa 1 dòng cho mỗi sản phẩm trong giỏ
+);
+
+-- Index để truy vấn giỏ hàng của user nhanh hơn
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON public.cart_items(user_id);
+
+-- Cấp quyền truy cập cho client
+GRANT ALL PRIVILEGES ON TABLE public.cart_items TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+-- ── 15. CẬP NHẬT BẢNG ĐƠN HÀNG (ORDERS) ─────────────────────────────
+ALTER TABLE public.orders 
+ADD COLUMN IF NOT EXISTS shipping_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50),
+ADD COLUMN IF NOT EXISTS note TEXT;

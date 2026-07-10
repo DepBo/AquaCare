@@ -1,83 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { ShoppingCart, Star, Info, X } from 'lucide-react'
 import { useCart, type Product } from '../contexts/CartContext'
+import { createClient } from '@supabase/supabase-js'
 
-const PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'Cảm biến pH & Nhiệt độ IoT',
-    description: 'Giám sát 24/7 chất lượng nước, cảnh báo qua ứng dụng khi thông số vượt ngưỡng.',
-    price: 1250000,
-    image: '/images/fish1.png',
-    rating: 4.8,
-    details: ['Cảm biến quang học siêu nhạy', 'Kết nối WiFi & Bluetooth 5.0', 'Pin dự phòng lên đến 48h', 'Vỏ ngoài chống nước IP68', 'App theo dõi tiếng Việt trực quan']
-  },
-  {
-    id: 'p2',
-    name: 'Máy cho cá ăn tự động AquaFeeder',
-    description: 'Lên lịch cho ăn thông minh qua điện thoại, dung tích 5L, chống ẩm mốc thức ăn.',
-    price: 850000,
-    image: '/images/fish2.png',
-    rating: 4.5,
-    details: ['Khay chứa siêu lớn 5 lít', 'Ghi âm giọng nói gọi cá', 'Quạt hút ẩm giữ thức ăn luôn giòn', 'Nguồn điện 5V/1A tiết kiệm năng lượng', 'Cảm biến báo sắp hết thức ăn']
-  },
-  {
-    id: 'p3',
-    name: 'Máy bơm nước thông minh 12V',
-    description: 'Điều khiển từ xa, tự động kích hoạt khi DO (oxy hòa tan) trong nước thấp.',
-    price: 1500000,
-    image: '/images/fish3.png',
-    rating: 4.9,
-    details: ['Động cơ không chổi than siêu êm', 'Tự động ngắt khi cạn nước', 'Lưu lượng tối đa 3000L/H', 'Điện áp an toàn 12V DC', 'Chế độ tạo sóng sinh thái']
-  },
-  {
-    id: 'p4',
-    name: 'Bộ đo độ mặn kỹ thuật số',
-    description: 'Thiết kế cầm tay tiện dụng, chống nước IP67, độ chính xác cao.',
-    price: 450000,
-    image: '/images/fish4.png',
-    rating: 4.6,
-    details: ['Màn hình LCD đèn nền rõ nét', 'Phạm vi đo 0 - 100 ppt', 'Tự động bù nhiệt độ (ATC)', 'Đầu dò Titan chống ăn mòn', 'Tự động tắt sau 5 phút']
-  },
-  /*
-  {
-    id: 'p5',
-    name: 'Đèn LED quang phổ rộng',
-    description: 'Mô phỏng ánh sáng tự nhiên, kích thích màu sắc cá và sự phát triển của cây thủy sinh.',
-    price: 650000,
-    image: '/@fs/C:/Users/dang9/.gemini/antigravity-ide/brain/4c61e183-6166-4ca6-a4ca-47367d0181ce/realistic_aquarium_led_1781832764309.png',
-    rating: 4.7,
-    details: ['Quang phổ toàn dải 10000K', 'Chế độ ban ngày và ban đêm (Moonlight)', 'Vỏ nhôm tản nhiệt hợp kim nhôm', 'Chống chập điện chuẩn IP67', 'Điều chỉnh độ sáng 0-100% qua App']
-  },
-  {
-    id: 'p6',
-    name: 'Hệ thống lọc sủi vi sinh',
-    description: 'Tăng cường oxy hòa tan, thiết kế nhỏ gọn, dễ dàng vệ sinh bảo dưỡng.',
-    price: 320000,
-    image: '/images/crab2.png',
-    rating: 4.4,
-    details: ['Lõi lọc vi sinh cao cấp', 'Thiết kế giấu ống dây', 'Chân hít chân không chắc chắn', 'Không gây tiếng ồn (<25dB)', 'Phù hợp bể nuôi tôm, cá nhỏ']
-  },
-  {
-    id: 'p7',
-    name: 'Camera giám sát dưới nước',
-    description: 'Quan sát rõ nét 1080p, kết nối wifi theo dõi cá từ xa 24/7.',
-    price: 1850000,
-    image: '/images/crab3.png',
-    rating: 4.8,
-    details: ['Độ phân giải Full HD 1080p', 'Góc quay siêu rộng 120 độ', 'Hồng ngoại quay đêm rõ nét', 'Vỏ bọc Nano chống rêu bám', 'Lưu trữ đám mây hoặc thẻ nhớ MicroSD']
-  },
-  {
-    id: 'p8',
-    name: 'Bộ làm lạnh nước Chiller',
-    description: 'Duy trì nhiệt độ ổn định cho các dòng cá xứ lạnh, tiết kiệm điện năng.',
-    price: 2450000,
-    image: '/@fs/C:/Users/dang9/.gemini/antigravity-ide/brain/4c61e183-6166-4ca6-a4ca-47367d0181ce/realistic_aquarium_chiller_1781832776627.png',
-    rating: 4.9,
-    details: ['Máy nén Panasonic siêu bền', 'Môi chất lạnh R134a an toàn', 'Kiểm soát nhiệt độ chính xác ±0.1°C', 'Thiết kế vỏ kim loại sơn tĩnh điện', 'Vận hành êm ái, độ ồn thấp']
-  }
-  */
-];
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
 
@@ -87,6 +15,36 @@ export default function ProductsSection() {
   const { addToCart } = useCart();
   const [addedItems, setAddedItems] = useState<{[key: string]: boolean}>({});
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_available', true)
+        .order('version', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        const formatted = data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          image: p.image_url,
+          rating: 4.9,
+          details: p.details || []
+        }))
+        setProducts(formatted)
+      } else {
+        console.error("Failed to load products", error)
+      }
+      setLoading(false);
+    }
+    fetchProducts()
+  }, [])
 
   useEffect(() => {
     const o = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true) }, { threshold: 0.08 })
@@ -154,10 +112,16 @@ export default function ProductsSection() {
         </div>
 
         {/* Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }} className="products-grid">
-          {PRODUCTS.map((product, i) => (
-            <div
-              key={product.id}
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+            <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#4DA6FF', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }} className="products-grid">
+            {products.map((product, i) => (
+              <div
+                key={product.id}
               className="glass-card"
               style={{
                 display: 'flex',
@@ -243,9 +207,10 @@ export default function ProductsSection() {
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal Details */}

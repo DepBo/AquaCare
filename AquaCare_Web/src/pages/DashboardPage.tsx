@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, SlidersHorizontal, Lightbulb, Power, ArrowLeft, ArrowRight,
+  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft, ArrowRight,
   Sun, Moon, Wind
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
@@ -131,7 +131,7 @@ function Dialog({
       position: 'fixed', inset: 0, zIndex: 1000,
       background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }} onClick={onCancel}>
+    }}>
       <div style={{
         background: 'var(--bg-dialog)',
         border: '1px solid var(--border-color)',
@@ -163,7 +163,7 @@ function Dialog({
           >{cancelText}</button>
           <button onClick={onConfirm} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-            background: confirmColor, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
             transition: 'all 160ms', boxShadow: `0 4px 16px ${confirmColor}40`,
           }}
             onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' }}
@@ -177,12 +177,11 @@ function Dialog({
 
 // ── Pond Dropdown ────────────────────────────────────────────
 function PondDropdown({
-  ponds, activeDevice, onSelect, onEdit, onSettings, onDelete, onAdd
+  ponds, activeDevice, onSelect, onEdit, onDelete, onAdd
 }: {
   ponds: Pond[]; activeDevice: number | null
   onSelect: (id: number) => void
   onEdit: (pond: Pond) => void
-  onSettings: (pond: Pond) => void
   onDelete: (pond: Pond) => void
   onAdd: () => void
 }) {
@@ -222,9 +221,9 @@ function PondDropdown({
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
-          background: 'linear-gradient(135deg, #0d1a2e, #112240)',
+          background: 'var(--bg-dialog)',
           border: '1px solid var(--border-color)', borderRadius: 14,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.6)', minWidth: 240,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.15)', minWidth: 240,
           animation: 'fadeDown 160ms ease',
           overflow: 'hidden',
         }}>
@@ -257,14 +256,7 @@ function PondDropdown({
                 </button>
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                  <button onClick={e => { e.stopPropagation(); onSettings(pond); setOpen(false) }} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
-                    color: 'var(--text-muted)', transition: 'all 140ms',
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,179,71,0.12)'; e.currentTarget.style.color = '#FFB347' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)' }}
-                    title="Cài đặt cảnh báo"
-                  ><SlidersHorizontal size={11} /></button>
+
                   <button onClick={e => { e.stopPropagation(); onEdit(pond); setOpen(false) }} style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 6,
                     color: 'var(--text-muted)', transition: 'all 140ms',
@@ -825,12 +817,12 @@ export default function DashboardPage() {
   const [addSpeciesId, setAddSpeciesId] = useState<number>(0)
   const [addMacAddress, setAddMacAddress] = useState('')
   const [editDialog, setEditDialog] = useState<Pond | null>(null)
+  const [editTab, setEditTab] = useState<'general' | 'alerts'>('general')
   const [editName, setEditName] = useState('')
   const [editVolume, setEditVolume] = useState<number | string>('')
   const [editSpeciesId, setEditSpeciesId] = useState<number>(0)
   const [editMacAddress, setEditMacAddress] = useState('')
   const [deleteDialog, setDeleteDialog] = useState<Pond | null>(null)
-  const [notificationDialog, setNotificationDialog] = useState<Pond | null>(null)
   const [notifyViaEmail, setNotifyViaEmail] = useState(false)
   const [notifyViaWebPush, setNotifyViaWebPush] = useState(false)
   const [notifyViaAppNoti, setNotifyViaAppNoti] = useState(false)
@@ -1303,6 +1295,23 @@ export default function DashboardPage() {
       }
       setPonds(prev => prev.map(p => p.id === editDialog.id ? updatedPond : p))
     }
+
+    // Save notification settings
+    const payload = {
+      notify_via_email: notifyViaEmail,
+      notify_via_web_push: notifyViaWebPush,
+      notify_via_app_noti: notifyViaAppNoti,
+      alert_cooldown_minutes: alertCooldown,
+      alert_severity_preference: alertSeverity
+    };
+    const { data: existing } = await supabase.from('tank_notification_settings').select('tank_id').eq('tank_id', editDialog.id).single();
+    if (existing) {
+      await supabase.from('tank_notification_settings').update(payload).eq('tank_id', editDialog.id);
+    } else {
+      await supabase.from('tank_notification_settings').insert({ tank_id: editDialog.id, ...payload });
+    }
+
+    showNotification("Đã cập nhật thông tin bể cá thành công!");
     setEditDialog(null)
   }
 
@@ -1555,31 +1564,33 @@ export default function DashboardPage() {
                 ponds={ponds}
                 activeDevice={activeDevice}
                 onSelect={handleSelectPond}
-                onSettings={async pond => {
-                  setDialogError('');
-                  const { data } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', pond.id).single();
-                  if (data) {
-                    setNotifyViaEmail(data.notify_via_email ?? false);
-                    setNotifyViaWebPush(data.notify_via_web_push ?? false);
-                    setNotifyViaAppNoti(data.notify_via_app_noti ?? false);
-                    setAlertCooldown(data.alert_cooldown_minutes ?? 0);
-                    setAlertSeverity(data.alert_severity_preference ?? 'both');
-                  } else {
-                    setNotifyViaEmail(false);
-                    setNotifyViaWebPush(false);
-                    setNotifyViaAppNoti(false);
-                    setAlertCooldown(0);
-                    setAlertSeverity('both');
-                  }
-                  setNotificationDialog(pond);
-                }}
-                onEdit={pond => {
+
+                onEdit={async pond => {
                   setEditDialog(pond);
+                  setEditTab('general');
                   setEditName(pond.name);
                   setEditVolume(pond.volume ?? '');
                   setEditSpeciesId(pond.species_id ?? 0);
-                  setEditMacAddress(pond.mac_address || '');
                   setDialogError('');
+
+                  // Fetch MAC trực tiếp để đảm bảo luôn đúng
+                  const { data: devData } = await supabase.from('devices').select('mac_address').eq('tank_id', pond.id).single();
+                  setEditMacAddress(devData?.mac_address || pond.mac_address || '');
+
+                  const { data: nSettings } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', pond.id).single();
+                  if (nSettings) {
+                    setNotifyViaEmail(nSettings.notify_via_email);
+                    setNotifyViaWebPush(nSettings.notify_via_web_push);
+                    setNotifyViaAppNoti(nSettings.notify_via_app_noti);
+                    setAlertCooldown(nSettings.alert_cooldown_minutes);
+                    setAlertSeverity(nSettings.alert_severity_preference);
+                  } else {
+                    setNotifyViaEmail(false);
+                    setNotifyViaWebPush(false);
+                    setNotifyViaAppNoti(true);
+                    setAlertCooldown(15);
+                    setAlertSeverity('all');
+                  }
                 }}
                 onDelete={pond => setDeleteDialog(pond)}
                 onAdd={() => { setAddName(''); setAddVolume(''); setAddSpeciesId(0); setAddMacAddress(''); setDialogError(''); setAddDialog(true) }}
@@ -2755,213 +2766,119 @@ export default function DashboardPage() {
         </Dialog>
       )}
 
-      {/* ── Dialog: Cấu hình bể cá ── */}
+      {/* ── Dialog: Cấu hình & Cảnh báo ── */}
       {editDialog && (
         <Dialog
-          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#4DA6FF" /> Cấu hình bể cá</div>}
+          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#4DA6FF" /> Cấu hình & Cảnh báo</div>}
           confirmText="Lưu thay đổi"
           error={dialogError}
           onConfirm={handleEditConfirm}
           onCancel={() => setEditDialog(null)}
         >
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Tên bể cá
-            </label>
-            <input
-              autoFocus
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              placeholder="VD: Bể Rồng Phòng Ngủ"
+          {/* Tabs header */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>
+            <button
+              onClick={() => setEditTab('general')}
               style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: editTab === 'general' ? 600 : 400,
+                color: editTab === 'general' ? '#4DA6FF' : 'var(--text-muted)',
+                borderBottom: editTab === 'general' ? '2px solid #4DA6FF' : '2px solid transparent',
+                padding: '4px 8px', transition: 'all 200ms'
               }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Thể tích (Lít)
-            </label>
-            <input
-              type="number"
-              value={editVolume}
-              onChange={e => setEditVolume(e.target.value)}
-              placeholder="VD: 250"
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Loài cá (Tùy chọn)
-            </label>
-            <select
-              value={editSpeciesId}
-              onChange={e => setEditSpeciesId(Number(e.target.value))}
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms', appearance: 'none'
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             >
-              <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
-              {fishSpecies.map(sp => (
-                <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginTop: 12, marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Mã thiết bị (MAC Address)
-            </label>
-            <input
-              value={editMacAddress}
-              onChange={e => setEditMacAddress(e.target.value)}
-              placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
+              Thông tin chung
+            </button>
+            <button
+              onClick={() => setEditTab('alerts')}
               style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: editTab === 'alerts' ? 600 : 400,
+                color: editTab === 'alerts' ? '#00A896' : 'var(--text-muted)',
+                borderBottom: editTab === 'alerts' ? '2px solid #00A896' : '2px solid transparent',
+                padding: '4px 8px', transition: 'all 200ms'
               }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
+            >
+              Cài đặt cảnh báo
+            </button>
           </div>
-        </Dialog>
-      )}
 
-      {/* ── Dialog: Cài đặt cảnh báo ── */}
-      {notificationDialog && (
-        <Dialog
-          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><SlidersHorizontal size={18} color="#00A896" /> Cài đặt cảnh báo: {notificationDialog.name}</div>}
-          confirmText="Lưu cấu hình"
-          error={dialogError}
-          onConfirm={async () => {
-            setDialogError('');
-            const payload = {
-              notify_via_email: notifyViaEmail,
-              notify_via_web_push: notifyViaWebPush,
-              notify_via_app_noti: notifyViaAppNoti,
-              alert_cooldown_minutes: alertCooldown,
-              alert_severity_preference: alertSeverity
-            };
-            const { data: existing } = await supabase.from('tank_notification_settings').select('tank_id').eq('tank_id', notificationDialog.id).single();
-            let error;
-            if (existing) {
-              const res = await supabase.from('tank_notification_settings').update(payload).eq('tank_id', notificationDialog.id);
-              error = res.error;
-            } else {
-              const res = await supabase.from('tank_notification_settings').insert({ tank_id: notificationDialog.id, ...payload });
-              error = res.error;
-            }
+          {editTab === 'general' && (
+            <div style={{ animation: 'tabSlideInLeft 220ms cubic-bezier(0.25,0.46,0.45,0.94)' }}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Tên bể cá</label>
+                <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} placeholder="VD: Bể Rồng Phòng Ngủ" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Thể tích (Lít)</label>
+                <input type="number" value={editVolume} onChange={e => setEditVolume(e.target.value)} placeholder="VD: 250" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
+              </div>
+              <div style={{ marginBottom: 4 }}>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Loài cá (Tùy chọn)</label>
+                <select value={editSpeciesId} onChange={e => setEditSpeciesId(Number(e.target.value))} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
+                  <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
+                  {fishSpecies.map(sp => (<option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>))}
+                </select>
+              </div>
+              <div style={{ marginTop: 12, marginBottom: 4 }}>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Mã thiết bị (MAC Address)</label>
+                <input value={editMacAddress} onChange={e => setEditMacAddress(e.target.value)} placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
+              </div>
+            </div>
+          )}
 
-            if (error) {
-              setDialogError('Lỗi khi lưu cấu hình');
-            } else {
-              showNotification("Đã lưu cấu hình thông báo thành công!");
-              setNotificationDialog(null);
-            }
-          }}
-          onCancel={() => setNotificationDialog(null)}
-        >
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 12 }}>
-              Kênh nhận thông báo
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                <input type="checkbox" checked={notifyViaEmail} onChange={e => setNotifyViaEmail(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
-                Gửi qua Email
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                <input type="checkbox" checked={notifyViaWebPush} onChange={async e => {
-                  const checked = e.target.checked;
-                  setNotifyViaWebPush(checked);
-                  if (checked) {
-                    const token = await requestNotificationPermission();
-                    if (token) {
-                      const userInfoStr = localStorage.getItem('user_info');
-                      if (userInfoStr) {
-                        const currentUser = JSON.parse(userInfoStr);
-                        if (currentUser.id) {
-                          const { error } = await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
-                          if (error) console.error("Lỗi lưu FCM Token:", error.message);
-                          else console.log("✅ Đã lưu FCM Token vào CSDL (bảng users).");
+          {editTab === 'alerts' && (
+            <div style={{ animation: 'tabSlideIn 220ms cubic-bezier(0.25,0.46,0.45,0.94)' }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 12 }}>Kênh nhận thông báo</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <input type="checkbox" checked={notifyViaEmail} onChange={e => setNotifyViaEmail(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua Email
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <input type="checkbox" checked={notifyViaWebPush} onChange={async e => {
+                      const checked = e.target.checked;
+                      setNotifyViaWebPush(checked);
+                      if (checked) {
+                        const token = await requestNotificationPermission();
+                        if (token) {
+                          const userInfoStr = localStorage.getItem('user_info');
+                          if (userInfoStr) {
+                            const currentUser = JSON.parse(userInfoStr);
+                            if (currentUser.id) {
+                              const { error } = await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
+                              if (error) console.error("Lỗi lưu FCM Token:", error.message);
+                              else console.log("✅ Đã lưu FCM Token vào CSDL (bảng users).");
+                            }
+                          }
                         }
                       }
-                    }
-                  }
-                }} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
-                Gửi qua Trình duyệt Web
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                <input type="checkbox" checked={notifyViaAppNoti} onChange={e => setNotifyViaAppNoti(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} />
-                Gửi qua App di động
-              </label>
+                    }} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua Trình duyệt Web
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <input type="checkbox" checked={notifyViaAppNoti} onChange={e => setNotifyViaAppNoti(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua App di động
+                  </label>
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Thời gian khóa Cooldown (Nhắc lại)</label>
+                <select value={alertCooldown} onChange={e => setAlertCooldown(Number(e.target.value))} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
+                  <option value={1} style={{ color: '#000' }}>1 phút (Dành cho Test)</option>
+                  <option value={15} style={{ color: '#000' }}>15 phút</option>
+                  <option value={30} style={{ color: '#000' }}>30 phút</option>
+                  <option value={60} style={{ color: '#000' }}>1 tiếng</option>
+                  <option value={0} style={{ color: '#000' }}>Không nhắc lại</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Bộ lọc mức độ nghiêm trọng</label>
+                <select value={alertSeverity} onChange={e => setAlertSeverity(e.target.value)} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
+                  <option value="both" style={{ color: '#000' }}>Nhận tất cả cảnh báo</option>
+                  <option value="critical_only" style={{ color: '#000' }}>Chỉ nhận khi Nguy kịch (Critical)</option>
+                  <option value="warning_only" style={{ color: '#000' }}>Chỉ nhận Cảnh báo sớm (Warning)</option>
+                  <option value="none" style={{ color: '#000' }}>Tắt nhận thông báo</option>
+                </select>
+              </div>
             </div>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Thời gian khóa Cooldown (Nhắc lại)
-            </label>
-            <select
-              value={alertCooldown}
-              onChange={e => setAlertCooldown(Number(e.target.value))}
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms', appearance: 'none'
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            >
-              <option value={1} style={{ color: '#000' }}>1 phút (Dành cho Test)</option>
-              <option value={15} style={{ color: '#000' }}>15 phút</option>
-              <option value={30} style={{ color: '#000' }}>30 phút</option>
-              <option value={60} style={{ color: '#000' }}>1 tiếng</option>
-              <option value={0} style={{ color: '#000' }}>Không nhắc lại</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: 4 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Bộ lọc mức độ nghiêm trọng
-            </label>
-            <select
-              value={alertSeverity}
-              onChange={e => setAlertSeverity(e.target.value)}
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms', appearance: 'none'
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            >
-              <option value="both" style={{ color: '#000' }}>Nhận tất cả cảnh báo</option>
-              <option value="critical_only" style={{ color: '#000' }}>Chỉ nhận khi Nguy kịch (Critical)</option>
-              <option value="warning_only" style={{ color: '#000' }}>Chỉ nhận Cảnh báo sớm (Warning)</option>
-              <option value="none" style={{ color: '#000' }}>Tắt nhận thông báo</option>
-            </select>
-          </div>
+          )}
         </Dialog>
       )}
 
@@ -3081,6 +2998,8 @@ export default function DashboardPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes dialogIn { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
+        @keyframes tabSlideIn { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes tabSlideInLeft { from { opacity:0; transform:translateX(-14px); } to { opacity:1; transform:translateX(0); } }
         @media (max-width: 768px) { aside { display: none !important; } }
         @media (min-width: 1024px) { .alerts-grid { grid-template-columns: 1.5fr 1fr; } }
         @media (max-width: 1023px) { .alerts-grid { grid-template-columns: 1fr; } }

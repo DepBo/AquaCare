@@ -13,6 +13,8 @@ import '../widgets/sensor_history_drill_down.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
+
+import '../services/fcm_service.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:io';
@@ -21,7 +23,17 @@ import 'package:image_picker/image_picker.dart';
 class Pond {
   String id;
   String name;
-  Pond({required this.id, required this.name});
+  String? volume;
+  int? speciesId;
+  String? macAddress;
+
+  Pond({
+    required this.id,
+    required this.name,
+    this.volume,
+    this.speciesId,
+    this.macAddress,
+  });
 }
 
 // ──────────────────── SENSOR MODEL ──────────────────────────
@@ -180,6 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Stream<List<Map<String, dynamic>>>? _telemetryStream;
   Stream<List<Map<String, dynamic>>>? _alertsStream;
   int _unreadAlertCount = 0;
+  List<Map<String, dynamic>> _fishSpecies = [];
 
   void _updateStream() {
     if (_activePondId.isNotEmpty) {
@@ -272,6 +285,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadPonds();
     _loadOnboardingPref();
     _loadUserInfo();
+    _loadFishSpecies();
+
+    FCMService.onAlertReceived = () {
+      if (mounted) {
+        setState(() {
+          if (_selectedTab != 3) {
+            _unreadAlertCount++;
+          }
+        });
+      }
+    };
   }
 
   Future<void> _loadUserInfo() async {
@@ -434,11 +458,24 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (data.isNotEmpty) {
         setState(() {
           _ponds = data
-              .map(
-                (json) =>
-                    Pond(id: json['id'].toString(), name: json['tank_name']),
-              )
-              .toList();
+              .map((json) {
+            String? mac;
+            var devicesData = json['devices'];
+            if (devicesData != null) {
+              if (devicesData is List && devicesData.isNotEmpty) {
+                mac = devicesData[0]['mac_address'];
+              } else if (devicesData is Map) {
+                mac = devicesData['mac_address'];
+              }
+            }
+            return Pond(
+              id: json['id'].toString(),
+              name: json['tank_name'],
+              volume: json['water_volume_liter']?.toString(),
+              speciesId: json['species_id'],
+              macAddress: mac,
+            );
+          }).toList();
           _activePondId = _ponds.first.id;
           _updateStream();
         });
@@ -447,6 +484,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       print('Error loading ponds: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadFishSpecies() async {
+    try {
+      final data = await SupabaseService.instance.getFishSpecies();
+      if (mounted) {
+        setState(() {
+          _fishSpecies = data;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading fish species: $e');
     }
   }
 
@@ -500,28 +550,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  void _showRenamePondDialog(Pond pond) {
-    final ctrl = TextEditingController(text: pond.name);
-    final formKey = GlobalKey<FormState>();
+  void _showPondSettingsDialog(Pond pond) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.65),
-      builder: (ctx) => _buildPondDialog(
-        title: '✏️ Đổi tên bể cá',
-        confirmLabel: 'Lưu tên',
-        confirmColor: const Color(0xFF00A896),
-        controller: ctrl,
-        formKey: formKey,
-        hint: 'Tên mới...',
-        onConfirm: () {
-          if (formKey.currentState!.validate()) {
-            final name = ctrl.text.trim();
-            Navigator.pop(ctx);
-            setState(() {
-              final idx = _ponds.indexWhere((p) => p.id == pond.id);
-              if (idx != -1) _ponds[idx].name = name;
-            });
-          }
+      builder: (ctx) => PondSettingsDialog(
+        pond: pond,
+        fishSpeciesList: _fishSpecies,
+        onSaved: () {
+          _loadPonds();
         },
       ),
     );
@@ -1455,9 +1492,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 // Pass value via pop to trigger onSelected on PopupMenuButton
                 Navigator.pop(ctx, pond.id);
               },
-              onRename: () {
+              onSettings: () {
                 Navigator.pop(ctx);
-                _showRenamePondDialog(pond);
+                _showPondSettingsDialog(pond);
               },
               onDelete: _ponds.length > 1
                   ? () {
@@ -1927,14 +1964,14 @@ class _PondMenuItem extends StatelessWidget {
   final Pond pond;
   final bool isActive;
   final VoidCallback onSelect;
-  final VoidCallback onRename;
+  final VoidCallback onSettings;
   final VoidCallback? onDelete;
 
   const _PondMenuItem({
     required this.pond,
     required this.isActive,
     required this.onSelect,
-    required this.onRename,
+    required this.onSettings,
     this.onDelete,
   });
 
@@ -1987,13 +2024,13 @@ class _PondMenuItem extends StatelessWidget {
           ),
           // Action buttons
           IconButton(
-            onPressed: onRename,
+            onPressed: onSettings,
             icon: Icon(
               Icons.edit,
               size: 15,
               color: Colors.white.withOpacity(0.3),
             ),
-            tooltip: 'Đổi tên',
+            tooltip: 'Cấu hình',
             splashRadius: 16,
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -2502,4 +2539,387 @@ class ArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class PondSettingsDialog extends StatefulWidget {
+  final Pond pond;
+  final List<Map<String, dynamic>> fishSpeciesList;
+  final VoidCallback onSaved;
+
+  const PondSettingsDialog({
+    Key? key,
+    required this.pond,
+    required this.fishSpeciesList,
+    required this.onSaved,
+  }) : super(key: key);
+
+  @override
+  State<PondSettingsDialog> createState() => _PondSettingsDialogState();
+}
+
+class _PondSettingsDialogState extends State<PondSettingsDialog> {
+  int _tabIndex = 0; // 0 = Chung, 1 = Cảnh báo
+  bool _isLoading = false;
+  String _errorMsg = '';
+
+  // Chung state
+  late TextEditingController _nameCtrl;
+  late TextEditingController _volumeCtrl;
+  late TextEditingController _macCtrl;
+  int? _speciesId;
+
+  // Cảnh báo state
+  bool _email = false;
+  bool _web = false;
+  bool _app = true;
+  int _cooldown = 15;
+  String _severity = 'both'; 
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.pond.name);
+    _volumeCtrl = TextEditingController(text: widget.pond.volume ?? '');
+    _macCtrl = TextEditingController(text: widget.pond.macAddress ?? '');
+    _speciesId = widget.pond.speciesId;
+    _loadNotificationSettings();
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    try {
+      final res = await SupabaseService.instance.client
+          .from('tank_notification_settings')
+          .select('*')
+          .eq('tank_id', int.parse(widget.pond.id))
+          .maybeSingle();
+
+      if (res != null && mounted) {
+        setState(() {
+          _email = res['notify_via_email'] ?? false;
+          _web = res['notify_via_web_push'] ?? false;
+          _app = res['notify_via_app_noti'] ?? true;
+          final rawCooldown = res['alert_cooldown_minutes'] ?? 15;
+          // Ensure cooldown value exists in dropdown options
+          const validCooldowns = [0, 1, 15, 30, 60];
+          _cooldown = validCooldowns.contains(rawCooldown) ? rawCooldown : 15;
+          final rawSeverity = res['alert_severity_preference'] ?? 'both';
+          // Ensure severity value exists in dropdown options
+          const validSeverities = ['both', 'critical_only', 'warning_only', 'none'];
+          _severity = validSeverities.contains(rawSeverity) ? rawSeverity : 'both';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading notif settings: $e');
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    if (_nameCtrl.text.trim().isEmpty) {
+      setState(() => _errorMsg = 'Tên bể không được để trống');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMsg = '';
+    });
+
+    try {
+      final tankId = int.parse(widget.pond.id);
+      
+      // Update tanks
+      await SupabaseService.instance.client.from('tanks').update({
+        'tank_name': _nameCtrl.text.trim(),
+        'water_volume_liter': _volumeCtrl.text.trim().isNotEmpty ? double.tryParse(_volumeCtrl.text.trim()) : null,
+        'species_id': _speciesId,
+      }).eq('id', tankId);
+
+      // Update mac address
+      final mac = _macCtrl.text.trim();
+      if (mac != widget.pond.macAddress) {
+        if (widget.pond.macAddress != null && widget.pond.macAddress!.isNotEmpty) {
+           await SupabaseService.instance.client.from('devices').update({'tank_id': null}).eq('mac_address', widget.pond.macAddress!);
+        }
+        if (mac.isNotEmpty) {
+           final existingDevice = await SupabaseService.instance.client
+               .from('devices')
+               .select('id')
+               .eq('mac_address', mac)
+               .maybeSingle();
+           if (existingDevice != null) {
+               await SupabaseService.instance.client.from('devices').update({'tank_id': tankId}).eq('mac_address', mac);
+           } else {
+               throw Exception('Không tìm thấy thiết bị với địa chỉ MAC này.');
+           }
+        }
+      }
+
+      // Update notif settings
+      await SupabaseService.instance.client.from('tank_notification_settings').upsert({
+        'tank_id': tankId,
+        'notify_via_email': _email,
+        'notify_via_web_push': _web,
+        'notify_via_app_noti': _app,
+        'alert_cooldown_minutes': _cooldown,
+        'alert_severity_preference': _severity,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+
+      widget.onSaved();
+      if (mounted) {
+         Navigator.pop(context);
+      }
+    } catch (e) {
+      setState(() {
+         _errorMsg = e.toString().replaceAll('Exception:', '').trim();
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _volumeCtrl.dispose();
+    _macCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {String? hint, TextInputType? type}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: type,
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(color: Colors.white30),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.04),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF00A896)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildDropdown<T>(String label, T? value, List<DropdownMenuItem<T>> items, ValueChanged<T?> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: value,
+              items: items,
+              onChanged: onChanged,
+              isExpanded: true,
+              dropdownColor: const Color(0xFF152238),
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.white54),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF00A896),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: const Color(0xFF0F1A30),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cấu hình bể cá',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Tabs
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _tabIndex = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: _tabIndex == 0 ? const Color(0xFF4DA6FF) : Colors.transparent, width: 2)),
+                      ),
+                      child: Text(
+                        'Thông tin chung',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: _tabIndex == 0 ? FontWeight.w600 : FontWeight.w400,
+                          color: _tabIndex == 0 ? const Color(0xFF4DA6FF) : Colors.white54,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _tabIndex = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: _tabIndex == 1 ? const Color(0xFF00A896) : Colors.transparent, width: 2)),
+                      ),
+                      child: Text(
+                        'Cài đặt cảnh báo',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: _tabIndex == 1 ? FontWeight.w600 : FontWeight.w400,
+                          color: _tabIndex == 1 ? const Color(0xFF00A896) : Colors.white54,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Tab Content
+            if (_tabIndex == 0) ...[
+              _buildTextField('TÊN BỂ CÁ', _nameCtrl, hint: 'VD: Bể Rồng Phòng Khách'),
+              _buildTextField('THỂ TÍCH (LÍT)', _volumeCtrl, type: TextInputType.number, hint: 'VD: 250'),
+              Builder(builder: (_) {
+                // Validate _speciesId exists in the list to prevent DropdownButton crash
+                final speciesIds = widget.fishSpeciesList.map((s) => s['id'] as int).toList();
+                final safeSpeciesId = (_speciesId != null && speciesIds.contains(_speciesId)) ? _speciesId : null;
+                return _buildDropdown<int>(
+                  'LOÀI CÁ',
+                  safeSpeciesId,
+                  [
+                    const DropdownMenuItem(value: null, child: Text('Không xác định')),
+                    ...widget.fishSpeciesList.map((s) => DropdownMenuItem(
+                      value: s['id'] as int,
+                      child: Text(s['species_name'] as String),
+                    )),
+                  ],
+                  (val) => setState(() => _speciesId = val),
+                );
+              }),
+              _buildTextField('MÃ THIẾT BỊ (MAC)', _macCtrl, hint: 'AA:BB:CC:DD:EE:FF'),
+            ] else ...[
+              Text('KÊNH NHẬN THÔNG BÁO', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+              const SizedBox(height: 8),
+              _buildSwitch('Thông báo qua Email', _email, (v) => setState(() => _email = v)),
+              _buildSwitch('Thông báo qua trình duyệt web', _web, (v) => setState(() => _web = v)),
+              _buildSwitch('Thông báo trên App', _app, (v) => setState(() => _app = v)),
+              const SizedBox(height: 16),
+              _buildDropdown<int>(
+                'THỜI GIAN NHẮC LẠI (COOLDOWN)',
+                _cooldown,
+                const [
+                  DropdownMenuItem(value: 0, child: Text('Không nhắc lại')),
+                  DropdownMenuItem(value: 1, child: Text('Nhắc nhở liên tục (1 phút)')),
+                  DropdownMenuItem(value: 15, child: Text('Nhắc lại sau 15 phút')),
+                  DropdownMenuItem(value: 30, child: Text('Nhắc lại sau 30 phút')),
+                  DropdownMenuItem(value: 60, child: Text('Nhắc lại sau 1 giờ')),
+                ],
+                (val) => setState(() => _cooldown = val!),
+              ),
+              _buildDropdown<String>(
+                'BỘ LỌC MỨC ĐỘ',
+                _severity,
+                const [
+                  DropdownMenuItem(value: 'both', child: Text('Nhận tất cả cảnh báo')),
+                  DropdownMenuItem(value: 'critical_only', child: Text('Chỉ nhận cảnh báo Nguy hiểm')),
+                  DropdownMenuItem(value: 'warning_only', child: Text('Chỉ nhận cảnh báo Cảnh báo')),
+                  DropdownMenuItem(value: 'none', child: Text('Tắt thông báo')),
+                ],
+                (val) => setState(() => _severity = val!),
+              ),
+            ],
+
+            if (_errorMsg.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(_errorMsg, style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13)),
+              ),
+              
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Hủy', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _saveSettings,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00A896),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text('Lưu thay đổi', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Fish, Box, LogOut, ArrowLeft, Sun, Moon,
   Plus, Edit, Trash2, X, Server, Users, Shield, ShoppingCart,
-  CheckCheck, FileText, Truck, Wrench
+  CheckCheck, FileText, Truck, Wrench, CheckCircle, ArrowRight, Eye, EyeOff
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -17,7 +17,8 @@ const F = "'Inter', sans-serif"
 const ThemeStyles = ({ theme }: { theme: 'dark' | 'light' }) => {
   const isDark = theme === 'dark'
   return (
-    <style dangerouslySetInnerHTML={{ __html: `
+    <style dangerouslySetInnerHTML={{
+      __html: `
       :root[data-theme="${theme}"] {
         --ap-bg-main: ${isDark ? '#0f172a' : '#f8fafc'};
         --ap-bg-sidebar: ${isDark ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)'};
@@ -107,21 +108,16 @@ interface Order {
   id: string
   customerName: string
   phone: string
+  email: string
   address: string
-  productVersion: 'V1' | 'V2' | 'V3'
+  note: string
+  productVersion: string
+  totalQuantity: number
   totalPrice: number
   paymentMethod: 'COD' | 'Chuyển khoản'
   status: 'pending' | 'approved'
   createdAt: string
 }
-
-const MOCK_ORDERS: Order[] = [
-  { id: 'ORD-001', customerName: 'Nguyễn Văn An', phone: '0901234567', address: '12 Nguyễn Huệ, Q.1, TP.HCM', productVersion: 'V2', totalPrice: 3100000, paymentMethod: 'COD', status: 'pending', createdAt: '2026-07-01T08:30:00Z' },
-  { id: 'ORD-002', customerName: 'Trần Thị Bích', phone: '0912345678', address: '45 Lê Lợi, Q.3, TP.HCM', productVersion: 'V1', totalPrice: 2500000, paymentMethod: 'Chuyển khoản', status: 'pending', createdAt: '2026-07-01T10:15:00Z' },
-  { id: 'ORD-003', customerName: 'Lê Hoàng Dũng', phone: '0923456789', address: '78 Trần Hưng Đạo, Q.5, TP.HCM', productVersion: 'V3', totalPrice: 3800000, paymentMethod: 'Chuyển khoản', status: 'approved', createdAt: '2026-06-30T14:00:00Z' },
-  { id: 'ORD-004', customerName: 'Phạm Minh Châu', phone: '0934567890', address: '90 Điện Biên Phủ, Q.Bình Thạnh, TP.HCM', productVersion: 'V1', totalPrice: 2500000, paymentMethod: 'COD', status: 'pending', createdAt: '2026-07-02T07:45:00Z' },
-  { id: 'ORD-005', customerName: 'Hoàng Thị Lan', phone: '0945678901', address: '23 Cách Mạng Tháng Tám, Q.10, TP.HCM', productVersion: 'V2', totalPrice: 3100000, paymentMethod: 'Chuyển khoản', status: 'pending', createdAt: '2026-07-02T09:20:00Z' },
-]
 
 const TASK_TYPES = [
   { value: 'delivery', label: 'Giao hàng', icon: Truck },
@@ -137,7 +133,7 @@ function Dialog({
       position: 'fixed', inset: 0, zIndex: 1000,
       background: 'var(--ap-modal-overlay)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }} onClick={onCancel}>
+    }}>
       <div style={{
         background: 'var(--ap-bg-modal)',
         border: '1px solid var(--ap-border)',
@@ -156,21 +152,23 @@ function Dialog({
         </div>
         {error && <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <button onClick={onCancel} style={{
-            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--ap-border)',
-            background: 'var(--ap-btn-cancel)', color: 'var(--ap-text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: F, fontWeight: 600,
-            transition: 'background 160ms'
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--ap-btn-cancel)'}
-          >{cancelText}</button>
+          {cancelText && (
+            <button onClick={onCancel} style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--ap-border)',
+              background: 'var(--ap-btn-cancel)', color: 'var(--ap-text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: F, fontWeight: 600,
+              transition: 'background 160ms'
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--ap-btn-cancel)'}
+            >{cancelText}</button>
+          )}
           <button onClick={onConfirm} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
             background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
             transition: 'filter 160ms'
           }}
-          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-          onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+            onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
           >{confirmText}</button>
         </div>
       </div>
@@ -178,18 +176,38 @@ function Dialog({
   )
 }
 
-function Input({ label, ...props }: any) {
+function Input({ label, type = 'text', ...props }: any) {
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const actualType = isPassword ? (showPassword ? 'text' : 'password') : type
+
   return (
     <div>
       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>{label}</label>
-      <input style={{
-        width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)',
-        background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none',
-        transition: 'border-color 160ms'
-      }} 
-      onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
-      onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
-      {...props} />
+      <div style={{ position: 'relative' }}>
+        <input style={{
+          width: '100%', padding: '10px 12px', paddingRight: isPassword ? 40 : 12, borderRadius: 10, border: '1px solid var(--ap-input-border)',
+          background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none',
+          transition: 'border-color 160ms'
+        }}
+          type={actualType}
+          onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+          onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+          {...props} />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--ap-text-secondary)'
+            }}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -202,13 +220,20 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'species' | 'devices' | 'staff' | 'orders'>('species')
 
   // Orders state
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS)
+  const [orders, setOrders] = useState<Order[]>([])
   const [approveModal, setApproveModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
+  const [receiptModal, setReceiptModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
+  const [detailsModal, setDetailsModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
   const [selectedTaskType, setSelectedTaskType] = useState('delivery')
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
 
   const [species, setSpecies] = useState<FishSpecies[]>([])
   const [devices, setDevices] = useState<Device[]>([])
+  const [devicePage, setDevicePage] = useState(0)
+  const [devicePageInput, setDevicePageInput] = useState('1')
+  const [deviceFilterVersion, setDeviceFilterVersion] = useState('all')
+  const [deviceFilterStatus, setDeviceFilterStatus] = useState('all')
+
   const [staff, setStaff] = useState<Staff[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -219,10 +244,19 @@ export default function AdminPage() {
   const [deviceModal, setDeviceModal] = useState<{ show: boolean, data?: Device, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
   const [devForm, setDevForm] = useState<{ mac_address: string, firmware_version: string }>({ mac_address: '', firmware_version: 'V1' })
 
-  const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'delete' }>({ show: false, mode: 'add' })
+  const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
   const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '' })
 
   const [errorMsg, setErrorMsg] = useState('')
+
+  const [notification, setNotification] = useState<{ show: boolean, msg: string }>({ show: false, msg: '' })
+
+  const showNotification = (msg: string) => {
+    setNotification({ show: true, msg })
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }))
+    }, 3000)
+  }
 
   useEffect(() => {
     if (!localStorage.getItem('cs_auth')) navigate('/login')
@@ -243,6 +277,25 @@ export default function AdminPage() {
 
     const { data: staffData } = await supabase.from('users').select('*').eq('role', 'staff').order('created_at', { ascending: false })
     if (staffData) setStaff(staffData)
+
+    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity)').order('created_at', { ascending: false })
+    if (ordersData) {
+      const mappedOrders = ordersData.map((o: any) => ({
+        id: o.id,
+        customerName: o.shipping_name,
+        phone: o.shipping_phone,
+        email: o.shipping_email || 'N/A',
+        address: o.shipping_address,
+        note: o.note || '',
+        productVersion: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.product_name).join(', ') : 'N/A',
+        totalQuantity: o.order_items && o.order_items.length > 0 ? o.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 1,
+        totalPrice: o.total_price,
+        paymentMethod: o.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD',
+        status: o.status,
+        createdAt: o.created_at
+      }))
+      setOrders(mappedOrders)
+    }
 
     setLoading(false)
   }
@@ -265,11 +318,17 @@ export default function AdminPage() {
     setErrorMsg('')
     if (!spForm.species_name) return setErrorMsg('Vui lòng nhập tên loài cá')
     if (speciesModal.mode === 'add') {
-      await supabase.from('fish_species').insert(spForm)
+      const { error } = await supabase.from('fish_species').insert(spForm)
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      showNotification('Thêm loài cá thành công!')
     } else if (speciesModal.mode === 'edit' && speciesModal.data) {
-      await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
+      const { error } = await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      showNotification('Cập nhật loài cá thành công!')
     } else if (speciesModal.mode === 'delete' && speciesModal.data) {
-      await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
+      const { error } = await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      showNotification('Xóa loài cá thành công!')
     }
     setSpeciesModal({ show: false, mode: 'add' })
     fetchData()
@@ -287,18 +346,32 @@ export default function AdminPage() {
     if (deviceModal.mode === 'add') {
       if (!devForm.mac_address) return setErrorMsg('Vui lòng nhập MAC Address')
       const { error } = await supabase.from('devices').insert({
-        mac_address: devForm.mac_address,
+        mac_address: devForm.mac_address.trim(),
         firmware_version: devForm.firmware_version,
       })
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) {
+          return setErrorMsg('MAC Address này đã tồn tại trong hệ thống!')
+        }
+        return setErrorMsg('Lỗi: ' + error.message)
+      }
+      showNotification('Thêm thiết bị thành công!')
     } else if (deviceModal.mode === 'edit' && deviceModal.data) {
       const { error } = await supabase.from('devices').update({
-        mac_address: devForm.mac_address,
+        mac_address: devForm.mac_address.trim(),
         firmware_version: devForm.firmware_version,
       }).eq('id', deviceModal.data.id)
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) {
+          return setErrorMsg('MAC Address này đã tồn tại trong hệ thống!')
+        }
+        return setErrorMsg('Lỗi: ' + error.message)
+      }
+      showNotification('Cập nhật thiết bị thành công!')
     } else if (deviceModal.mode === 'delete' && deviceModal.data) {
-      await supabase.from('devices').delete().eq('id', deviceModal.data.id)
+      const { error } = await supabase.from('devices').delete().eq('id', deviceModal.data.id)
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      showNotification('Xóa thiết bị thành công!')
     }
     setDeviceModal({ show: false, mode: 'add' })
     fetchData()
@@ -315,35 +388,49 @@ export default function AdminPage() {
     setErrorMsg('')
     if (staffModal.mode === 'add') {
       if (!staffForm.email || !staffForm.password || !staffForm.full_name) return setErrorMsg('Vui lòng điền đủ thông tin bắt buộc')
-      
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: staffForm.email,
         password: staffForm.password,
       })
-      
+
       if (authError) return setErrorMsg('Lỗi tạo tài khoản: ' + authError.message)
-      
+
       if (authData.user) {
-        const { error: dbError } = await supabase.from('users').insert({
-          id: authData.user.id,
+        // The DB trigger automatically creates a row in users on sign up.
+        // We just need to update that row with staff details and role.
+        const { error: dbError } = await supabase.from('users').update({
           full_name: staffForm.full_name,
-          email: staffForm.email,
           phone: staffForm.phone || null,
           role: 'staff'
-        })
+        }).eq('id', authData.user.id)
         if (dbError) return setErrorMsg('Lỗi lưu thông tin: ' + dbError.message)
+        showNotification('Thêm nhân viên thành công!')
       }
+    } else if (staffModal.mode === 'edit' && staffModal.data) {
+      if (!staffForm.full_name) return setErrorMsg('Vui lòng điền họ tên')
+      const { error: dbError } = await supabase.from('users').update({
+        full_name: staffForm.full_name,
+        phone: staffForm.phone || null,
+      }).eq('id', staffModal.data.id)
+      if (dbError) return setErrorMsg('Lỗi cập nhật: ' + dbError.message)
+      showNotification('Cập nhật nhân viên thành công!')
     } else if (staffModal.mode === 'delete' && staffModal.data) {
       const { error } = await supabase.from('users').delete().eq('id', staffModal.data.id)
       if (error) return setErrorMsg('Lỗi xóa nhân viên: ' + error.message)
+      showNotification('Xóa nhân viên thành công!')
     }
     setStaffModal({ show: false, mode: 'add' })
     fetchData()
   }
 
-  const openStaffModal = (mode: 'add' | 'delete', data?: Staff) => {
+  const openStaffModal = (mode: 'add' | 'edit' | 'delete', data?: Staff) => {
     setStaffModal({ show: true, mode, data })
-    if (mode === 'add') setStaffForm({ full_name: '', email: '', phone: '', password: '' })
+    if (mode === 'add') {
+      setStaffForm({ full_name: '', email: '', phone: '', password: '' })
+    } else if (data) {
+      setStaffForm({ full_name: data.full_name, email: data.email, phone: data.phone || '', password: '' })
+    }
   }
 
   const calculatePrice = (version: string) => {
@@ -469,8 +556,8 @@ export default function AdminPage() {
               <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Danh sách các loài cá</h3>
                 <button onClick={() => openSpeciesModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
-                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                  onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                  onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
                 >
                   <Plus size={14} /> Thêm loài mới
                 </button>
@@ -509,17 +596,112 @@ export default function AdminPage() {
           )}
 
           {/* TAB DEVICES */}
-          {activeTab === 'devices' && (
+          {activeTab === 'devices' && (() => {
+            const filteredDevices = devices.filter(d => {
+              const vMatch = deviceFilterVersion === 'all' || d.firmware_version === deviceFilterVersion;
+              const sMatch = deviceFilterStatus === 'all' || (deviceFilterStatus === 'active' ? !!d.tank_id : !d.tank_id);
+              return vMatch && sMatch;
+            });
+            const totalDevicePages = Math.max(1, Math.ceil(filteredDevices.length / 12));
+            const paginatedDevices = filteredDevices.slice(devicePage * 12, (devicePage + 1) * 12);
+            
+            return (
             <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
-              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)', flexWrap: 'wrap', gap: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Quản lý kho thiết bị</h3>
-                <button onClick={() => openDeviceModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
-                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
-                >
-                  <Plus size={14} /> Thêm thiết bị
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <select
+                    value={deviceFilterVersion}
+                    onChange={e => { setDeviceFilterVersion(e.target.value); setDevicePage(0); setDevicePageInput('1'); }}
+                    style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 12, fontFamily: F, outline: 'none' }}
+                  >
+                    <option value="all">Tất cả phiên bản</option>
+                    <option value="V1">V1</option>
+                    <option value="V2">V2</option>
+                    <option value="V3">V3</option>
+                  </select>
+                  <select
+                    value={deviceFilterStatus}
+                    onChange={e => { setDeviceFilterStatus(e.target.value); setDevicePage(0); setDevicePageInput('1'); }}
+                    style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 12, fontFamily: F, outline: 'none' }}
+                  >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="active">Đang dùng</option>
+                    <option value="inactive">Trong kho</option>
+                  </select>
+                  <button onClick={() => openDeviceModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
+                    onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                  >
+                    <Plus size={14} /> Thêm thiết bị
+                  </button>
+                </div>
               </div>
+
+              <div style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, borderBottom: '1px solid var(--ap-border)', background: 'var(--ap-table-header)' }}>
+                <span style={{ fontSize: 12, color: 'var(--ap-text-muted)' }}>Tổng: {filteredDevices.length} thiết bị</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ap-text-primary)' }}>
+                  <button
+                    onClick={() => {
+                      if (devicePage > 0) {
+                        setDevicePage(p => p - 1);
+                        setDevicePageInput((devicePage).toString());
+                      }
+                    }}
+                    disabled={devicePage === 0}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--ap-border)', borderRadius: 6, color: devicePage === 0 ? 'var(--ap-text-muted)' : 'var(--ap-text-primary)', cursor: devicePage === 0 ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                    onMouseEnter={e => { if (devicePage !== 0) e.currentTarget.style.background = 'var(--ap-hover-bg)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <ArrowLeft size={14} />
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: 'var(--ap-text-muted)' }}>Trang</span>
+                    <input
+                      value={devicePageInput}
+                      onChange={e => setDevicePageInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          let p = parseInt(devicePageInput);
+                          if (isNaN(p) || p < 1) p = 1;
+                          if (p > totalDevicePages) p = totalDevicePages;
+                          setDevicePageInput(p.toString());
+                          setDevicePage(p - 1);
+                        }
+                      }}
+                      onBlur={() => {
+                        let p = parseInt(devicePageInput);
+                        if (isNaN(p) || p < 1) p = 1;
+                        if (p > totalDevicePages) p = totalDevicePages;
+                        setDevicePageInput(p.toString());
+                        setDevicePage(p - 1);
+                      }}
+                      style={{
+                        background: 'var(--ap-bg-card)', border: '1px solid var(--ap-border)', borderRadius: 6,
+                        padding: '3px 0', width: 36, textAlign: 'center', fontWeight: 600, color: 'var(--ap-text-primary)', outline: 'none'
+                      }}
+                    />
+                    <span style={{ color: 'var(--ap-text-muted)' }}>của {totalDevicePages}</span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (devicePage < totalDevicePages - 1) {
+                        setDevicePage(p => p + 1);
+                        setDevicePageInput((devicePage + 2).toString());
+                      }
+                    }}
+                    disabled={devicePage >= totalDevicePages - 1}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: '1px solid var(--ap-border)', borderRadius: 6, color: devicePage >= totalDevicePages - 1 ? 'var(--ap-text-muted)' : 'var(--ap-text-primary)', cursor: devicePage >= totalDevicePages - 1 ? 'not-allowed' : 'pointer', transition: 'all 200ms' }}
+                    onMouseEnter={e => { if (devicePage < totalDevicePages - 1) e.currentTarget.style.background = 'var(--ap-hover-bg)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 800 }}>
                   <thead>
@@ -534,7 +716,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {devices.map(d => {
+                    {paginatedDevices.map(d => {
                       const status = d.tank_id ? 'Đang dùng' : 'Trong kho'
                       const statusColor = d.tank_id ? '#F59E0B' : '#10B981'
                       const statusBg = d.tank_id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'
@@ -565,14 +747,15 @@ export default function AdminPage() {
                         </tr>
                       )
                     })}
-                    {devices.length === 0 && !loading && (
+                    {filteredDevices.length === 0 && !loading && (
                       <tr><td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có thiết bị nào</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+          )
+          })()}
 
           {/* TAB STAFF */}
           {activeTab === 'staff' && (
@@ -580,8 +763,8 @@ export default function AdminPage() {
               <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Danh sách nhân viên</h3>
                 <button onClick={() => openStaffModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
-                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                  onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                  onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
                 >
                   <Plus size={14} /> Thêm nhân viên
                 </button>
@@ -611,6 +794,7 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
                         <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                          <button onClick={() => openStaffModal('edit', s)} style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', padding: 4 }}><Edit size={16} /></button>
                           <button onClick={() => openStaffModal('delete', s)} style={{ background: 'none', border: 'none', color: '#FF6B6B', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
                         </td>
                       </tr>
@@ -665,8 +849,8 @@ export default function AdminPage() {
                             <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>{order.phone}</div>
                           </td>
                           <td style={{ padding: '14px 16px' }}>
-                            <span style={{ padding: '4px 10px', borderRadius: 6, background: 'var(--ap-table-header)', fontSize: 11, fontWeight: 800, color: 'var(--ap-text-secondary)', border: '1px solid var(--ap-border)' }}>
-                              AquaCare {order.productVersion}
+                            <span style={{ padding: '4px 10px', borderRadius: 6, background: 'var(--ap-table-header)', fontSize: 11, fontWeight: 800, color: 'var(--ap-text-secondary)', border: '1px solid var(--ap-border)', display: 'inline-block', maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.productVersion}>
+                              {order.productVersion}
                             </span>
                           </td>
                           <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--ap-text-primary)' }}>
@@ -689,9 +873,17 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: '14px 16px' }}>
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                              <button
+                                onClick={() => setDetailsModal({ show: true, order })}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'filter 160ms', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.15)'}
+                                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                              >
+                                <Eye size={12} /> Chi tiết
+                              </button>
                               {order.paymentMethod === 'Chuyển khoản' && (
                                 <button
-                                  onClick={() => alert(`[Mock] Xem biên lai thanh toán\nĐơn hàng: ${order.id}\nKhách hàng: ${order.customerName}\nSố tiền: ${new Intl.NumberFormat('vi-VN').format(order.totalPrice)}đ\nTrạng thái: Đã xác nhận`)}
+                                  onClick={() => setReceiptModal({ show: true, order })}
                                   style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'filter 160ms', whiteSpace: 'nowrap' }}
                                   onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.15)'}
                                   onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
@@ -726,6 +918,33 @@ export default function AdminPage() {
           })()}
         </div>
       </main>
+
+      {/* Custom Notification */}
+      <div style={{
+        position: 'fixed',
+        top: 24,
+        left: '50%',
+        zIndex: 2000,
+        background: 'var(--ap-bg-card)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid #00A896',
+        color: '#00A896',
+        padding: '12px 24px',
+        borderRadius: 12,
+        fontSize: 14,
+        fontWeight: 600,
+        opacity: notification.show ? 1 : 0,
+        transform: notification.show ? 'translate(-50%, 0)' : 'translate(-50%, -20px)',
+        transition: 'all 300ms ease',
+        pointerEvents: notification.show ? 'auto' : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        boxShadow: '0 8px 32px rgba(0, 168, 150, 0.2)'
+      }}>
+        <CheckCircle size={18} />
+        {notification.msg}
+      </div>
 
       {/* Modals */}
       {speciesModal.show && (
@@ -777,10 +996,10 @@ export default function AdminPage() {
                   width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)',
                   background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none',
                   transition: 'border-color 160ms'
-                }} 
-                onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
-                onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
-                value={devForm.firmware_version} onChange={(e) => setDevForm({ ...devForm, firmware_version: e.target.value })}>
+                }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+                  value={devForm.firmware_version} onChange={(e) => setDevForm({ ...devForm, firmware_version: e.target.value })}>
                   <option value="V1" style={{ color: '#000' }}>V1</option>
                   <option value="V2" style={{ color: '#000' }}>V2</option>
                   <option value="V3" style={{ color: '#000' }}>V3</option>
@@ -792,8 +1011,8 @@ export default function AdminPage() {
                 <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
                   <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', marginBottom: 8, fontWeight: 600 }}>Thông tin cấu hình {devForm.firmware_version}:</div>
                   <div style={{ fontSize: 11, color: 'var(--ap-text-primary)', marginBottom: 12, lineHeight: 1.6 }}>
-                    <span style={{ color: 'var(--ap-text-secondary)' }}>Giá vốn phần cứng:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].hardware))}đ</b><br/>
-                    <span style={{ color: 'var(--ap-text-secondary)' }}>Chi phí vận hành:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].operation))}đ</b><br/>
+                    <span style={{ color: 'var(--ap-text-secondary)' }}>Giá vốn phần cứng:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].hardware))}đ</b><br />
+                    <span style={{ color: 'var(--ap-text-secondary)' }}>Chi phí vận hành:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].operation))}đ</b><br />
                     <span style={{ color: 'var(--ap-text-secondary)' }}>Biên lợi nhuận (Margin):</span> <b>{Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].margin) * 100}%</b>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(139,92,246,0.2)', paddingTop: 12 }}>
@@ -816,10 +1035,10 @@ export default function AdminPage() {
 
       {staffModal.show && (
         <Dialog
-          title={staffModal.mode === 'add' ? 'Thêm nhân viên mới' : 'Xóa nhân viên'}
+          title={staffModal.mode === 'add' ? 'Thêm nhân viên mới' : staffModal.mode === 'edit' ? 'Sửa thông tin nhân viên' : 'Xóa nhân viên'}
           message={staffModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa nhân viên "${staffModal.data?.full_name}"?` : undefined}
           error={errorMsg}
-          confirmText={staffModal.mode === 'delete' ? 'Xóa' : 'Thêm mới'}
+          confirmText={staffModal.mode === 'delete' ? 'Xóa' : staffModal.mode === 'edit' ? 'Cập nhật' : 'Thêm mới'}
           confirmColor={staffModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
           onConfirm={saveStaff}
           onCancel={() => setStaffModal({ show: false, mode: 'add' })}
@@ -827,9 +1046,13 @@ export default function AdminPage() {
           {staffModal.mode !== 'delete' && (
             <>
               <Input label="Họ và tên" placeholder="Nhập họ và tên" value={staffForm.full_name} onChange={(e: any) => setStaffForm({ ...staffForm, full_name: e.target.value })} />
-              <Input label="Email" type="email" placeholder="Nhập địa chỉ email" value={staffForm.email} onChange={(e: any) => setStaffForm({ ...staffForm, email: e.target.value })} />
+              {staffModal.mode === 'add' && (
+                <Input label="Email" type="email" placeholder="Nhập địa chỉ email" value={staffForm.email} onChange={(e: any) => setStaffForm({ ...staffForm, email: e.target.value })} />
+              )}
               <Input label="Số điện thoại" placeholder="Nhập số điện thoại" value={staffForm.phone} onChange={(e: any) => setStaffForm({ ...staffForm, phone: e.target.value })} />
-              <Input label="Mật khẩu" type="password" placeholder="Nhập mật khẩu (min 6 ký tự)" value={staffForm.password} onChange={(e: any) => setStaffForm({ ...staffForm, password: e.target.value })} />
+              {staffModal.mode === 'add' && (
+                <Input label="Mật khẩu" type="password" placeholder="Nhập mật khẩu (min 6 ký tự)" value={staffForm.password} onChange={(e: any) => setStaffForm({ ...staffForm, password: e.target.value })} />
+              )}
             </>
           )}
         </Dialog>
@@ -843,7 +1066,12 @@ export default function AdminPage() {
           confirmText="Xác nhận & Giao việc"
           cancelText="Hủy"
           confirmColor="#10B981"
-          onConfirm={() => {
+          onConfirm={async () => {
+            const { error } = await supabase.from('orders').update({ status: 'approved' }).eq('id', approveModal.order!.id)
+            if (error) {
+              alert('Lỗi duyệt đơn: ' + error.message)
+              return
+            }
             setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'approved' } : o))
             const taskLabel = TASK_TYPES.find(t => t.value === selectedTaskType)?.label || ''
             alert(`✅ Đã duyệt đơn ${approveModal.order!.id}!\n\nTask "${taskLabel}" đã được tạo và giao cho Staff.\nKhách hàng: ${approveModal.order!.customerName}\nĐịa chỉ: ${approveModal.order!.address}`)
@@ -900,6 +1128,89 @@ export default function AdminPage() {
                   </button>
                 )
               })}
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Receipt Modal */}
+      {receiptModal.show && receiptModal.order && (
+        <Dialog
+          title="Biên lai chuyển khoản"
+          confirmText="Đóng"
+          cancelText="Tải xuống"
+          confirmColor="#0ea5e9"
+          onConfirm={() => setReceiptModal({ show: false, order: null })}
+          onCancel={() => setReceiptModal({ show: false, order: null })}
+        >
+          <div style={{ padding: 16, background: 'var(--ap-bg-card)', borderRadius: 12, border: '1px solid var(--ap-border)', textAlign: 'center' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <CheckCircle size={48} color="#10B981" />
+            </div>
+            <h4 style={{ margin: '0 0 12px 0', color: 'var(--ap-text-primary)' }}>Đã thanh toán thành công</h4>
+            <div style={{ fontSize: 13, color: 'var(--ap-text-secondary)', display: 'grid', gap: 8, textAlign: 'left', background: 'var(--ap-hover-bg)', padding: 16, borderRadius: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Mã giao dịch:</span> <strong style={{ color: 'var(--ap-text-primary)' }}>TXN-{receiptModal.order.id.toString().slice(0, 6)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Khách hàng:</span> <strong style={{ color: 'var(--ap-text-primary)' }}>{receiptModal.order.customerName}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Số tiền:</span> <strong style={{ color: '#0ea5e9' }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(receiptModal.order.totalPrice)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Ngày chuyển:</span> <strong style={{ color: 'var(--ap-text-primary)' }}>{new Date(receiptModal.order.createdAt).toLocaleDateString('vi-VN')}</strong></div>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Details Modal */}
+      {detailsModal.show && detailsModal.order && (
+        <Dialog
+          title="Chi tiết đơn hàng"
+          confirmText="Đóng"
+          cancelText=""
+          confirmColor="#a78bfa"
+          onConfirm={() => setDetailsModal({ show: false, order: null })}
+          onCancel={() => setDetailsModal({ show: false, order: null })}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Mã đơn hàng:</span>
+              <span style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--ap-purple-text)' }}>{detailsModal.order.id}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Khách hàng:</span>
+              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{detailsModal.order.customerName}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Email:</span>
+              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.email}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>SĐT:</span>
+              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.phone}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Địa chỉ:</span>
+              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.address}</span>
+            </div>
+            {detailsModal.order.note && (
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+                <span style={{ color: 'var(--ap-text-muted)' }}>Ghi chú:</span>
+                <span style={{ color: '#F59E0B', fontStyle: 'italic', background: 'rgba(245,158,11,0.1)', padding: '4px 8px', borderRadius: 6 }}>"{detailsModal.order.note}"</span>
+              </div>
+            )}
+            <div style={{ height: 1, background: 'var(--ap-border)', margin: '4px 0' }}></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Sản phẩm:</span>
+              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{detailsModal.order.productVersion}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Số lượng:</span>
+              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.totalQuantity} sản phẩm</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền:</span>
+              <span style={{ fontWeight: 700, color: '#10B981', fontSize: 16 }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(detailsModal.order.totalPrice)}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <span style={{ color: 'var(--ap-text-muted)' }}>Ngày đặt:</span>
+              <span style={{ color: 'var(--ap-text-primary)' }}>{new Date(detailsModal.order.createdAt).toLocaleString('vi-VN')}</span>
             </div>
           </div>
         </Dialog>

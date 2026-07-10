@@ -15,6 +15,8 @@ class FCMService {
   FCMService._privateConstructor();
   static final FCMService instance = FCMService._privateConstructor();
 
+  static VoidCallback? onAlertReceived;
+
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   /// Xin quyền hiển thị thông báo
@@ -62,6 +64,10 @@ class FCMService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('🔔 Đã nhận thông báo khi đang mở app: ${message.messageId}');
       
+      if (onAlertReceived != null) {
+        onAlertReceived!();
+      }
+
       if (message.notification != null) {
         final title = message.notification?.title ?? 'Thông báo';
         final body = message.notification?.body ?? '';
@@ -78,7 +84,7 @@ class FCMService {
                 Text(body, style: const TextStyle(fontSize: 13)),
               ],
             ),
-            backgroundColor: const Color(0xFFFF8C42), // Màu cam cảnh báo
+            backgroundColor: const Color(0xFFB45309), // Màu cam sẫm, bớt chói hơn
             duration: const Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
