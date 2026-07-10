@@ -290,7 +290,7 @@ export default function AdminPage() {
         productVersion: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.product_name).join(', ') : 'N/A',
         totalQuantity: o.order_items && o.order_items.length > 0 ? o.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 1,
         totalPrice: o.total_price,
-        paymentMethod: o.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD',
+        paymentMethod: (o.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD') as 'Chuyển khoản' | 'COD',
         status: o.status,
         createdAt: o.created_at
       }))

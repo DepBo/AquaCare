@@ -52,7 +52,7 @@ export default function CartPage() {
 
   const fetchHistoryOrders = async (userId: string) => {
     setHistoryLoading(true)
-    const { data: ordersData, error } = await supabase.from('orders').select('*, order_items(product_name, quantity, product_price)').eq('user_id', userId).order('created_at', { ascending: false })
+    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, product_price)').eq('user_id', userId).order('created_at', { ascending: false })
     if (ordersData) {
       setHistoryOrders(ordersData)
     }
