@@ -118,7 +118,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           'Chọn một bể cá để xem cảnh báo',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
           ),
         ),
       );
@@ -150,13 +150,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF00A896).withOpacity(0.2)
-                          : Colors.white.withOpacity(0.05),
+                          ? const Color(0xFF00A896).withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected
                             ? const Color(0xFF00A896)
-                            : Colors.white.withOpacity(0.1),
+                            : Colors.white.withValues(alpha: 0.1),
                       ),
                     ),
                     child: Text(
@@ -164,7 +164,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? const Color(0xFF00A896) : Colors.white.withOpacity(0.6),
+                        color: isSelected ? const Color(0xFF00A896) : Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -188,7 +188,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                           Icon(
                             Icons.check_circle_outline_rounded,
                             size: 56,
-                            color: const Color(0xFF00A896).withOpacity(0.3),
+                            color: const Color(0xFF00A896).withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -196,7 +196,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -204,7 +204,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                             'Hệ thống đang hoạt động ổn định 🎉',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.3),
+                              color: Colors.white.withValues(alpha: 0.3),
                             ),
                           ),
                         ],
@@ -232,7 +232,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white.withOpacity(0.7),
+                                      color: Colors.white.withValues(alpha: 0.7),
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -338,10 +338,10 @@ class _AlertCardWidget extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.9),
+        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isRead ? Colors.white.withOpacity(0.06) : color.withOpacity(0.25),
+          color: isRead ? Colors.white.withValues(alpha: 0.06) : color.withValues(alpha: 0.25),
           width: 1,
         ),
       ),
@@ -353,7 +353,7 @@ class _AlertCardWidget extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -384,7 +384,7 @@ class _AlertCardWidget extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: color.withOpacity(0.4),
+                              color: color.withValues(alpha: 0.4),
                               blurRadius: 6,
                             ),
                           ],
@@ -397,7 +397,7 @@ class _AlertCardWidget extends StatelessWidget {
                   message,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     height: 1.5,
                   ),
                 ),
@@ -406,9 +406,9 @@ class _AlertCardWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
+                      color: color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: color.withOpacity(0.15)),
+                      border: Border.all(color: color.withValues(alpha: 0.15)),
                     ),
                     child: Text(
                       'Giá trị: $actualValue',
@@ -424,9 +424,9 @@ class _AlertCardWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.03),
+                    color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +434,7 @@ class _AlertCardWidget extends StatelessWidget {
                       Icon(
                         Icons.lightbulb_outline_rounded,
                         size: 14,
-                        color: const Color(0xFFFFD93D).withOpacity(0.6),
+                        color: const Color(0xFFFFD93D).withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -442,7 +442,7 @@ class _AlertCardWidget extends StatelessWidget {
                           guidance,
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: Colors.white.withOpacity(0.35),
+                            color: Colors.white.withValues(alpha: 0.35),
                             height: 1.5,
                             fontStyle: FontStyle.italic,
                           ),
@@ -456,7 +456,7 @@ class _AlertCardWidget extends StatelessWidget {
                   timeStr,
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: color.withOpacity(0.5),
+                    color: color.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

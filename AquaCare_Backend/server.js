@@ -40,6 +40,15 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 
+// Route Health Check dành cho UptimeRobot
+app.get('/api/health', (req, res) => {
+  // In ra màn hình log của Render
+  console.log(`[${new Date().toLocaleTimeString()}] UptimeRobot vừa gọi để giữ Server thức!`); 
+  
+  // Trả về cho UptimeRobot biết là Server vẫn ổn
+  res.status(200).send('Server is awake!');
+});
+
 // Bắt các route không tồn tại
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });

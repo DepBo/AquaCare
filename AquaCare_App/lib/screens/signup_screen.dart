@@ -183,8 +183,8 @@ class _SignupScreenState extends State<SignupScreen>
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => destination,
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => destination,
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 400),
         ),
@@ -309,7 +309,7 @@ class _SignupScreenState extends State<SignupScreen>
                             'Điền thông tin để bắt đầu sử dụng AquaCare',
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              color: Colors.white.withOpacity(0.4),
+                              color: Colors.white.withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 32),
@@ -336,10 +336,12 @@ class _SignupScreenState extends State<SignupScreen>
                                   icon: Icons.mail_outline,
                                   keyboardType: TextInputType.emailAddress,
                                   validator: (v) {
-                                    if (v == null || v.trim().isEmpty)
+                                    if (v == null || v.trim().isEmpty) {
                                       return 'Vui lòng nhập email';
-                                    if (!v.contains('@'))
+                                    }
+                                    if (!v.contains('@')) {
                                       return 'Email không hợp lệ';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -365,10 +367,12 @@ class _SignupScreenState extends State<SignupScreen>
                                     () => _showPassword = !_showPassword,
                                   ),
                                   validator: (v) {
-                                    if (v == null || v.isEmpty)
+                                    if (v == null || v.isEmpty) {
                                       return 'Vui lòng nhập mật khẩu';
-                                    if (v.length < 6)
+                                    }
+                                    if (v.length < 6) {
                                       return 'Mật khẩu ít nhất 6 ký tự';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -382,10 +386,12 @@ class _SignupScreenState extends State<SignupScreen>
                                     () => _showConfirm = !_showConfirm,
                                   ),
                                   validator: (v) {
-                                    if (v == null || v.isEmpty)
+                                    if (v == null || v.isEmpty) {
                                       return 'Vui lòng xác nhận mật khẩu';
-                                    if (v != _passCtrl.text)
+                                    }
+                                    if (v != _passCtrl.text) {
                                       return 'Mật khẩu không khớp';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -429,8 +435,8 @@ class _SignupScreenState extends State<SignupScreen>
                                             text: TextSpan(
                                               style: GoogleFonts.inter(
                                                 fontSize: 11,
-                                                color: Colors.white.withOpacity(
-                                                  0.35,
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.35,
                                                 ),
                                                 height: 1.5,
                                               ),
@@ -475,7 +481,7 @@ class _SignupScreenState extends State<SignupScreen>
                                       Expanded(
                                         child: Container(
                                           height: 1,
-                                          color: Colors.white.withOpacity(0.06),
+                                          color: Colors.white.withValues(alpha: 0.06),
                                         ),
                                       ),
                                       Padding(
@@ -486,8 +492,8 @@ class _SignupScreenState extends State<SignupScreen>
                                           'hoặc',
                                           style: GoogleFonts.inter(
                                             fontSize: 11,
-                                            color: Colors.white.withOpacity(
-                                              0.25,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.25,
                                             ),
                                             letterSpacing: 0.5,
                                           ),
@@ -496,7 +502,7 @@ class _SignupScreenState extends State<SignupScreen>
                                       Expanded(
                                         child: Container(
                                           height: 1,
-                                          color: Colors.white.withOpacity(0.06),
+                                          color: Colors.white.withValues(alpha: 0.06),
                                         ),
                                       ),
                                     ],
@@ -520,7 +526,7 @@ class _SignupScreenState extends State<SignupScreen>
                                     TextSpan(
                                       text: 'Đã có tài khoản? ',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.35),
+                                        color: Colors.white.withValues(alpha: 0.35),
                                       ),
                                     ),
                                     const TextSpan(
@@ -560,13 +566,13 @@ class _SignupScreenState extends State<SignupScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 size: 16,
               ),
             ),
@@ -602,7 +608,7 @@ class _SignupScreenState extends State<SignupScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             letterSpacing: 0.08,
           ),
         ),
@@ -635,7 +641,7 @@ class _SignupScreenState extends State<SignupScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             letterSpacing: 0.08,
           ),
         ),
@@ -653,7 +659,7 @@ class _SignupScreenState extends State<SignupScreen>
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
               ),
             ),
           ),
@@ -667,9 +673,9 @@ class _SignupScreenState extends State<SignupScreen>
       hintText: hint,
       hintStyle: GoogleFonts.inter(
         fontSize: 13,
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
       ),
-      prefixIcon: Icon(icon, size: 18, color: Colors.white.withOpacity(0.2)),
+      prefixIcon: Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.2)),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -722,7 +728,7 @@ class _SignupScreenState extends State<SignupScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00A896).withOpacity(0.25),
+              color: const Color(0xFF00A896).withValues(alpha: 0.25),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -768,8 +774,8 @@ class _SignupScreenState extends State<SignupScreen>
       child: OutlinedButton(
         onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white.withOpacity(0.04),
-          side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1),
+          backgroundColor: Colors.white.withValues(alpha: 0.04),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -798,7 +804,7 @@ class _SignupScreenState extends State<SignupScreen>
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.75),
+                      color: Colors.white.withValues(alpha: 0.75),
                     ),
                   ),
                 ],

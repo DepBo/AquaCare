@@ -93,9 +93,9 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.9),
+        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +105,7 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 20),
@@ -124,7 +124,7 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
                 child: Text(
                   'Chưa có dữ liệu cảnh báo',
                   style: GoogleFonts.inter(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     fontSize: 13,
                   ),
                 ),
@@ -182,7 +182,7 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
                                 entry.key,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: Colors.white.withValues(alpha: 0.7),
                                 ),
                               ),
                             ),

@@ -154,10 +154,10 @@ class _ControlScreenState extends State<ControlScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.9),
+        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isOn ? activeColor.withOpacity(0.3) : Colors.white.withOpacity(0.06),
+          color: isOn ? activeColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),
         ),
       ),
       child: Column(
@@ -168,12 +168,12 @@ class _ControlScreenState extends State<ControlScreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: isOn ? activeColor.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+                  color: isOn ? activeColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
-                  color: isOn ? activeColor : Colors.white.withOpacity(0.4),
+                  color: isOn ? activeColor : Colors.white.withValues(alpha: 0.4),
                   size: 24,
                 ),
               ),
@@ -187,7 +187,7 @@ class _ControlScreenState extends State<ControlScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: isOn ? Colors.white : Colors.white.withOpacity(0.7),
+                        color: isOn ? Colors.white : Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -195,7 +195,7 @@ class _ControlScreenState extends State<ControlScreen> {
                       isOn ? 'Đang hoạt động' : 'Đã tắt',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: isOn ? activeColor : Colors.white.withOpacity(0.4),
+                        color: isOn ? activeColor : Colors.white.withValues(alpha: 0.4),
                       ),
                     ),
                   ],
@@ -203,10 +203,10 @@ class _ControlScreenState extends State<ControlScreen> {
               ),
               Switch(
                 value: isOn,
-                activeColor: activeColor,
-                activeTrackColor: activeColor.withOpacity(0.3),
-                inactiveThumbColor: Colors.white.withOpacity(0.6),
-                inactiveTrackColor: Colors.white.withOpacity(0.1),
+                activeThumbColor: activeColor,
+                activeTrackColor: activeColor.withValues(alpha: 0.3),
+                inactiveThumbColor: Colors.white.withValues(alpha: 0.6),
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
                 onChanged: (val) {
                   SupabaseService.instance.updateRelayState(widget.tankId, relayType, val);
                 },
@@ -250,13 +250,13 @@ class _ControlScreenState extends State<ControlScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: Colors.white.withOpacity(0.5)),
+            Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.5)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -266,7 +266,7 @@ class _ControlScreenState extends State<ControlScreen> {
                     label,
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -275,7 +275,7 @@ class _ControlScreenState extends State<ControlScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: time != '--:--' ? Colors.white : Colors.white.withOpacity(0.3),
+                      color: time != '--:--' ? Colors.white : Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ],
@@ -287,7 +287,7 @@ class _ControlScreenState extends State<ControlScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -325,7 +325,7 @@ class _ControlScreenState extends State<ControlScreen> {
           return Center(
             child: Text(
               'Không có dữ liệu thiết bị',
-              style: GoogleFonts.inter(color: Colors.white.withOpacity(0.4)),
+              style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.4)),
             ),
           );
         }

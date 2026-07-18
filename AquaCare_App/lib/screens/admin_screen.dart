@@ -10,8 +10,8 @@ class AdminScreen extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => const LoginScreen(),
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 350),
       ),
@@ -58,7 +58,7 @@ class AdminScreen extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(
                 painter: _DotGridPainter(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.04),
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -92,7 +92,7 @@ class AdminScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(26),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.4),
                           blurRadius: 40,
                           spreadRadius: 0,
                         ),
@@ -130,7 +130,7 @@ class AdminScreen extends StatelessWidget {
                     'Tính năng đang được phát triển',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -188,8 +188,8 @@ class StaffScreen extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => const LoginScreen(),
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 350),
       ),
@@ -236,7 +236,7 @@ class StaffScreen extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(
                 painter: _DotGridPainter(
-                  color: const Color(0xFF00E5A0).withOpacity(0.04),
+                  color: const Color(0xFF00E5A0).withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -273,7 +273,7 @@ class StaffScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(26),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF00A896).withOpacity(0.35),
+                          color: const Color(0xFF00A896).withValues(alpha: 0.35),
                           blurRadius: 40,
                           spreadRadius: 0,
                         ),
@@ -311,7 +311,7 @@ class StaffScreen extends StatelessWidget {
                     'Tính năng đang được phát triển',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -381,7 +381,7 @@ class _GlowBlob extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [color.withOpacity(opacity), Colors.transparent],
+          colors: [color.withValues(alpha: opacity), Colors.transparent],
           stops: const [0.0, 1.0],
         ),
       ),
@@ -424,21 +424,21 @@ class _LogoutButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.25), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.logout_rounded, size: 15, color: color.withOpacity(0.8)),
+            Icon(Icons.logout_rounded, size: 15, color: color.withValues(alpha: 0.8)),
             const SizedBox(width: 6),
             Text(
               'Đăng xuất',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -458,9 +458,9 @@ class _ComingSoonBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -472,7 +472,7 @@ class _ComingSoonBadge extends StatelessWidget {
               color: color,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: color.withOpacity(0.5), blurRadius: 6),
+                BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6),
               ],
             ),
           ),
@@ -502,7 +502,7 @@ class _FeatureBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -534,9 +534,9 @@ class _FeatureCard extends StatelessWidget {
       width: 90,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.12), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.12), width: 1),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -549,7 +549,7 @@ class _FeatureCard extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.45),
+              color: Colors.white.withValues(alpha: 0.45),
               height: 1.4,
             ),
           ),

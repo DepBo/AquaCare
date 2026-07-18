@@ -204,8 +204,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Pond get _activePond {
-    if (_isLoading && _ponds.isEmpty)
+    if (_isLoading && _ponds.isEmpty) {
       return Pond(id: '', name: 'Đang đồng bộ...');
+    }
     if (_ponds.isEmpty) return Pond(id: '', name: 'Chưa có bể cá');
     return _ponds.firstWhere(
       (p) => p.id == _activePondId,
@@ -523,7 +524,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final formKey = GlobalKey<FormState>();
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (ctx) => _buildPondDialog(
         title: '➕ Thêm bể cá mới',
         confirmLabel: 'Thêm bể',
@@ -553,7 +554,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _showPondSettingsDialog(Pond pond) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (ctx) => PondSettingsDialog(
         pond: pond,
         fishSpeciesList: _fishSpecies,
@@ -567,12 +568,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _showDeletePondDialog(Pond pond) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0F1A30),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         title: Text(
           '🗑️ Xóa bể cá',
@@ -586,7 +587,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           text: TextSpan(
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               height: 1.6,
             ),
             children: [
@@ -607,7 +608,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withOpacity(0.5),
+              foregroundColor: Colors.white.withValues(alpha: 0.5),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -668,7 +669,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       backgroundColor: const Color(0xFF0F1A30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
       ),
       title: Text(
         title,
@@ -689,7 +690,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.35),
+                color: Colors.white.withValues(alpha: 0.35),
                 letterSpacing: 0.8,
               ),
             ),
@@ -702,21 +703,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                 hintText: hint,
                 hintStyle: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                 ),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.04),
+                fillColor: Colors.white.withValues(alpha: 0.04),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 12,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -740,8 +741,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               onFieldSubmitted: (_) => onConfirm(),
               validator: (v) {
-                if (v == null || v.trim().isEmpty)
+                if (v == null || v.trim().isEmpty) {
                   return 'Vui lòng nhập tên bể';
+                }
                 return null;
               },
             ),
@@ -753,7 +755,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         TextButton(
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.white.withOpacity(0.5),
+            foregroundColor: Colors.white.withValues(alpha: 0.5),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -788,12 +790,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _handleLogout() {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0F1A30),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
         ),
         title: Text(
           'Đăng xuất',
@@ -807,7 +809,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             height: 1.5,
           ),
         ),
@@ -816,7 +818,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withOpacity(0.5),
+              foregroundColor: Colors.white.withValues(alpha: 0.5),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -836,8 +838,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               Navigator.pushAndRemoveUntil(
                 context,
                 PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => const LoginScreen(),
-                  transitionsBuilder: (_, anim, __, child) =>
+                  pageBuilder: (_, _, _) => const LoginScreen(),
+                  transitionsBuilder: (_, anim, _, child) =>
                       FadeTransition(opacity: anim, child: child),
                   transitionDuration: const Duration(milliseconds: 350),
                 ),
@@ -944,8 +946,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 if (phHistory.isEmpty) phHistory = [7.0];
                                 if (tempHistory.isEmpty) tempHistory = [26.0];
                                 if (tdsHistory.isEmpty) tdsHistory = [250.0];
-                                if (waterLevelHistory.isEmpty)
+                                if (waterLevelHistory.isEmpty) {
                                   waterLevelHistory = [1.0];
+                                }
 
                                 // Cập nhật state biến _currentSensors trực tiếp trong quá trình build
                                 _currentSensors = [
@@ -1018,7 +1021,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           'Đang đồng bộ dữ liệu...',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -1088,7 +1091,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF0F1A30),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF00A896).withOpacity(0.3)),
+            border: Border.all(color: const Color(0xFF00A896).withValues(alpha: 0.3)),
             boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
           ),
           child: Column(
@@ -1125,7 +1128,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF0F1A30),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF4DA6FF).withOpacity(0.3)),
+            border: Border.all(color: const Color(0xFF4DA6FF).withValues(alpha: 0.3)),
             boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
           ),
           child: Column(
@@ -1211,7 +1214,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: Stack(
         children: [
           // Arrow up (to "Chọn bể cá")
@@ -1250,7 +1253,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1),
         ),
       ),
       child: Column(
@@ -1269,7 +1272,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       height: 36,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF00E5A0).withOpacity(0.5), width: 1.5),
+                        border: Border.all(color: const Color(0xFF00E5A0).withValues(alpha: 0.5), width: 1.5),
                         gradient: _userInfo?['avatar_url'] != null ? null : const LinearGradient(
                           colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
                           begin: Alignment.topLeft,
@@ -1328,7 +1331,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       'Cập nhật lúc $_currentTime',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                       ),
                     ),
                   ],
@@ -1347,10 +1350,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: _isLoading
                             ? const Color(
                                 0xFFFFB347,
-                              ).withOpacity(_pulseAnimation.value)
+                              ).withValues(alpha: _pulseAnimation.value)
                             : const Color(
                                 0xFF00E5A0,
-                              ).withOpacity(_pulseAnimation.value),
+                              ).withValues(alpha: _pulseAnimation.value),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -1358,7 +1361,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 (_isLoading
                                         ? const Color(0xFFFFB347)
                                         : const Color(0xFF00E5A0))
-                                    .withOpacity(_pulseAnimation.value * 0.6),
+                                    .withValues(alpha: _pulseAnimation.value * 0.6),
                             blurRadius: 5,
                             spreadRadius: 1,
                           ),
@@ -1384,7 +1387,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     icon: Icon(
                       Icons.logout_rounded,
                       size: 19,
-                      color: Colors.white.withOpacity(0.45),
+                      color: Colors.white.withValues(alpha: 0.45),
                     ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(
@@ -1408,7 +1411,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 'Bể cá:',
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.35),
+                  color: Colors.white.withValues(alpha: 0.35),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1425,10 +1428,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF00A896).withOpacity(0.3),
+                      color: const Color(0xFF00A896).withValues(alpha: 0.3),
                       style: BorderStyle.solid,
                     ),
-                    color: const Color(0xFF00A896).withOpacity(0.06),
+                    color: const Color(0xFF00A896).withValues(alpha: 0.06),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1436,7 +1439,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Icon(
                         Icons.add,
                         size: 13,
-                        color: const Color(0xFF00A896).withOpacity(0.8),
+                        color: const Color(0xFF00A896).withValues(alpha: 0.8),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -1444,7 +1447,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF00A896).withOpacity(0.8),
+                          color: const Color(0xFF00A896).withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -1475,7 +1478,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       color: const Color(0xFF0F1A30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
       ),
       elevation: 10,
       offset: const Offset(0, 8),
@@ -1517,7 +1520,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00A896).withOpacity(0.12),
+                  color: const Color(0xFF00A896).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -1542,16 +1545,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.10)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         ),
         child: Row(
           children: [
             Icon(
               Icons.water,
               size: 13,
-              color: const Color(0xFF00A896).withOpacity(0.8),
+              color: const Color(0xFF00A896).withValues(alpha: 0.8),
             ),
             const SizedBox(width: 7),
             Expanded(
@@ -1569,7 +1572,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Icon(
               Icons.expand_more_rounded,
               size: 16,
-              color: Colors.white.withOpacity(0.35),
+              color: Colors.white.withValues(alpha: 0.35),
             ),
           ],
         ),
@@ -1588,13 +1591,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF060E1A).withOpacity(0.95),
+        color: const Color(0xFF060E1A).withValues(alpha: 0.95),
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.06), width: 1),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.06), width: 1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -1626,12 +1629,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? const Color(0xFF00A896).withOpacity(0.12)
+                        ? const Color(0xFF00A896).withValues(alpha: 0.12)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     border: isSelected
                         ? Border.all(
-                            color: const Color(0xFF00A896).withOpacity(0.25),
+                            color: const Color(0xFF00A896).withValues(alpha: 0.25),
                             width: 1,
                           )
                         : null,
@@ -1647,7 +1650,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             size: 22,
                             color: isSelected
                                 ? const Color(0xFF00A896)
-                                : Colors.white.withOpacity(0.3),
+                                : Colors.white.withValues(alpha: 0.3),
                           ),
                           // Badge cho tab Cảnh báo
                           if (i == 3 && _unreadAlertCount > 0)
@@ -1666,7 +1669,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     BoxShadow(
                                       color: const Color(
                                         0xFFFF6B6B,
-                                      ).withOpacity(0.4),
+                                      ).withValues(alpha: 0.4),
                                       blurRadius: 6,
                                     ),
                                   ],
@@ -1695,7 +1698,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               : FontWeight.w400,
                           color: isSelected
                               ? const Color(0xFF00A896)
-                              : Colors.white.withOpacity(0.3),
+                              : Colors.white.withValues(alpha: 0.3),
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -1746,7 +1749,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     letterSpacing: 0.1,
                   ),
                 ),
@@ -1757,10 +1760,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00A896).withOpacity(0.1),
+                    color: const Color(0xFF00A896).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: const Color(0xFF00A896).withOpacity(0.2),
+                      color: const Color(0xFF00A896).withValues(alpha: 0.2),
                     ),
                   ),
                   child: Text(
@@ -1812,14 +1815,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF00A896).withOpacity(0.12),
-            const Color(0xFF1B4F72).withOpacity(0.12),
+            const Color(0xFF00A896).withValues(alpha: 0.12),
+            const Color(0xFF1B4F72).withValues(alpha: 0.12),
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF00A896).withOpacity(0.15)),
+        border: Border.all(color: const Color(0xFF00A896).withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -1827,7 +1830,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF00A896).withOpacity(0.15),
+              color: const Color(0xFF00A896).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -1855,7 +1858,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'Tất cả 4 cảm biến trong ngưỡng an toàn',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -1897,10 +1900,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       margin: const EdgeInsets.only(right: 12),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: isSelected ? s.color.withOpacity(0.15) : Colors.transparent,
+                        color: isSelected ? s.color.withValues(alpha: 0.15) : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? s.color : Colors.white.withOpacity(0.1),
+                          color: isSelected ? s.color : Colors.white.withValues(alpha: 0.1),
                           width: 1,
                         ),
                       ),
@@ -1981,7 +1984,7 @@ class _PondMenuItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isActive
-            ? const Color(0xFF00A896).withOpacity(0.10)
+            ? const Color(0xFF00A896).withValues(alpha: 0.10)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
@@ -2015,7 +2018,7 @@ class _PondMenuItem extends StatelessWidget {
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                     color: isActive
                         ? const Color(0xFF00A896)
-                        : Colors.white.withOpacity(0.7),
+                        : Colors.white.withValues(alpha: 0.7),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2028,7 +2031,7 @@ class _PondMenuItem extends StatelessWidget {
             icon: Icon(
               Icons.edit,
               size: 15,
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
             ),
             tooltip: 'Cấu hình',
             splashRadius: 16,
@@ -2041,8 +2044,8 @@ class _PondMenuItem extends StatelessWidget {
               Icons.delete_outline,
               size: 15,
               color: onDelete != null
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.white.withOpacity(0.1),
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.1),
             ),
             tooltip: onDelete != null ? 'Xóa' : 'Cần ít nhất 1 bể',
             splashRadius: 16,
@@ -2067,12 +2070,12 @@ class SensorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.85),
+        color: const Color(0xFF0F1A30).withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: sensor.color.withOpacity(0.15), width: 1),
+        border: Border.all(color: sensor.color.withValues(alpha: 0.15), width: 1),
         boxShadow: [
           BoxShadow(
-            color: sensor.color.withOpacity(0.05),
+            color: sensor.color.withValues(alpha: 0.05),
             blurRadius: 16,
             spreadRadius: 0,
           ),
@@ -2090,7 +2093,7 @@ class SensorCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: sensor.color.withOpacity(0.15),
+                    color: sensor.color.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(sensor.icon, color: sensor.color, size: 16),
@@ -2104,7 +2107,7 @@ class SensorCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         letterSpacing: 0.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -2117,10 +2120,10 @@ class SensorCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00A896).withOpacity(0.1),
+                    color: const Color(0xFF00A896).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(5),
                     border: Border.all(
-                      color: const Color(0xFF00A896).withOpacity(0.2),
+                      color: const Color(0xFF00A896).withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -2167,7 +2170,7 @@ class SensorCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: sensor.color.withOpacity(0.6),
+                        color: sensor.color.withValues(alpha: 0.6),
                       ),
                     ),
                 ],
@@ -2184,7 +2187,7 @@ class SensorCard extends StatelessWidget {
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: FractionallySizedBox(
@@ -2260,7 +2263,7 @@ class SparklineChart extends StatelessWidget {
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [color.withOpacity(0.25), color.withOpacity(0.0)],
+                colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -2283,12 +2286,12 @@ class SensorDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withOpacity(0.9),
+        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: sensor.color.withOpacity(0.15), width: 1),
+        border: Border.all(color: sensor.color.withValues(alpha: 0.15), width: 1),
         boxShadow: [
           BoxShadow(
-            color: sensor.color.withOpacity(0.05),
+            color: sensor.color.withValues(alpha: 0.05),
             blurRadius: 20,
             spreadRadius: 0,
           ),
@@ -2304,7 +2307,7 @@ class SensorDetailCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: sensor.color.withOpacity(0.12),
+                  color: sensor.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(sensor.icon, color: sensor.color, size: 22),
@@ -2327,7 +2330,7 @@ class SensorDetailCard extends StatelessWidget {
                       'Thời gian thực',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                       ),
                     ),
                   ],
@@ -2357,10 +2360,10 @@ class SensorDetailCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00A896).withOpacity(0.1),
+                      color: const Color(0xFF00A896).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: const Color(0xFF00A896).withOpacity(0.2),
+                        color: const Color(0xFF00A896).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Text(
@@ -2455,9 +2458,9 @@ class SensorDetailCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.1)),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
         child: Column(
           children: [
@@ -2466,7 +2469,7 @@ class SensorDetailCard extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 letterSpacing: 0.5,
               ),
             ),
@@ -2547,11 +2550,11 @@ class PondSettingsDialog extends StatefulWidget {
   final VoidCallback onSaved;
 
   const PondSettingsDialog({
-    Key? key,
+    super.key,
     required this.pond,
     required this.fishSpeciesList,
     required this.onSaved,
-  }) : super(key: key);
+  });
 
   @override
   State<PondSettingsDialog> createState() => _PondSettingsDialogState();
@@ -2700,15 +2703,15 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
             hintText: hint,
             hintStyle: GoogleFonts.inter(color: Colors.white30),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.04),
+            fillColor: Colors.white.withValues(alpha: 0.04),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -2730,9 +2733,9 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
@@ -2759,7 +2762,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: const Color(0xFF00A896),
+          activeThumbColor: const Color(0xFF00A896),
         ),
       ],
     );
@@ -2771,7 +2774,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
       backgroundColor: const Color(0xFF0F1A30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Container(
         width: 400,

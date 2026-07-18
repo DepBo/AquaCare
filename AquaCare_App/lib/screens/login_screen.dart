@@ -115,8 +115,8 @@ class _LoginScreenState extends State<LoginScreen>
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => destination,
-            transitionsBuilder: (_, anim, __, child) =>
+            pageBuilder: (_, _, _) => destination,
+            transitionsBuilder: (_, anim, _, child) =>
                 FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 400),
           ),
@@ -217,8 +217,8 @@ class _LoginScreenState extends State<LoginScreen>
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => destination,
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => destination,
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 400),
         ),
@@ -314,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen>
                             'Nhập thông tin tài khoản của bạn',
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              color: Colors.white.withOpacity(0.4),
+                              color: Colors.white.withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 36),
@@ -367,8 +367,8 @@ class _LoginScreenState extends State<LoginScreen>
                                             'Ghi nhớ đăng nhập',
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
-                                              color: Colors.white.withOpacity(
-                                                0.4,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.4,
                                               ),
                                             ),
                                           ),
@@ -400,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 Expanded(
                                   child: Container(
                                     height: 1,
-                                    color: Colors.white.withOpacity(0.06),
+                                    color: Colors.white.withValues(alpha: 0.06),
                                   ),
                                 ),
                                 Padding(
@@ -411,7 +411,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     'hoặc',
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
-                                      color: Colors.white.withOpacity(0.25),
+                                      color: Colors.white.withValues(alpha: 0.25),
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -419,7 +419,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 Expanded(
                                   child: Container(
                                     height: 1,
-                                    color: Colors.white.withOpacity(0.06),
+                                    color: Colors.white.withValues(alpha: 0.06),
                                   ),
                                 ),
                               ],
@@ -437,9 +437,9 @@ class _LoginScreenState extends State<LoginScreen>
                               onTap: () => Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (_, __, ___) =>
+                                  pageBuilder: (_, _, _) =>
                                       const SignupScreen(),
-                                  transitionsBuilder: (_, anim, __, child) =>
+                                  transitionsBuilder: (_, anim, _, child) =>
                                       SlideTransition(
                                         position:
                                             Tween<Offset>(
@@ -465,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     TextSpan(
                                       text: 'Chưa có tài khoản? ',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.35),
+                                        color: Colors.white.withValues(alpha: 0.35),
                                       ),
                                     ),
                                     const TextSpan(
@@ -524,7 +524,7 @@ class _LoginScreenState extends State<LoginScreen>
               'Smart IoT Farming',
               style: GoogleFonts.inter(
                 fontSize: 11,
-                color: Colors.white.withOpacity(0.35),
+                color: Colors.white.withValues(alpha: 0.35),
                 letterSpacing: 0.06,
               ),
             ),
@@ -544,7 +544,7 @@ class _LoginScreenState extends State<LoginScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             letterSpacing: 0.08,
           ),
         ),
@@ -574,7 +574,7 @@ class _LoginScreenState extends State<LoginScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             letterSpacing: 0.08,
           ),
         ),
@@ -591,7 +591,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
               ),
             ),
           ),
@@ -609,9 +609,9 @@ class _LoginScreenState extends State<LoginScreen>
       hintText: hint,
       hintStyle: GoogleFonts.inter(
         fontSize: 13,
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
       ),
-      prefixIcon: Icon(icon, size: 18, color: Colors.white.withOpacity(0.2)),
+      prefixIcon: Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.2)),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -664,7 +664,7 @@ class _LoginScreenState extends State<LoginScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00A896).withOpacity(0.25),
+              color: const Color(0xFF00A896).withValues(alpha: 0.25),
               blurRadius: 20,
               spreadRadius: 0,
               offset: const Offset(0, 6),
@@ -711,8 +711,8 @@ class _LoginScreenState extends State<LoginScreen>
       child: OutlinedButton(
         onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white.withOpacity(0.04),
-          side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1),
+          backgroundColor: Colors.white.withValues(alpha: 0.04),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -740,7 +740,7 @@ class _LoginScreenState extends State<LoginScreen>
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.75),
+                      color: Colors.white.withValues(alpha: 0.75),
                     ),
                   ),
                 ],
@@ -761,7 +761,7 @@ class GoogleLogoPainter extends CustomPainter {
     final double r = size.width / 2;
 
     final bgPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, bgPaint);
 
