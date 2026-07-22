@@ -108,6 +108,7 @@ interface Order {
   address: string
   note: string
   productVersion: string
+  deviceMacs?: string
   totalQuantity: number
   totalPrice: number
   paymentMethod: 'COD' | 'Chuyển khoản'
