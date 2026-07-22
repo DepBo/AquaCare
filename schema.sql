@@ -423,8 +423,9 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON public.cart_items(user_id);
 GRANT ALL PRIVILEGES ON TABLE public.cart_items TO postgres, anon, authenticated, service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 
+
 -- ── 15. CẬP NHẬT BẢNG ĐƠN HÀNG (ORDERS) ─────────────────────────────
 ALTER TABLE public.orders 
 ADD COLUMN IF NOT EXISTS shipping_email VARCHAR(255),
-ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50),
+ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50); 
 ADD COLUMN IF NOT EXISTS note TEXT;

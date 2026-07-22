@@ -88,11 +88,7 @@ interface Staff {
   created_at: string
 }
 
-const VERSION_CONFIG = {
-  'V1': { hardware: 1900000, operation: 200000, margin: 0.2, price: 2500000 },
-  'V2': { hardware: 2200000, operation: 200000, margin: 0.3, price: 3100000 },
-  'V3': { hardware: 2500000, operation: 200000, margin: 0.4, price: 3800000 },
-}
+
 
 const getNormalizedVersion = (version: string) => {
   if (!version) return 'V1'
@@ -234,6 +230,7 @@ export default function AdminPage() {
   const [deviceFilterVersion, setDeviceFilterVersion] = useState('all')
   const [deviceFilterStatus, setDeviceFilterStatus] = useState('all')
 
+  const [products, setProducts] = useState<{version: number, price: number}[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -278,7 +275,7 @@ export default function AdminPage() {
     const { data: staffData } = await supabase.from('users').select('*').eq('role', 'staff').order('created_at', { ascending: false })
     if (staffData) setStaff(staffData)
 
-    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity)').order('created_at', { ascending: false })
+    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, device_mac)').order('created_at', { ascending: false })
     if (ordersData) {
       const mappedOrders = ordersData.map((o: any) => ({
         id: o.id,
@@ -288,6 +285,7 @@ export default function AdminPage() {
         address: o.shipping_address,
         note: o.note || '',
         productVersion: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.product_name).join(', ') : 'N/A',
+        deviceMacs: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.device_mac).filter(Boolean).join(', ') : '',
         totalQuantity: o.order_items && o.order_items.length > 0 ? o.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 1,
         totalPrice: o.total_price,
         paymentMethod: (o.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD') as 'Chuyển khoản' | 'COD',
@@ -296,6 +294,9 @@ export default function AdminPage() {
       }))
       setOrders(mappedOrders)
     }
+
+    const { data: prodData } = await supabase.from('products').select('version, price')
+    if (prodData) setProducts(prodData)
 
     setLoading(false)
   }
@@ -433,15 +434,10 @@ export default function AdminPage() {
     }
   }
 
-  const calculatePrice = (version: string) => {
-    if (!version) return 0
-    const cfg = VERSION_CONFIG[version as keyof typeof VERSION_CONFIG]
-    if (!cfg) return 0
-    return Number(cfg.price) || 0
-  }
-
   const formatPrice = (version: string) => {
-    const price = calculatePrice(version)
+    const vNum = parseInt(version.replace('V', ''), 10)
+    const prod = products.find(p => p.version === vNum)
+    const price = prod ? prod.price : 0
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
   }
 
@@ -599,7 +595,10 @@ export default function AdminPage() {
           {activeTab === 'devices' && (() => {
             const filteredDevices = devices.filter(d => {
               const vMatch = deviceFilterVersion === 'all' || d.firmware_version === deviceFilterVersion;
-              const sMatch = deviceFilterStatus === 'all' || (deviceFilterStatus === 'active' ? !!d.tank_id : !d.tank_id);
+              let sMatch = true;
+              if (deviceFilterStatus === 'active') sMatch = !!d.tank_id;
+              else if (deviceFilterStatus === 'bought') sMatch = !d.tank_id && !!d.is_active;
+              else if (deviceFilterStatus === 'inactive') sMatch = !d.tank_id && !d.is_active;
               return vMatch && sMatch;
             });
             const totalDevicePages = Math.max(1, Math.ceil(filteredDevices.length / 12));
@@ -619,6 +618,7 @@ export default function AdminPage() {
                     <option value="V1">V1</option>
                     <option value="V2">V2</option>
                     <option value="V3">V3</option>
+                    <option value="V4">V4</option>
                   </select>
                   <select
                     value={deviceFilterStatus}
@@ -627,6 +627,7 @@ export default function AdminPage() {
                   >
                     <option value="all">Tất cả trạng thái</option>
                     <option value="active">Đang dùng</option>
+                    <option value="bought">Đã được mua</option>
                     <option value="inactive">Trong kho</option>
                   </select>
                   <button onClick={() => openDeviceModal('add')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#a78bfa', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: F, transition: 'filter 160ms' }}
@@ -717,10 +718,10 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {paginatedDevices.map(d => {
-                      const status = d.tank_id ? 'Đang dùng' : 'Trong kho'
-                      const statusColor = d.tank_id ? '#F59E0B' : '#10B981'
-                      const statusBg = d.tank_id ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'
-                      const statusBorder = d.tank_id ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'
+                      const status = d.tank_id ? 'Đang dùng' : (d.is_active ? 'Đã được mua' : 'Trong kho')
+                      const statusColor = d.tank_id ? '#F59E0B' : (d.is_active ? '#3B82F6' : '#10B981')
+                      const statusBg = d.tank_id ? 'rgba(245,158,11,0.1)' : (d.is_active ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)')
+                      const statusBorder = d.tank_id ? 'rgba(245,158,11,0.2)' : (d.is_active ? 'rgba(59,130,246,0.2)' : 'rgba(16,185,129,0.2)')
                       const owner = d.tanks?.users ? `${d.tanks.users.full_name} (${d.tanks.users.phone || 'N/A'})` : '-'
                       const tankName = d.tanks?.tank_name || '-'
 
@@ -1003,31 +1004,17 @@ export default function AdminPage() {
                   <option value="V1" style={{ color: '#000' }}>V1</option>
                   <option value="V2" style={{ color: '#000' }}>V2</option>
                   <option value="V3" style={{ color: '#000' }}>V3</option>
+                  <option value="V4" style={{ color: '#000' }}>V4</option>
                 </select>
               </div>
 
               {/* Auto price calculation display */}
-              {devForm.firmware_version && VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG] ? (
-                <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
-                  <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', marginBottom: 8, fontWeight: 600 }}>Thông tin cấu hình {devForm.firmware_version}:</div>
-                  <div style={{ fontSize: 11, color: 'var(--ap-text-primary)', marginBottom: 12, lineHeight: 1.6 }}>
-                    <span style={{ color: 'var(--ap-text-secondary)' }}>Giá vốn phần cứng:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].hardware))}đ</b><br />
-                    <span style={{ color: 'var(--ap-text-secondary)' }}>Chi phí vận hành:</span> <b>{new Intl.NumberFormat('vi-VN').format(Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].operation))}đ</b><br />
-                    <span style={{ color: 'var(--ap-text-secondary)' }}>Biên lợi nhuận (Margin):</span> <b>{Number(VERSION_CONFIG[getNormalizedVersion(devForm.firmware_version) as keyof typeof VERSION_CONFIG].margin) * 100}%</b>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(139,92,246,0.2)', paddingTop: 12 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)' }}>Giá bán dự kiến:</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ap-purple-text)' }}>{formatPrice(devForm.firmware_version)}</span>
-                  </div>
+              <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)' }}>Giá bán dự kiến ({devForm.firmware_version}):</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ap-purple-text)' }}>{formatPrice(devForm.firmware_version)}</span>
                 </div>
-              ) : (
-                <div style={{ padding: 16, borderRadius: 12, background: 'var(--ap-purple-bg)', border: '1px dashed rgba(139,92,246,0.3)', marginTop: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)' }}>Giá bán dự kiến:</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ap-purple-text)' }}>0đ</span>
-                  </div>
-                </div>
-              )}
+              </div>
             </>
           )}
         </Dialog>
@@ -1204,6 +1191,12 @@ export default function AdminPage() {
               <span style={{ color: 'var(--ap-text-muted)' }}>Số lượng:</span>
               <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.totalQuantity} sản phẩm</span>
             </div>
+            {detailsModal.order.deviceMacs && (
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+                <span style={{ color: 'var(--ap-text-muted)' }}>Mã MAC thiết bị (Cần giao):</span>
+                <span style={{ fontWeight: 700, fontFamily: 'monospace', color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 8px', borderRadius: 6, display: 'inline-block', width: 'fit-content' }}>{detailsModal.order.deviceMacs}</span>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
               <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền:</span>
               <span style={{ fontWeight: 700, color: '#10B981', fontSize: 16 }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(detailsModal.order.totalPrice)}</span>

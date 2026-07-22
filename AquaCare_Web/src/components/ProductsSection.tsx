@@ -21,25 +21,33 @@ export default function ProductsSection() {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_available', true)
-        .order('version', { ascending: true })
+      const [productsRes, devicesRes] = await Promise.all([
+        supabase.from('products').select('*').eq('is_available', true).order('version', { ascending: true }),
+        supabase.from('devices').select('firmware_version').eq('is_active', false).is('tank_id', null)
+      ])
 
-      if (!error && data && data.length > 0) {
-        const formatted = data.map((p: any) => ({
+      if (!productsRes.error && productsRes.data && productsRes.data.length > 0) {
+        const devicesData = devicesRes.data || [];
+        const stockCounts: Record<string, number> = {};
+        devicesData.forEach(d => {
+          const vKey = d.firmware_version;
+          stockCounts[vKey] = (stockCounts[vKey] || 0) + 1;
+        });
+
+        const formatted = productsRes.data.map((p: any) => ({
           id: p.id,
           name: p.name,
           description: p.description,
           price: p.price,
           image: p.image_url,
           rating: 4.9,
-          details: p.details || []
+          details: p.details || [],
+          stock: stockCounts['V' + p.version] || 0,
+          version: p.version
         }))
         setProducts(formatted)
       } else {
-        console.error("Failed to load products", error)
+        console.error("Failed to load products", productsRes.error)
       }
       setLoading(false);
     }
@@ -148,9 +156,40 @@ export default function ProductsSection() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0, lineHeight: 1.4 }}>{product.name}</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
-                  <Star size={14} color="#FFD700" fill="#FFD700" />
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{product.rating}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Star size={14} color="#FFD700" fill="#FFD700" />
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{product.rating}</span>
+                  </div>
+                  {/* Stock badge */}
+                  {(product as any).stock !== undefined && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 600,
+                      padding: '3px 8px', borderRadius: 20,
+                      background: (product as any).stock <= 0
+                        ? 'rgba(255, 80, 80, 0.15)'
+                        : (product as any).stock <= 5
+                          ? 'rgba(255, 180, 0, 0.15)'
+                          : 'rgba(90, 232, 125, 0.12)',
+                      color: (product as any).stock <= 0
+                        ? '#FF6B6B'
+                        : (product as any).stock <= 5
+                          ? '#FFB800'
+                          : '#5AE87D',
+                      border: `1px solid ${
+                        (product as any).stock <= 0
+                          ? 'rgba(255, 107, 107, 0.3)'
+                          : (product as any).stock <= 5
+                            ? 'rgba(255, 184, 0, 0.3)'
+                            : 'rgba(90, 232, 125, 0.25)'
+                      }`,
+                    }}>
+                      {(product as any).stock <= 0
+                        ? 'Hết hàng'
+                        : `Còn: ${(product as any).stock}`
+                      }
+                    </span>
+                  )}
                 </div>
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, flex: 1, margin: '0 0 20px 0' }}>
                   {product.description}
@@ -180,29 +219,35 @@ export default function ProductsSection() {
                     </button>
                     <button
                       onClick={() => handleAddToCart(product)}
+                      disabled={(product as any).stock <= 0}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '8px 12px', borderRadius: 8,
                         fontSize: 12, fontWeight: 600,
-                        background: addedItems[product.id] ? '#5AE87D' : 'rgba(77, 166, 255, 0.1)',
-                        color: addedItems[product.id] ? '#000' : '#4DA6FF',
-                        border: 'none', cursor: 'pointer',
+                        background: (product as any).stock <= 0
+                          ? 'rgba(255,255,255,0.05)'
+                          : addedItems[product.id] ? '#5AE87D' : 'rgba(77, 166, 255, 0.1)',
+                        color: (product as any).stock <= 0
+                          ? 'rgba(255,255,255,0.3)'
+                          : addedItems[product.id] ? '#000' : '#4DA6FF',
+                        border: 'none',
+                        cursor: (product as any).stock <= 0 ? 'not-allowed' : 'pointer',
                         transition: 'all 200ms',
                         whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => {
-                        if (!addedItems[product.id]) {
+                        if (!addedItems[product.id] && (product as any).stock > 0) {
                           e.currentTarget.style.background = 'rgba(77, 166, 255, 0.2)';
                         }
                       }}
                       onMouseLeave={e => {
-                        if (!addedItems[product.id]) {
+                        if (!addedItems[product.id] && (product as any).stock > 0) {
                           e.currentTarget.style.background = 'rgba(77, 166, 255, 0.1)';
                         }
                       }}
                     >
                       <ShoppingCart size={16} />
-                      {addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
+                      {(product as any).stock <= 0 ? 'Hết hàng' : addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
                     </button>
                   </div>
                 </div>

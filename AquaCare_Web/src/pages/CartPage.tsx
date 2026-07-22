@@ -80,16 +80,40 @@ export default function CartPage() {
     e.preventDefault()
 
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
-      alert('Vui lòng đăng nhập để đặt hàng!')
-      navigate('/login')
-      return
+
+    const orderItems: any[] = [];
+
+    // Check stock and reserve devices for each item
+    for (const item of cart) {
+      const { data: devices } = await supabase.from('devices')
+        .select('id, mac_address')
+        .eq('firmware_version', 'V' + item.version)
+        .eq('is_active', false)
+        .is('tank_id', null)
+        .limit(item.quantity);
+
+      if (!devices || devices.length < item.quantity) {
+        alert(`Rất tiếc, sản phẩm ${item.name} không đủ số lượng trong kho! Vui lòng giảm số lượng.`);
+        return;
+      }
+      
+      // Update devices to active
+      for (const device of devices) {
+        await supabase.from('devices').update({ is_active: true }).eq('id', device.id);
+        orderItems.push({
+          product_id: item.id,
+          product_name: item.name,
+          product_price: item.price,
+          quantity: 1, // Split into 1 item per row to track specific MAC address
+          device_mac: device.mac_address
+        });
+      }
     }
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: session.user.id,
+        user_id: session?.user?.id || null,
         shipping_name: formData.fullName,
         shipping_phone: formData.phone,
         shipping_email: formData.email,
@@ -107,15 +131,8 @@ export default function CartPage() {
       return
     }
 
-    const orderItems = cart.map(item => ({
-      order_id: order.id,
-      product_id: item.id,
-      product_name: item.name,
-      product_price: item.price,
-      quantity: item.quantity
-    }))
-
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+    const finalOrderItems = orderItems.map(oi => ({ ...oi, order_id: order.id }));
+    const { error: itemsError } = await supabase.from('order_items').insert(finalOrderItems)
 
     if (itemsError) {
       alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message)
