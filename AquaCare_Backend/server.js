@@ -304,3 +304,44 @@ mqttClient.on('message', async (topic, message) => {
     console.error('❌ Lỗi xử lý MQTT Message (Server an toàn không bị crash):', error.message);
   }
 });
+
+// ==========================================
+// TÍCH HỢP ĐIỀU KHIỂN RELAY QUA API (ZERO DELAY)
+// ==========================================
+app.post('/api/device/relay', async (req, res) => {
+  try {
+    const { tank_id, pin, state, relay_field } = req.body;
+    
+    if (pin === undefined || state === undefined || !tank_id || !relay_field) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Lấy MAC Address từ DB
+    const { data: device, error: fetchErr } = await supabase.from('devices').select('mac_address').eq('tank_id', tank_id).single();
+    if (fetchErr || !device || !device.mac_address) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+    const mac = device.mac_address;
+
+    // 1. Lập tức bắn lệnh MQTT để phần cứng nhận liền (0 delay)
+    const command = { pin: pin, cmd: state ? "ON" : "OFF" };
+    const topic = `iras-rag/command/${mac}`;
+    mqttClient.publish(topic, JSON.stringify(command));
+    console.log(`[MQTT CONTROL] Đã gửi lệnh Relay tới ${mac}:`, command);
+
+    // 2. Chạy ngầm việc update vào database Supabase
+    const { error } = await supabase.from('devices')
+      .update({ [relay_field]: state })
+      .eq('tank_id', tank_id);
+
+    if (error) {
+      console.error('❌ Lỗi lưu trạng thái Relay vào DB:', error.message);
+      return res.status(500).json({ error: "Failed to update database" });
+    }
+    
+    res.json({ success: true, message: "Command sent & Database updated" });
+  } catch (err) {
+    console.error('❌ Lỗi API điều khiển Relay:', err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});

@@ -1,0 +1,202 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.users (
+  id uuid NOT NULL,
+  full_name character varying NOT NULL,
+  email character varying NOT NULL UNIQUE,
+  phone character varying UNIQUE,
+  role character varying NOT NULL DEFAULT 'user'::character varying CHECK (role::text = ANY (ARRAY['user'::character varying, 'staff'::character varying, 'admin'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  web_fcm_token text,
+  app_fcm_token text,
+  avatar_url text,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.subscriptions (
+  id integer NOT NULL DEFAULT nextval('subscriptions_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  plan_type character varying NOT NULL CHECK (plan_type::text = ANY (ARRAY['free'::character varying, 'premium'::character varying, 'enterprise'::character varying]::text[])),
+  max_tanks integer NOT NULL DEFAULT 3,
+  ai_enabled boolean DEFAULT false,
+  status character varying DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'expired'::character varying, 'cancelled'::character varying]::text[])),
+  started_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.fish_species (
+  id integer NOT NULL DEFAULT nextval('fish_species_id_seq'::regclass),
+  species_name character varying NOT NULL UNIQUE,
+  temp_min numeric,
+  temp_max numeric,
+  ph_min numeric,
+  ph_max numeric,
+  tds_min numeric,
+  tds_max numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT fish_species_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.tanks (
+  id integer NOT NULL DEFAULT nextval('tanks_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  tank_name character varying NOT NULL,
+  species_id integer,
+  water_volume_liter numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  last_alert_sent_at timestamp with time zone,
+  CONSTRAINT tanks_pkey PRIMARY KEY (id),
+  CONSTRAINT tanks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT tanks_species_id_fkey FOREIGN KEY (species_id) REFERENCES public.fish_species(id)
+);
+CREATE TABLE public.devices (
+  id integer NOT NULL DEFAULT nextval('devices_id_seq'::regclass),
+  tank_id integer UNIQUE,
+  mac_address character varying NOT NULL UNIQUE,
+  firmware_version character varying,
+  sampling_interval_seconds integer NOT NULL DEFAULT 30 CHECK (sampling_interval_seconds = ANY (ARRAY[10, 30, 60, 600])),
+  is_active boolean DEFAULT false,
+  last_seen timestamp with time zone,
+  relay_pump_state boolean DEFAULT false,
+  relay_aerator_state boolean DEFAULT false,
+  relay_light_state boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  pump_on_time text,
+  pump_off_time text,
+  aerator_on_time text,
+  aerator_off_time text,
+  light_on_time text,
+  light_off_time text,
+  calib_ph_status text DEFAULT 'ready'::text CHECK (calib_ph_status = ANY (ARRAY['ready'::text, 'request_7.0'::text, 'request_4.0'::text, 'processing'::text, 'done'::text, 'failed'::text])),
+  calib_tds_status text DEFAULT 'ready'::text CHECK (calib_tds_status = ANY (ARRAY['ready'::text, 'request_standard'::text, 'processing'::text, 'done'::text, 'failed'::text])),
+  ph_offset numeric DEFAULT 0.00,
+  tds_calib_factor numeric DEFAULT 1.00,
+  last_calib_ph timestamp with time zone DEFAULT now(),
+  last_calib_tds timestamp with time zone DEFAULT now(),
+  is_simulator boolean DEFAULT true,
+  CONSTRAINT devices_pkey PRIMARY KEY (id),
+  CONSTRAINT devices_tank_id_fkey FOREIGN KEY (tank_id) REFERENCES public.tanks(id)
+);
+CREATE TABLE public.telemetry_logs (
+  id bigint NOT NULL DEFAULT nextval('telemetry_logs_id_seq'::regclass),
+  device_id integer NOT NULL,
+  temp numeric,
+  ph numeric,
+  tds numeric,
+  water_level_ok boolean,
+  extra_data jsonb,
+  recorded_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT telemetry_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT telemetry_logs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
+);
+CREATE TABLE public.alerts_history (
+  id bigint NOT NULL DEFAULT nextval('alerts_history_id_seq'::regclass),
+  tank_id integer NOT NULL,
+  device_id integer NOT NULL,
+  alert_type character varying NOT NULL,
+  actual_value numeric,
+  alert_message text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT alerts_history_pkey PRIMARY KEY (id),
+  CONSTRAINT alerts_history_tank_id_fkey FOREIGN KEY (tank_id) REFERENCES public.tanks(id),
+  CONSTRAINT alerts_history_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
+);
+CREATE TABLE public.relay_logs (
+  id bigint NOT NULL DEFAULT nextval('relay_logs_id_seq'::regclass),
+  device_id integer NOT NULL,
+  relay_name character varying NOT NULL,
+  action character varying NOT NULL CHECK (action::text = ANY (ARRAY['ON'::character varying, 'OFF'::character varying]::text[])),
+  triggered_by character varying NOT NULL CHECK (triggered_by::text = ANY (ARRAY['USER'::character varying, 'AUTO'::character varying, 'SYSTEM'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT relay_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT relay_logs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
+);
+CREATE TABLE public.mqtt_messages (
+  id bigint NOT NULL DEFAULT nextval('mqtt_messages_id_seq'::regclass),
+  device_id integer,
+  raw_payload jsonb NOT NULL,
+  processed boolean DEFAULT false,
+  received_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT mqtt_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT mqtt_messages_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
+);
+CREATE TABLE public.notifications (
+  id bigint NOT NULL DEFAULT nextval('notifications_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  body text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.tank_notification_settings (
+  tank_id integer NOT NULL,
+  notify_via_email boolean DEFAULT true,
+  notify_via_web_push boolean DEFAULT true,
+  notify_via_app_noti boolean DEFAULT true,
+  alert_cooldown_minutes integer DEFAULT 30,
+  alert_severity_preference character varying DEFAULT 'both'::character varying CHECK (alert_severity_preference::text = ANY (ARRAY['both'::character varying, 'critical_only'::character varying, 'warning_only'::character varying, 'none'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tank_notification_settings_pkey PRIMARY KEY (tank_id),
+  CONSTRAINT tank_notification_settings_tank_id_fkey FOREIGN KEY (tank_id) REFERENCES public.tanks(id)
+);
+CREATE TABLE public.products (
+  id character varying NOT NULL,
+  name character varying NOT NULL,
+  description text,
+  price integer NOT NULL,
+  image_url text,
+  version integer,
+  is_available boolean DEFAULT true,
+  details jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT products_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.orders (
+  id bigint NOT NULL DEFAULT nextval('orders_id_seq'::regclass),
+  user_id uuid,
+  shipping_name character varying NOT NULL,
+  shipping_phone character varying NOT NULL,
+  shipping_address text NOT NULL,
+  status character varying NOT NULL DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'confirmed'::character varying, 'shipping'::character varying, 'delivered'::character varying, 'cancelled'::character varying]::text[])),
+  total_price integer NOT NULL,
+  note text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  shipping_email character varying,
+  payment_method character varying,
+  CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.order_items (
+  id bigint NOT NULL DEFAULT nextval('order_items_id_seq'::regclass),
+  order_id bigint NOT NULL,
+  product_id character varying NOT NULL,
+  product_name character varying NOT NULL,
+  product_price integer NOT NULL,
+  quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  device_mac character varying,
+  CONSTRAINT order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.cart_items (
+  id bigint NOT NULL DEFAULT nextval('cart_items_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  product_id character varying NOT NULL,
+  quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT cart_items_pkey PRIMARY KEY (id),
+  CONSTRAINT cart_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT cart_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);

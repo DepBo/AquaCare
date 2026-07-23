@@ -16,6 +16,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
+const API_URL = import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
 
 // ── Kiểu dữ liệu ────────────────────────────────────────────
 interface SensorReading { time: string; value: number }
@@ -1845,20 +1846,25 @@ export default function DashboardPage() {
                       <button
                         onClick={async () => {
                           const newState = !pumpState;
-                          const { data: dev, error } = await supabase.from('devices')
-                            .update({ relay_pump_state: newState })
-                            .eq('tank_id', activeDevice)
-                            .select('id')
-                            .single();
-                          if (!error && dev) {
-                            setPumpState(newState);
-                            await supabase.from('relay_logs').insert({
-                              device_id: dev.id,
-                              relay_name: 'Pump',
-                              action: newState ? 'ON' : 'OFF',
-                              triggered_by: 'USER'
+                          try {
+                            const res = await fetch(`${API_URL}/api/device/relay`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ pin: 3, state: newState, tank_id: activeDevice, relay_field: 'relay_pump_state' })
                             });
-                          }
+                            if (res.ok) {
+                              setPumpState(newState);
+                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
+                              if (dev) {
+                                await supabase.from('relay_logs').insert({
+                                  device_id: dev.id,
+                                  relay_name: 'Pump',
+                                  action: newState ? 'ON' : 'OFF',
+                                  triggered_by: 'USER'
+                                });
+                              }
+                            }
+                          } catch (err) { console.error(err); }
                         }}
                         style={{
                           width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
@@ -2011,20 +2017,25 @@ export default function DashboardPage() {
                       <button
                         onClick={async () => {
                           const newState = !lightState;
-                          const { data: dev, error } = await supabase.from('devices')
-                            .update({ relay_light_state: newState })
-                            .eq('tank_id', activeDevice)
-                            .select('id')
-                            .single();
-                          if (!error && dev) {
-                            setLightState(newState);
-                            await supabase.from('relay_logs').insert({
-                              device_id: dev.id,
-                              relay_name: 'Light',
-                              action: newState ? 'ON' : 'OFF',
-                              triggered_by: 'USER'
+                          try {
+                            const res = await fetch(`${API_URL}/api/device/relay`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ pin: 1, state: newState, tank_id: activeDevice, relay_field: 'relay_light_state' })
                             });
-                          }
+                            if (res.ok) {
+                              setLightState(newState);
+                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
+                              if (dev) {
+                                await supabase.from('relay_logs').insert({
+                                  device_id: dev.id,
+                                  relay_name: 'Light',
+                                  action: newState ? 'ON' : 'OFF',
+                                  triggered_by: 'USER'
+                                });
+                              }
+                            }
+                          } catch (err) { console.error(err); }
                         }}
                         style={{
                           width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
@@ -2177,20 +2188,25 @@ export default function DashboardPage() {
                       <button
                         onClick={async () => {
                           const newState = !oxyState;
-                          const { data: dev, error } = await supabase.from('devices')
-                            .update({ relay_aerator_state: newState })
-                            .eq('tank_id', activeDevice)
-                            .select('id')
-                            .single();
-                          if (!error && dev) {
-                            setOxyState(newState);
-                            await supabase.from('relay_logs').insert({
-                              device_id: dev.id,
-                              relay_name: 'Aerator',
-                              action: newState ? 'ON' : 'OFF',
-                              triggered_by: 'USER'
+                          try {
+                            const res = await fetch(`${API_URL}/api/device/relay`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ pin: 2, state: newState, tank_id: activeDevice, relay_field: 'relay_aerator_state' })
                             });
-                          }
+                            if (res.ok) {
+                              setOxyState(newState);
+                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
+                              if (dev) {
+                                await supabase.from('relay_logs').insert({
+                                  device_id: dev.id,
+                                  relay_name: 'Aerator',
+                                  action: newState ? 'ON' : 'OFF',
+                                  triggered_by: 'USER'
+                                });
+                              }
+                            }
+                          } catch (err) { console.error(err); }
                         }}
                         style={{
                           width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
