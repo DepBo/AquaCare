@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -169,23 +171,39 @@ class SupabaseService {
         .map((list) => list.isNotEmpty ? list.first : null);
   }
 
-  /// Cập nhật trạng thái thủ công (Bật/Tắt) của một Relay
+  /// Cập nhật trạng thái thủ công (Bật/Tắt) của một Relay qua API (0-delay)
   Future<void> updateRelayState(
     String tankId,
     String relayType,
     bool newState,
   ) async {
     try {
-      final columnName = 'relay_${relayType}_state';
-      await client
-          .from('devices')
-          .update({columnName: newState})
-          .eq('tank_id', int.parse(tankId));
-      debugPrint(
-        '✅ [DB UPDATE]: Cập nhật $columnName thành $newState cho bể $tankId',
+      int pin = 0;
+      if (relayType == 'pump') pin = 3;
+      else if (relayType == 'aerator') pin = 2;
+      else if (relayType == 'light') pin = 1;
+      
+      final url = Uri.parse('https://aquacare-p78r.onrender.com/api/device/relay');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'pin': pin,
+          'state': newState,
+          'tank_id': int.parse(tankId),
+          'relay_field': 'relay_${relayType}_state'
+        }),
       );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ [MQTT API]: Đã gửi lệnh bật/tắt $relayType thành $newState cho bể $tankId (0-delay)',
+        );
+      } else {
+        throw Exception('API trả về lỗi ${response.statusCode}: ${response.body}');
+      }
     } catch (e) {
-      debugPrint('❌ [DB ERROR]: Lỗi khi cập nhật Relay: $e');
+      debugPrint('❌ [MQTT API ERROR]: Lỗi khi gọi API Relay: $e');
       rethrow;
     }
   }
