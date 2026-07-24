@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: 'Giới thiệu', href: '#about' },
   { label: 'Giải pháp', href: '#features' },
   { label: 'Sản phẩm', href: '#products' },
+  { label: 'Gói dịch vụ', href: '#subscriptions' },
   { label: 'Công nghệ', href: '#technology' },
   { label: 'Quy trình', href: '#howitworks' },
   { label: 'Liên hệ', href: '#contact' },

@@ -88,6 +88,18 @@ interface Staff {
   created_at: string
 }
 
+interface SubscriptionPlan {
+  id: number
+  name: string
+  plan_type: 'free' | 'premium' | 'enterprise'
+  price: number
+  duration_months: number
+  max_tanks: number
+  smart_device_setup: boolean
+  history_days: number
+  is_active: boolean
+}
+
 
 
 const getNormalizedVersion = (version: string) => {
@@ -214,7 +226,7 @@ export default function AdminPage() {
   const userInfoStr = localStorage.getItem('user_info')
   const userInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [activeTab, setActiveTab] = useState<'species' | 'devices' | 'staff' | 'orders'>('species')
+  const [activeTab, setActiveTab] = useState<'species' | 'devices' | 'staff' | 'orders' | 'subscriptions'>('species')
 
   // Orders state
   const [orders, setOrders] = useState<Order[]>([])
@@ -233,6 +245,7 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState<{version: number, price: number}[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
 
   // Modals
@@ -244,6 +257,11 @@ export default function AdminPage() {
 
   const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
   const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '' })
+
+  const [subModal, setSubModal] = useState<{ show: boolean, data?: SubscriptionPlan, mode: 'add' }>({ show: false, mode: 'add' })
+  const [subForm, setSubForm] = useState<Partial<SubscriptionPlan>>({
+    name: '', plan_type: 'premium', price: 80000, duration_months: 1, max_tanks: 5, smart_device_setup: true, history_days: 365
+  })
 
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -298,6 +316,9 @@ export default function AdminPage() {
 
     const { data: prodData } = await supabase.from('products').select('version, price')
     if (prodData) setProducts(prodData)
+
+    const { data: subData } = await supabase.from('subscription_plans').select('*').order('id')
+    if (subData) setSubscriptionPlans(subData)
 
     setLoading(false)
   }
@@ -435,6 +456,33 @@ export default function AdminPage() {
     }
   }
 
+  // ---- Subscription CRUD ----
+  const saveSubscription = async () => {
+    setErrorMsg('')
+    if (subModal.mode === 'add') {
+      if (!subForm.name || !subForm.plan_type || subForm.price === undefined) return setErrorMsg('Vui lòng điền đủ thông tin')
+      
+      const { error } = await supabase.from('subscription_plans').insert({
+        name: subForm.name,
+        plan_type: subForm.plan_type,
+        price: subForm.price,
+        duration_months: subForm.duration_months,
+        max_tanks: subForm.max_tanks,
+        smart_device_setup: subForm.smart_device_setup,
+        history_days: subForm.history_days
+      })
+      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      showNotification('Thêm gói cước thành công!')
+    }
+    setSubModal({ show: false, mode: 'add' })
+    fetchData()
+  }
+
+  const openSubModal = (mode: 'add') => {
+    setSubModal({ show: true, mode })
+    setSubForm({ name: '', plan_type: 'premium', price: 80000, duration_months: 1, max_tanks: 5, smart_device_setup: true, history_days: 365 })
+  }
+
   const formatPrice = (version: string) => {
     const vNum = parseInt(version.replace('V', ''), 10)
     const prod = products.find(p => p.version === vNum)
@@ -468,6 +516,7 @@ export default function AdminPage() {
             { id: 'devices', icon: Box, label: 'Thiết bị & Kho' },
             { id: 'staff', icon: Users, label: 'Quản lý nhân viên' },
             { id: 'orders', icon: ShoppingCart, label: 'Quản lý Đơn hàng' },
+            { id: 'subscriptions', icon: FileText, label: 'Quản lý Gói cước' },
           ].map(item => (
             <button key={item.id}
               onClick={() => setActiveTab(item.id as any)}
@@ -918,6 +967,57 @@ export default function AdminPage() {
               </div>
             )
           })()}
+
+          {/* TAB SUBSCRIPTIONS */}
+          {activeTab === 'subscriptions' && (
+            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 16, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+              <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)' }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--ap-text-primary)' }}>Danh sách Gói cước</h2>
+                <button
+                  onClick={() => openSubModal('add')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'var(--ap-purple-text)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 600, transition: 'filter 180ms' }}
+                  onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                  onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                >
+                  <Plus size={16} /> Thêm Gói mới
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 600 }}>
+                  <thead style={{ background: 'var(--ap-table-header)', borderBottom: '1px solid var(--ap-border)' }}>
+                    <tr>
+                      <th style={{ padding: '12px 24px', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)', textTransform: 'uppercase' }}>Tên gói</th>
+                      <th style={{ padding: '12px 24px', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)', textTransform: 'uppercase' }}>Loại</th>
+                      <th style={{ padding: '12px 24px', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)', textTransform: 'uppercase' }}>Giá</th>
+                      <th style={{ padding: '12px 24px', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-secondary)', textTransform: 'uppercase' }}>Quyền lợi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscriptionPlans.map((plan, i) => (
+                      <tr key={plan.id} style={{ borderBottom: i < subscriptionPlans.length - 1 ? '1px solid var(--ap-border)' : 'none', transition: 'background 160ms' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <td style={{ padding: '16px 24px', color: 'var(--ap-text-primary)', fontWeight: 600 }}>{plan.name}</td>
+                        <td style={{ padding: '16px 24px', color: 'var(--ap-text-secondary)' }}>{plan.plan_type}</td>
+                        <td style={{ padding: '16px 24px', color: 'var(--ap-purple-text)', fontWeight: 700 }}>
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(plan.price)}
+                        </td>
+                        <td style={{ padding: '16px 24px', color: 'var(--ap-text-secondary)', fontSize: 13 }}>
+                          Bể: {plan.max_tanks} • Lưu data: {plan.history_days} ngày • Setup T.Bị: {plan.smart_device_setup ? 'Có' : 'Không'}
+                        </td>
+                      </tr>
+                    ))}
+                    {subscriptionPlans.length === 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có gói cước nào</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -949,6 +1049,51 @@ export default function AdminPage() {
       </div>
 
       {/* Modals */}
+      {subModal.show && (
+        <Dialog
+          title="Thêm gói cước mới"
+          error={errorMsg}
+          confirmText="Lưu"
+          confirmColor="#a78bfa"
+          onConfirm={saveSubscription}
+          onCancel={() => setSubModal({ show: false, mode: 'add' })}
+        >
+          <Input label="Tên gói cước" value={subForm.name} onChange={(e: any) => setSubForm({ ...subForm, name: e.target.value })} placeholder="VD: Gói Siêu Cấp" />
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>Loại gói</label>
+              <select style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)', background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: F, outline: 'none', transition: 'border-color 160ms' }}
+                value={subForm.plan_type} onChange={e => setSubForm({ ...subForm, plan_type: e.target.value as any })}
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+              >
+                <option value="free" style={{ color: '#000' }}>Miễn phí</option>
+                <option value="premium" style={{ color: '#000' }}>Cao cấp (Premium)</option>
+                <option value="enterprise" style={{ color: '#000' }}>Doanh nghiệp</option>
+              </select>
+            </div>
+            <Input label="Giá (VNĐ)" type="number" value={subForm.price} onChange={(e: any) => setSubForm({ ...subForm, price: parseInt(e.target.value, 10) })} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Thời hạn (Tháng)" type="number" value={subForm.duration_months} onChange={(e: any) => setSubForm({ ...subForm, duration_months: parseInt(e.target.value, 10) })} />
+            <Input label="Số bể tối đa" type="number" value={subForm.max_tanks} onChange={(e: any) => setSubForm({ ...subForm, max_tanks: parseInt(e.target.value, 10) })} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Lưu trữ lịch sử (Ngày)" type="number" value={subForm.history_days} onChange={(e: any) => setSubForm({ ...subForm, history_days: parseInt(e.target.value, 10) })} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--ap-text-primary)' }}>
+              <input type="checkbox" checked={subForm.smart_device_setup} onChange={e => setSubForm({ ...subForm, smart_device_setup: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--ap-purple-text)' }} />
+              Setup Thiết bị
+            </label>
+          </div>
+        </Dialog>
+      )}
+
       {speciesModal.show && (
         <Dialog
           title={speciesModal.mode === 'add' ? 'Thêm loài cá mới' : speciesModal.mode === 'edit' ? 'Sửa loài cá' : 'Xóa loài cá'}

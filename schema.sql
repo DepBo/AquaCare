@@ -429,3 +429,80 @@ ALTER TABLE public.orders
 ADD COLUMN IF NOT EXISTS shipping_email VARCHAR(255),
 ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50); 
 ADD COLUMN IF NOT EXISTS note TEXT;
+
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS device_mac VARCHAR(30);
+
+-- ── 1. XÓA BẢNG CŨ ──────────────────────────────────────────────────
+DROP TABLE IF EXISTS public.subscriptions CASCADE;
+
+
+-- ── 2. TẠO BẢNG CẤU HÌNH GÓI CƯỚC (SUBSCRIPTION_PLANS) ──────────────
+CREATE TABLE IF NOT EXISTS public.subscription_plans (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL, -- Tên hiển thị (VD: Gói Miễn Phí, Gói Cao Cấp)
+    plan_type VARCHAR(20) UNIQUE NOT NULL 
+        CHECK (plan_type IN ('free', 'premium', 'enterprise')),
+    
+    price INTEGER NOT NULL DEFAULT 0, -- Giá tiền (VND)
+    duration_months INTEGER NOT NULL DEFAULT 1, -- Thời hạn của gói (Tháng)
+    
+    max_tanks INTEGER NOT NULL DEFAULT 1, -- Giới hạn số lượng bể
+    
+    is_active BOOLEAN DEFAULT TRUE,       -- Gói này còn đang kinh doanh không?
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── 3. TẠO BẢNG ĐĂNG KÝ CỦA USER (USER_SUBSCRIPTIONS) ────────────────
+CREATE TABLE IF NOT EXISTS public.user_subscriptions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    plan_id INTEGER NOT NULL REFERENCES public.subscription_plans(id) ON DELETE RESTRICT,
+    
+    start_date TIMESTAMPTZ DEFAULT NOW(),
+    end_date TIMESTAMPTZ, -- Nếu là Free thì có thể để NULL (Vĩnh viễn)
+    
+    status VARCHAR(20) NOT NULL DEFAULT 'active' 
+        CHECK (status IN ('active', 'expired', 'cancelled', 'pending')),
+        
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+-- ── 4. INDEXES & QUYỀN TRUY CẬP ──────────────────────────────────────
+-- Giúp truy vấn danh sách gói và kiểm tra quyền của user cực nhanh
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON public.user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON public.user_subscriptions(status);
+
+-- Phân quyền bảo mật cho client
+GRANT ALL PRIVILEGES ON TABLE public.subscription_plans TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON TABLE public.user_subscriptions TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+
+-- 1. Thêm 2 cột đặc quyền mới vào bảng subscription_plans
+ALTER TABLE public.subscription_plans 
+ADD COLUMN IF NOT EXISTS smart_device_setup BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS history_days INTEGER NOT NULL DEFAULT 30;
+-- 2. Cập nhật lại Gói Free ( <= 3 bể, xem lịch sử 30 ngày, giá 0đ )
+UPDATE public.subscription_plans 
+SET 
+    max_tanks = 3,
+    smart_device_setup = FALSE,
+    history_days = 30,
+    price = 0
+WHERE plan_type = 'free';
+-- 3. Cập nhật lại Gói Premium ( > 3 bể (ví dụ 10 bể), Setup T.Bị, lịch sử 365 ngày, giá 80k/tháng )
+UPDATE public.subscription_plans 
+SET 
+    max_tanks = 10,
+    smart_device_setup = TRUE,
+    history_days = 365,
+    price = 80000
+WHERE plan_type = 'premium';
+
+INSERT INTO public.subscription_plans (name, plan_type, price, duration_months, max_tanks, smart_device_setup, history_days, is_active)
+VALUES 
+('Gói Miễn Phí (Starter)', 'free', 0, 999, 3, FALSE, 30, TRUE),
+('Gói Cao Cấp (Premium)', 'premium', 80000, 1, 10, TRUE, 365, TRUE);

@@ -15,6 +15,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 // import FishFarmGame from './pages/FishFarmGame'
 import DashboardPage from './pages/DashboardPage'
 import ProductsSection from './components/ProductsSection'
+import SubscriptionSection from './components/SubscriptionSection'
 import CartPage from './pages/CartPage'
 import { CartProvider } from './contexts/CartContext'
 import AdminPage from './pages/AdminPage'
@@ -37,6 +38,7 @@ function MainPage() {
       <AboutSection />
       <FeaturesSection />
       <ProductsSection />
+      <SubscriptionSection />
       <TechnologySection />
       <HowItWorksSection />
       <ContactSection />
