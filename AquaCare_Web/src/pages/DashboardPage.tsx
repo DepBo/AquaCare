@@ -780,7 +780,7 @@ export default function DashboardPage() {
     setPageInput((currentHistoryPage + 1).toString())
   }, [currentHistoryPage])
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'control' | 'sensors' | 'alerts'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'control' | 'sensors' | 'alerts' | 'calibration'>('overview')
   const [pumpState, setPumpState] = useState(false)
   const [lightState, setLightState] = useState(false)
   const [oxyState, setOxyState] = useState(false)
