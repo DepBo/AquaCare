@@ -208,6 +208,44 @@ class SupabaseService {
     }
   }
 
+  /// Gửi lệnh raw tới MQTT thông qua Backend (Zero Delay)
+  Future<void> sendDeviceCommand(String tankId, String command) async {
+    try {
+      final url = Uri.parse('https://aquacare-p78r.onrender.com/api/device/command');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'tank_id': int.parse(tankId),
+          'command': command,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ [MQTT API]: Đã gửi lệnh "$command" cho bể $tankId (0-delay)');
+      } else {
+        throw Exception('API trả về lỗi ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ [MQTT API ERROR]: Lỗi khi gọi API Command: $e');
+      rethrow;
+    }
+  }
+
+  /// Cập nhật thời gian hiệu chuẩn pH
+  Future<void> updateLastCalibPh(String tankId, String isoTime) async {
+    try {
+      await client
+          .from('devices')
+          .update({'last_calib_ph': isoTime})
+          .eq('tank_id', int.parse(tankId));
+      debugPrint('✅ [DB UPDATE]: Cập nhật last_calib_ph thành công cho bể $tankId');
+    } catch (e) {
+      debugPrint('❌ [DB ERROR]: Lỗi khi cập nhật last_calib_ph: $e');
+      rethrow;
+    }
+  }
+
   /// Cập nhật giờ bật/tắt tự động của một Relay
   Future<void> updateDeviceSchedule(
     String tankId,

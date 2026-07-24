@@ -26,6 +26,7 @@ class Pond {
   String? volume;
   int? speciesId;
   String? macAddress;
+  String? lastCalibPh;
 
   Pond({
     required this.id,
@@ -33,6 +34,7 @@ class Pond {
     this.volume,
     this.speciesId,
     this.macAddress,
+    this.lastCalibPh,
   });
 }
 
@@ -257,6 +259,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     'Tổng quan',
     'Cảm biến',
     'Điều khiển',
+    'Hiệu chuẩn',
     'Cảnh báo',
   ];
 
@@ -291,7 +294,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     FCMService.onAlertReceived = () {
       if (mounted) {
         setState(() {
-          if (_selectedTab != 3) {
+          if (_selectedTab != 4) {
             _unreadAlertCount++;
           }
         });
@@ -461,12 +464,15 @@ class _DashboardScreenState extends State<DashboardScreen>
           _ponds = data
               .map((json) {
             String? mac;
+            String? lastCalib;
             var devicesData = json['devices'];
             if (devicesData != null) {
               if (devicesData is List && devicesData.isNotEmpty) {
                 mac = devicesData[0]['mac_address'];
+                lastCalib = devicesData[0]['last_calib_ph'];
               } else if (devicesData is Map) {
                 mac = devicesData['mac_address'];
+                lastCalib = devicesData['last_calib_ph'];
               }
             }
             return Pond(
@@ -475,6 +481,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               volume: json['water_volume_liter']?.toString(),
               speciesId: json['species_id'],
               macAddress: mac,
+              lastCalibPh: lastCalib,
             );
           }).toList();
           _activePondId = _ponds.first.id;
@@ -1586,6 +1593,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       {'icon': Icons.home_rounded, 'label': 'Tổng quan'},
       {'icon': Icons.analytics_rounded, 'label': 'Cảm biến'},
       {'icon': Icons.power_settings_new_rounded, 'label': 'Điều khiển'},
+      {'icon': Icons.check_circle_rounded, 'label': 'Hiệu chuẩn'},
       {'icon': Icons.notifications_rounded, 'label': 'Cảnh báo'},
     ];
 
@@ -1615,7 +1623,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 onTap: () {
                   setState(() => _selectedTab = i);
                   // Reset badge khi bấm vào tab Cảnh báo
-                  if (i == 3) {
+                  if (i == 4) {
                     setState(() => _unreadAlertCount = 0);
                   }
                 },
@@ -1624,8 +1632,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOut,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
+                    horizontal: 8,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
@@ -1653,7 +1661,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 : Colors.white.withValues(alpha: 0.3),
                           ),
                           // Badge cho tab Cảnh báo
-                          if (i == 3 && _unreadAlertCount > 0)
+                          if (i == 4 && _unreadAlertCount > 0)
                             Positioned(
                               right: -8,
                               top: -4,
@@ -1692,7 +1700,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Text(
                         items[i]['label'] as String,
                         style: GoogleFonts.inter(
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: isSelected
                               ? FontWeight.w600
                               : FontWeight.w400,
@@ -1721,6 +1729,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _buildOverviewTab(),
         _buildSensorsTab(),
         ControlScreen(tankId: _activePondId),
+        _buildCalibrationTab(),
         _buildAlertsTab(),
       ],
     );
@@ -1949,6 +1958,218 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
       ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //                   TAB: HIỆU CHUẨN
+  // ══════════════════════════════════════════════════════════
+  Widget _buildCalibrationTab() {
+    bool isCalibNeeded = true;
+    if (_activePond.lastCalibPh != null) {
+      final lastCalib = DateTime.parse(_activePond.lastCalibPh!);
+      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+      isCalibNeeded = lastCalib.isBefore(sixMonthsAgo);
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Banner Cảnh báo
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isCalibNeeded ? const Color(0xFFFFB347).withValues(alpha: 0.1) : const Color(0xFF00A896).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isCalibNeeded ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                  color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isCalibNeeded ? 'Đã đến lúc cần hiệu chuẩn cảm biến pH!' : 'Cảm biến pH đang hoạt động tốt',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Lần hiệu chuẩn gần nhất: ${_activePond.lastCalibPh != null ? DateTime.parse(_activePond.lastCalibPh!).toLocal().toString().split(' ')[0] : 'Chưa từng hiệu chuẩn'}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Lưu ý: Bạn có thể thực hiện hiệu chuẩn bất cứ lúc nào.',
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white54, fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          
+          // Hướng dẫn
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1A30),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hướng dẫn các bước:',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildInstructionStep('1', 'Nhấn nút Bắt đầu hiệu chuẩn để thiết bị vào chế độ hiệu chuẩn.'),
+                _buildInstructionStep('2', 'Lấy cảm biến pH ra khỏi hồ, rửa sạch bằng nước cất và lau khô bằng giấy mềm.'),
+                _buildInstructionStep('3', 'Nhúng cảm biến vào dung dịch chuẩn pH 7.0, đợi giá trị ổn định rồi nhấn nút Calib 7.0.'),
+                _buildInstructionStep('4', 'Rửa sạch cảm biến bằng nước cất, lau khô.'),
+                _buildInstructionStep('5', 'Nhúng cảm biến vào dung dịch chuẩn pH 4.0, đợi ổn định rồi nhấn nút Calib 4.0.'),
+                _buildInstructionStep('6', 'Nhấn nút Lưu & Hoàn tất để lưu kết quả và thoát chế độ hiệu chuẩn.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Các nút bấm
+          _buildCalibButton(
+            '1. Bắt đầu hiệu chuẩn',
+            const Color(0xFF3B82F6),
+            () async {
+              await SupabaseService.instance.sendDeviceCommand(_activePondId, 'enterph');
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn')));
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCalibButton(
+                  '2. Calib pH 7.0',
+                  const Color(0xFFC77DFF),
+                  () async {
+                    await SupabaseService.instance.sendDeviceCommand(_activePondId, '7.0');
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Calib pH 7.0')));
+                  },
+                  isOutlined: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildCalibButton(
+                  '3. Calib pH 4.0',
+                  const Color(0xFFFF8C42),
+                  () async {
+                    await SupabaseService.instance.sendDeviceCommand(_activePondId, '4.0');
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Calib pH 4.0')));
+                  },
+                  isOutlined: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildCalibButton(
+            '4. Lưu & Hoàn tất',
+            const Color(0xFF00A896),
+            () async {
+              await SupabaseService.instance.sendDeviceCommand(_activePondId, 'exitph');
+              final now = DateTime.now().toUtc().toIso8601String();
+              await SupabaseService.instance.updateLastCalibPh(_activePondId, now);
+              
+              // Cập nhật lại UI lập tức
+              final pIndex = _ponds.indexWhere((p) => p.id == _activePondId);
+              if (pIndex != -1) {
+                setState(() {
+                  _ponds[pIndex] = Pond(
+                    id: _ponds[pIndex].id,
+                    name: _ponds[pIndex].name,
+                    volume: _ponds[pIndex].volume,
+                    speciesId: _ponds[pIndex].speciesId,
+                    macAddress: _ponds[pIndex].macAddress,
+                    lastCalibPh: now,
+                  );
+                });
+              }
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!')));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep(String step, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$step.',
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalibButton(String label, Color color, VoidCallback onPressed, {bool isOutlined = false}) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isOutlined ? Colors.transparent : color,
+        foregroundColor: isOutlined ? color : Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isOutlined ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 

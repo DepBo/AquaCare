@@ -37,6 +37,8 @@ interface Pond {
   species_id?: number
   species_name?: string
   mac_address?: string
+  last_calib_ph?: string
+  calib_ph_status?: string
 }
 interface FishSpecies {
   id: number
@@ -901,7 +903,7 @@ export default function DashboardPage() {
         })
       }
 
-      supabase.from('tanks').select('*, fish_species(*), devices(mac_address)').eq('user_id', userInfo.id).then(({ data }) => {
+      supabase.from('tanks').select('*, fish_species(*), devices(mac_address, last_calib_ph, calib_ph_status)').eq('user_id', userInfo.id).then(({ data }) => {
         if (data) {
           const mapped = data.map((t: any) => ({
             id: t.id,
@@ -909,7 +911,9 @@ export default function DashboardPage() {
             volume: t.water_volume_liter,
             species_id: t.species_id,
             species_name: t.fish_species?.species_name,
-            mac_address: t.devices?.[0]?.mac_address || ''
+            mac_address: t.devices?.[0]?.mac_address || '',
+            last_calib_ph: t.devices?.[0]?.last_calib_ph || null,
+            calib_ph_status: t.devices?.[0]?.calib_ph_status || 'ready'
           }))
           setPonds(mapped)
           if (mapped.length > 0) setActiveDevice(mapped[0].id)
@@ -1414,6 +1418,7 @@ export default function DashboardPage() {
             { id: 'overview', icon: Home, label: 'Tổng quan' },
             { id: 'sensors', icon: Activity, label: 'Cảm biến' },
             { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
+            { id: 'calibration', icon: CheckCircle, label: 'Hiệu chuẩn pH' },
             { id: 'alerts', icon: Bell, label: `Cảnh báo${alerts.length ? ` (${alerts.length})` : ''}` },
           ].map(item => (
             <button key={item.id}
@@ -2447,6 +2452,124 @@ export default function DashboardPage() {
                   {/* Lịch sử dữ liệu Drill-down */}
                   <DrillDownHistory selectedSensor={selectedSensor} activeDevice={activeDevice} selectedCfg={selectedCfg} />
                 </>
+              )}
+              {/* ═══ TAB: CALIBRATION ═══ */}
+              {activeTab === 'calibration' && (
+                <div style={{ padding: 24, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,168,150,0.15)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <Activity size={24} color="#00A896" />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>Hiệu chuẩn cảm biến pH</h2>
+                      <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Tiến hành hiệu chuẩn định kỳ 6 tháng/lần để đảm bảo độ chính xác</p>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const isCalibNeeded = (() => {
+                      if (!activePond || !activePond.last_calib_ph) return true;
+                      const lastCalib = new Date(activePond.last_calib_ph);
+                      const sixMonthsAgo = new Date();
+                      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                      return lastCalib < sixMonthsAgo;
+                    })();
+
+                    return (
+                      <div style={{ background: isCalibNeeded ? 'rgba(255,179,71,0.1)' : 'rgba(0,168,150,0.1)', border: `1px solid ${isCalibNeeded ? '#FFB347' : '#00A896'}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <AlertCircle size={24} color={isCalibNeeded ? '#FFB347' : '#00A896'} />
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: isCalibNeeded ? '#FFB347' : '#00A896' }}>
+                            {isCalibNeeded ? 'Đã đến lúc cần hiệu chuẩn cảm biến pH!' : 'Cảm biến pH đang hoạt động tốt'}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                            Lần hiệu chuẩn gần nhất: {activePond?.last_calib_ph ? new Date(activePond.last_calib_ph).toLocaleDateString('vi-VN') : 'Chưa từng hiệu chuẩn'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 10 }}>
+                    <div style={{ background: 'var(--bg-btn-cancel)', borderRadius: 12, padding: 20 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Hướng dẫn các bước:</h3>
+                      <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <li>Nhấn nút <b>Bắt đầu hiệu chuẩn</b> để thiết bị vào chế độ hiệu chuẩn.</li>
+                        <li>Lấy cảm biến pH ra khỏi hồ, rửa sạch bằng nước cất và lau khô bằng giấy mềm.</li>
+                        <li>Nhúng cảm biến vào dung dịch chuẩn <b>pH 7.0</b>, đợi giá trị ổn định rồi nhấn nút <b>Calib 7.0</b>.</li>
+                        <li>Rửa sạch cảm biến bằng nước cất, lau khô.</li>
+                        <li>Nhúng cảm biến vào dung dịch chuẩn <b>pH 4.0</b>, đợi ổn định rồi nhấn nút <b>Calib 4.0</b>.</li>
+                        <li>Nhấn nút <b>Lưu & Hoàn tất</b> để lưu kết quả và thoát chế độ hiệu chuẩn.</li>
+                      </ol>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+                      <button onClick={async () => {
+                        await fetch(`${API_URL}/api/device/command`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ tank_id: activeDevice, command: 'enterph' })
+                        });
+                        showNotification('Đã gửi lệnh Bắt đầu hiệu chuẩn');
+                      }} style={{ padding: '12px 20px', borderRadius: 10, background: '#3B82F6', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', transition: 'all 200ms' }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                      >
+                        1. Bắt đầu hiệu chuẩn
+                      </button>
+
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button onClick={async () => {
+                          await fetch(`${API_URL}/api/device/command`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tank_id: activeDevice, command: '7.0' })
+                          });
+                          showNotification('Đã gửi lệnh Calib pH 7.0');
+                        }} style={{ flex: 1, padding: '12px 20px', borderRadius: 10, background: 'var(--bg-btn-cancel)', border: '1px solid #C77DFF', color: '#C77DFF', fontWeight: 600, cursor: 'pointer', transition: 'all 200ms' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(199, 125, 255, 0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-btn-cancel)'}
+                        >
+                          2. Calib pH 7.0
+                        </button>
+
+                        <button onClick={async () => {
+                          await fetch(`${API_URL}/api/device/command`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tank_id: activeDevice, command: '4.0' })
+                          });
+                          showNotification('Đã gửi lệnh Calib pH 4.0');
+                        }} style={{ flex: 1, padding: '12px 20px', borderRadius: 10, background: 'var(--bg-btn-cancel)', border: '1px solid #FF8C42', color: '#FF8C42', fontWeight: 600, cursor: 'pointer', transition: 'all 200ms' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 140, 66, 0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-btn-cancel)'}
+                        >
+                          3. Calib pH 4.0
+                        </button>
+                      </div>
+
+                      <button onClick={async () => {
+                        await fetch(`${API_URL}/api/device/command`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ tank_id: activeDevice, command: 'exitph' })
+                        });
+                        // Cập nhật last_calib_ph vào DB
+                        const now = new Date().toISOString();
+                        const { error } = await supabase.from('devices').update({ last_calib_ph: now }).eq('tank_id', activeDevice);
+                        if (!error) {
+                          setPonds(prev => prev.map(p => p.id === activeDevice ? { ...p, last_calib_ph: now } : p));
+                          showNotification('Lưu & Hoàn tất hiệu chuẩn thành công!');
+                        }
+                      }} style={{ padding: '12px 20px', borderRadius: 10, background: '#00A896', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', transition: 'all 200ms' }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                      >
+                        4. Lưu & Hoàn tất
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* ═══ TAB: ALERTS ═══ */}

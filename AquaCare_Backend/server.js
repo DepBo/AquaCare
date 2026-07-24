@@ -90,6 +90,36 @@ app.post('/api/device/relay', async (req, res) => {
   }
 });
 
+// ==========================================
+// TÍCH HỢP GỬI LỆNH THÔ QUA API (ZERO DELAY)
+// ==========================================
+app.post('/api/device/command', async (req, res) => {
+  try {
+    const { tank_id, command } = req.body;
+    
+    if (!command || !tank_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Lấy MAC Address từ DB
+    const { data: device, error: fetchErr } = await supabase.from('devices').select('mac_address').eq('tank_id', tank_id).single();
+    if (fetchErr || !device || !device.mac_address) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+    const mac = device.mac_address;
+
+    // Lập tức bắn lệnh MQTT để phần cứng nhận liền
+    const topic = `iras-rag/command/${mac}`;
+    mqttClient.publish(topic, command); // Lưu ý: gửi dạng chuỗi thô (raw string) không phải JSON
+    console.log(`[MQTT CONTROL] Đã gửi lệnh thô tới ${mac}:`, command);
+
+    res.json({ success: true, message: "Raw command sent via MQTT" });
+  } catch (err) {
+    console.error('❌ Lỗi API điều khiển Raw Command:', err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Bắt các route không tồn tại
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });

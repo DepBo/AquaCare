@@ -4,6 +4,7 @@ class Pond {
   final int volume;
   final int? speciesId;
   final String? macAddress;
+  final String? lastCalibPh;
 
   Pond({
     required this.id,
@@ -11,6 +12,7 @@ class Pond {
     required this.volume,
     this.speciesId,
     this.macAddress,
+    this.lastCalibPh,
   });
 
   factory Pond.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class Pond {
       volume: json['volume'],
       speciesId: json['species_id'],
       macAddress: json['mac_address'],
+      lastCalibPh: json['last_calib_ph'],
     );
   }
 }
