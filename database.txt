@@ -15,18 +15,6 @@ CREATE TABLE public.users (
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.subscriptions (
-  id integer NOT NULL DEFAULT nextval('subscriptions_id_seq'::regclass),
-  user_id uuid NOT NULL,
-  plan_type character varying NOT NULL CHECK (plan_type::text = ANY (ARRAY['free'::character varying, 'premium'::character varying, 'enterprise'::character varying]::text[])),
-  max_tanks integer NOT NULL DEFAULT 3,
-  ai_enabled boolean DEFAULT false,
-  status character varying DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'expired'::character varying, 'cancelled'::character varying]::text[])),
-  started_at timestamp with time zone DEFAULT now(),
-  expires_at timestamp with time zone,
-  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
-  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
 CREATE TABLE public.fish_species (
   id integer NOT NULL DEFAULT nextval('fish_species_id_seq'::regclass),
   species_name character varying NOT NULL UNIQUE,
@@ -199,4 +187,32 @@ CREATE TABLE public.cart_items (
   CONSTRAINT cart_items_pkey PRIMARY KEY (id),
   CONSTRAINT cart_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT cart_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.subscription_plans (
+  id integer NOT NULL DEFAULT nextval('subscription_plans_id_seq'::regclass),
+  name character varying NOT NULL,
+  plan_type character varying NOT NULL UNIQUE CHECK (plan_type::text = ANY (ARRAY['free'::character varying, 'premium'::character varying, 'enterprise'::character varying]::text[])),
+  price integer NOT NULL DEFAULT 0,
+  duration_months integer NOT NULL DEFAULT 1,
+  max_tanks integer NOT NULL DEFAULT 1,
+  ai_enabled boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  smart_device_setup boolean DEFAULT false,
+  history_days integer NOT NULL DEFAULT 30,
+  CONSTRAINT subscription_plans_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.user_subscriptions (
+  id bigint NOT NULL DEFAULT nextval('user_subscriptions_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  plan_id integer NOT NULL,
+  start_date timestamp with time zone DEFAULT now(),
+  end_date timestamp with time zone,
+  status character varying NOT NULL DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'expired'::character varying, 'cancelled'::character varying, 'pending'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id)
 );
