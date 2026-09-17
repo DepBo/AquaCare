@@ -1,0 +1,107 @@
+# ==============================================================================
+# AquaCare Root .gitignore
+# ==============================================================================
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# ==============================================================================
+# AquaCare_Backend (Node.js / Express)
+# ==============================================================================
+AquaCare_Backend/node_modules/
+AquaCare_Backend/npm-debug.log*
+AquaCare_Backend/yarn-debug.log*
+AquaCare_Backend/yarn-error.log*
+AquaCare_Backend/pnpm-debug.log*
+AquaCare_Backend/.pnpm-debug.log*
+AquaCare_Backend/coverage/
+AquaCare_Backend/dist/
+AquaCare_Backend/build/
+
+# ==============================================================================
+# AquaCare_Web (React + Vite)
+# ==============================================================================
+AquaCare_Web/node_modules/
+AquaCare_Web/dist/
+AquaCare_Web/dist-ssr/
+AquaCare_Web/build/
+AquaCare_Web/npm-debug.log*
+AquaCare_Web/yarn-debug.log*
+AquaCare_Web/yarn-error.log*
+AquaCare_Web/pnpm-debug.log*
+
+# ==============================================================================
+# AquaCare_App (Flutter)
+# ==============================================================================
+# Miscellaneous
+AquaCare_App/*.class
+AquaCare_App/*.log
+AquaCare_App/*.pyc
+AquaCare_App/*.swp
+AquaCare_App/.DS_Store
+AquaCare_App/.atom/
+AquaCare_App/.buildlog/
+AquaCare_App/.history
+AquaCare_App/.svn/
+AquaCare_App/mac/
+AquaCare_App/out/
+
+# IntelliJ
+AquaCare_App/*.iml
+AquaCare_App/*.ipr
+AquaCare_App/*.iws
+AquaCare_App/.idea/
+
+# Flutter/Dart/Pub related
+AquaCare_App/**/doc/api/
+AquaCare_App/**/ios/Flutter/.last_build_id
+AquaCare_App/.dart_tool/
+AquaCare_App/.flutter-plugins
+AquaCare_App/.flutter-plugins-dependencies
+AquaCare_App/.pub-cache/
+AquaCare_App/.pub/
+AquaCare_App/build/
+AquaCare_App/flutter_*.png
+AquaCare_App/lib/generated_plugin_registrant.dart
+
+# Symbolication related
+AquaCare_App/app.*.symbols
+
+# Obfuscation related
+AquaCare_App/app.*.map.json
+
+# Android Studio will place build artifacts here
+AquaCare_App/android/app/debug
+AquaCare_App/android/app/profile
+AquaCare_App/android/app/release
+
+# iOS coverage files
+AquaCare_App/ios/coverage/
+
+# Firebase configuration files
+AquaCare_App/android/app/google-services.json
+AquaCare_App/ios/Runner/GoogleService-Info.plist
+AquaCare_App/macos/Runner/GoogleService-Info.plist

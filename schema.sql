@@ -447,6 +447,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
     duration_months INTEGER NOT NULL DEFAULT 1, -- Thời hạn của gói (Tháng)
     
     max_tanks INTEGER NOT NULL DEFAULT 1, -- Giới hạn số lượng bể
+    ai_enabled BOOLEAN DEFAULT FALSE,     -- Quyền sử dụng AI
     
     is_active BOOLEAN DEFAULT TRUE,       -- Gói này còn đang kinh doanh không?
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -502,7 +503,9 @@ SET
     price = 80000
 WHERE plan_type = 'premium';
 
-INSERT INTO public.subscription_plans (name, plan_type, price, duration_months, max_tanks, smart_device_setup, history_days, is_active)
+INSERT INTO public.subscription_plans (name, plan_type, price, duration_months, max_tanks, ai_enabled, smart_device_setup, history_days, is_active)
 VALUES 
-('Gói Miễn Phí (Starter)', 'free', 0, 999, 3, FALSE, 30, TRUE),
-('Gói Cao Cấp (Premium)', 'premium', 80000, 1, 10, TRUE, 365, TRUE);
+('Gói Miễn Phí (Starter)', 'free', 0, 999, 3, FALSE, FALSE, 30, TRUE),
+('Gói Cao Cấp (Premium)', 'premium', 80000, 1, 10, TRUE, TRUE, 365, TRUE);
+
+DROP TABLE IF EXISTS public.mqtt_messages CASCADE;
