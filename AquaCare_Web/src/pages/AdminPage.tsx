@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Fish, Box, LogOut, ArrowLeft, Sun, Moon,
   Plus, Edit, Trash2, X, Server, Users, Shield, ShoppingCart,
-  CheckCheck, FileText, Truck, Wrench, CheckCircle, ArrowRight, Eye, EyeOff
+  CheckCheck, FileText, Truck, Wrench, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -49,6 +49,10 @@ const ThemeStyles = ({ theme }: { theme: 'dark' | 'light' }) => {
         --ap-modal-overlay: ${isDark ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.3)'};
         --ap-btn-cancel: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
       }
+      select option {
+        background: var(--ap-bg-card);
+        color: var(--ap-text-primary);
+      }
     `}} />
   )
 }
@@ -80,11 +84,21 @@ interface Device {
   }
 }
 
+type StaffRole = 'staff_warehouse' | 'staff_shipper' | 'staff_support' | 'staff'
+
+const STAFF_ROLE_CONFIG: Record<StaffRole, { label: string; color: string; bg: string; border: string }> = {
+  staff_warehouse: { label: 'Nhân viên kho',      color: '#F59E0B', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)'  },
+  staff_shipper:   { label: 'Nhân viên giao hàng', color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)', border: 'rgba(14,165,233,0.3)' },
+  staff_support:   { label: 'Nhân viên hỗ trợ',    color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.3)' },
+  staff:           { label: 'Staff',                color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(139,92,246,0.3)'  },
+}
+
 interface Staff {
   id: string
   full_name: string
   email: string
   phone: string
+  role: StaffRole
   created_at: string
 }
 
@@ -256,7 +270,7 @@ export default function AdminPage() {
   const [devForm, setDevForm] = useState<{ mac_address: string, firmware_version: string }>({ mac_address: '', firmware_version: 'V1' })
 
   const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
-  const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '' })
+  const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '', role: 'staff_warehouse' as StaffRole })
 
   const [subModal, setSubModal] = useState<{ show: boolean, data?: SubscriptionPlan, mode: 'add' }>({ show: false, mode: 'add' })
   const [subForm, setSubForm] = useState<Partial<SubscriptionPlan>>({
@@ -265,10 +279,10 @@ export default function AdminPage() {
 
   const [errorMsg, setErrorMsg] = useState('')
 
-  const [notification, setNotification] = useState<{ show: boolean, msg: string }>({ show: false, msg: '' })
+  const [notification, setNotification] = useState<{ show: boolean, msg: string, type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' })
 
-  const showNotification = (msg: string) => {
-    setNotification({ show: true, msg })
+  const showNotification = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ show: true, msg, type })
     setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }))
     }, 3000)
@@ -291,10 +305,10 @@ export default function AdminPage() {
     const { data: devData } = await supabase.from('devices').select('*, tanks(tank_name, users(full_name, phone))').order('created_at', { ascending: false })
     if (devData) setDevices(devData)
 
-    const { data: staffData } = await supabase.from('users').select('*').eq('role', 'staff').order('created_at', { ascending: false })
+    const { data: staffData } = await supabase.from('users').select('*').like('role', 'staff%').order('created_at', { ascending: false })
     if (staffData) setStaff(staffData)
 
-    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, device_mac)').order('created_at', { ascending: false })
+    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, device_macs)').order('created_at', { ascending: false })
     if (ordersData) {
       const mappedOrders = ordersData.map((o: any) => ({
         id: o.id,
@@ -304,7 +318,7 @@ export default function AdminPage() {
         address: o.shipping_address,
         note: o.note || '',
         productVersion: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.product_name).join(', ') : 'N/A',
-        deviceMacs: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.device_mac).filter(Boolean).join(', ') : '',
+        deviceMacs: o.order_items && o.order_items.length > 0 ? o.order_items.flatMap((i: any) => i.device_macs || []).join(', ') : '',
         totalQuantity: o.order_items && o.order_items.length > 0 ? o.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 1,
         totalPrice: o.total_price,
         paymentMethod: (o.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD') as 'Chuyển khoản' | 'COD',
@@ -339,18 +353,26 @@ export default function AdminPage() {
   // ---- Species CRUD ----
   const saveSpecies = async () => {
     setErrorMsg('')
-    if (!spForm.species_name) return setErrorMsg('Vui lòng nhập tên loài cá')
+    if (!spForm.species_name || spForm.temp_min === undefined || spForm.temp_min === null || spForm.temp_max === undefined || spForm.temp_max === null || spForm.ph_min === undefined || spForm.ph_min === null || spForm.ph_max === undefined || spForm.ph_max === null || spForm.tds_min === undefined || spForm.tds_min === null || spForm.tds_max === undefined || spForm.tds_max === null) {
+      return showNotification('Vui lòng điền đầy đủ tất cả thông tin', 'error')
+    }
     if (speciesModal.mode === 'add') {
       const { error } = await supabase.from('fish_species').insert(spForm)
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
+        return showNotification(error.message, 'error')
+      }
       showNotification('Thêm loài cá thành công!')
     } else if (speciesModal.mode === 'edit' && speciesModal.data) {
       const { error } = await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
+        return showNotification(error.message, 'error')
+      }
       showNotification('Cập nhật loài cá thành công!')
     } else if (speciesModal.mode === 'delete' && speciesModal.data) {
       const { error } = await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) return showNotification(error.message, 'error')
       showNotification('Xóa loài cá thành công!')
     }
     setSpeciesModal({ show: false, mode: 'add' })
@@ -367,16 +389,16 @@ export default function AdminPage() {
   const saveDevice = async () => {
     setErrorMsg('')
     if (deviceModal.mode === 'add') {
-      if (!devForm.mac_address) return setErrorMsg('Vui lòng nhập MAC Address')
+      if (!devForm.mac_address) return showNotification('Vui lòng nhập MAC Address', 'error')
       const { error } = await supabase.from('devices').insert({
         mac_address: devForm.mac_address.trim(),
         firmware_version: devForm.firmware_version,
       })
       if (error) {
         if (error.code === '23505' || error.message.includes('unique')) {
-          return setErrorMsg('MAC Address này đã tồn tại trong hệ thống!')
+          return showNotification('MAC Address này đã tồn tại trong hệ thống!', 'error')
         }
-        return setErrorMsg('Lỗi: ' + error.message)
+        return showNotification(error.message, 'error')
       }
       showNotification('Thêm thiết bị thành công!')
     } else if (deviceModal.mode === 'edit' && deviceModal.data) {
@@ -386,14 +408,14 @@ export default function AdminPage() {
       }).eq('id', deviceModal.data.id)
       if (error) {
         if (error.code === '23505' || error.message.includes('unique')) {
-          return setErrorMsg('MAC Address này đã tồn tại trong hệ thống!')
+          return showNotification('MAC Address này đã tồn tại trong hệ thống!', 'error')
         }
-        return setErrorMsg('Lỗi: ' + error.message)
+        return showNotification(error.message, 'error')
       }
       showNotification('Cập nhật thiết bị thành công!')
     } else if (deviceModal.mode === 'delete' && deviceModal.data) {
       const { error } = await supabase.from('devices').delete().eq('id', deviceModal.data.id)
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) return showNotification(error.message, 'error')
       showNotification('Xóa thiết bị thành công!')
     }
     setDeviceModal({ show: false, mode: 'add' })
@@ -410,37 +432,57 @@ export default function AdminPage() {
   const saveStaff = async () => {
     setErrorMsg('')
     if (staffModal.mode === 'add') {
-      if (!staffForm.email || !staffForm.password || !staffForm.full_name) return setErrorMsg('Vui lòng điền đủ thông tin bắt buộc')
+      if (!staffForm.email || !staffForm.password || !staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ thông tin bắt buộc (kể cả số điện thoại)', 'error')
+
+      // Kiểm tra trùng số điện thoại trước khi tạo tài khoản Auth để tránh tạo ra user rác
+      const { data: existingPhone } = await supabase.from('users').select('id').eq('phone', staffForm.phone.trim()).maybeSingle()
+      if (existingPhone) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: staffForm.email,
         password: staffForm.password,
       })
 
-      if (authError) return setErrorMsg('Lỗi tạo tài khoản: ' + authError.message)
+      if (authError) {
+        if (authError.message.includes('already registered')) return showNotification('Email này đã được sử dụng!', 'error')
+        return showNotification(authError.message, 'error')
+      }
 
       if (authData.user) {
         // The DB trigger automatically creates a row in users on sign up.
         // We just need to update that row with staff details and role.
         const { error: dbError } = await supabase.from('users').update({
           full_name: staffForm.full_name,
-          phone: staffForm.phone || null,
-          role: 'staff'
+          phone: staffForm.phone,
+          role: staffForm.role
         }).eq('id', authData.user.id)
-        if (dbError) return setErrorMsg('Lỗi lưu thông tin: ' + dbError.message)
+        if (dbError) {
+          if (dbError.code === '23505' || dbError.message.includes('unique')) {
+            if (dbError.message.includes('phone')) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
+            if (dbError.message.includes('email')) return showNotification('Email này đã được sử dụng!', 'error')
+          }
+          return showNotification(dbError.message, 'error')
+        }
         showNotification('Thêm nhân viên thành công!')
       }
     } else if (staffModal.mode === 'edit' && staffModal.data) {
-      if (!staffForm.full_name) return setErrorMsg('Vui lòng điền họ tên')
+      if (!staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ họ tên và số điện thoại', 'error')
       const { error: dbError } = await supabase.from('users').update({
         full_name: staffForm.full_name,
-        phone: staffForm.phone || null,
+        phone: staffForm.phone,
+        role: staffForm.role,
       }).eq('id', staffModal.data.id)
-      if (dbError) return setErrorMsg('Lỗi cập nhật: ' + dbError.message)
+      if (dbError) {
+        if (dbError.code === '23505' || dbError.message.includes('unique')) {
+          if (dbError.message.includes('phone')) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
+          if (dbError.message.includes('email')) return showNotification('Email này đã được sử dụng!', 'error')
+        }
+        return showNotification(dbError.message, 'error')
+      }
       showNotification('Cập nhật nhân viên thành công!')
     } else if (staffModal.mode === 'delete' && staffModal.data) {
       const { error } = await supabase.from('users').delete().eq('id', staffModal.data.id)
-      if (error) return setErrorMsg('Lỗi xóa nhân viên: ' + error.message)
+      if (error) return showNotification(error.message, 'error')
       showNotification('Xóa nhân viên thành công!')
     }
     setStaffModal({ show: false, mode: 'add' })
@@ -450,9 +492,9 @@ export default function AdminPage() {
   const openStaffModal = (mode: 'add' | 'edit' | 'delete', data?: Staff) => {
     setStaffModal({ show: true, mode, data })
     if (mode === 'add') {
-      setStaffForm({ full_name: '', email: '', phone: '', password: '' })
+      setStaffForm({ full_name: '', email: '', phone: '', password: '', role: 'staff_warehouse' })
     } else if (data) {
-      setStaffForm({ full_name: data.full_name, email: data.email, phone: data.phone || '', password: '' })
+      setStaffForm({ full_name: data.full_name, email: data.email, phone: data.phone || '', password: '', role: data.role || 'staff_warehouse' })
     }
   }
 
@@ -460,7 +502,9 @@ export default function AdminPage() {
   const saveSubscription = async () => {
     setErrorMsg('')
     if (subModal.mode === 'add') {
-      if (!subForm.name || !subForm.plan_type || subForm.price === undefined) return setErrorMsg('Vui lòng điền đủ thông tin')
+      if (!subForm.name || !subForm.plan_type || subForm.price === undefined || subForm.price === null || subForm.duration_months === undefined || subForm.duration_months === null || subForm.max_tanks === undefined || subForm.max_tanks === null || subForm.history_days === undefined || subForm.history_days === null) {
+        return showNotification('Vui lòng điền đầy đủ tất cả thông tin gói cước', 'error')
+      }
       
       const { error } = await supabase.from('subscription_plans').insert({
         name: subForm.name,
@@ -471,7 +515,7 @@ export default function AdminPage() {
         smart_device_setup: subForm.smart_device_setup,
         history_days: subForm.history_days
       })
-      if (error) return setErrorMsg('Lỗi: ' + error.message)
+      if (error) return showNotification(error.message, 'error')
       showNotification('Thêm gói cước thành công!')
     }
     setSubModal({ show: false, mode: 'add' })
@@ -839,9 +883,14 @@ export default function AdminPage() {
                         <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.email}</td>
                         <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{s.phone || '-'}</td>
                         <td style={{ padding: '12px 16px' }}>
-                          <span style={{ padding: '4px 10px', borderRadius: 100, background: 'var(--ap-purple-bg)', color: 'var(--ap-purple-text)', fontSize: 11, fontWeight: 700, border: '1px solid rgba(139,92,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Shield size={10} /> Staff
-                          </span>
+                          {(() => {
+                            const cfg = STAFF_ROLE_CONFIG[s.role as StaffRole] || STAFF_ROLE_CONFIG['staff']
+                            return (
+                              <span style={{ padding: '4px 10px', borderRadius: 100, background: cfg.bg, color: cfg.color, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Shield size={10} /> {cfg.label}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--ap-text-secondary)' }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
                         <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
@@ -1029,8 +1078,8 @@ export default function AdminPage() {
         zIndex: 2000,
         background: 'var(--ap-bg-card)',
         backdropFilter: 'blur(8px)',
-        border: '1px solid #00A896',
-        color: '#00A896',
+        border: `1px solid ${notification.type === 'error' ? '#FF6B6B' : '#00A896'}`,
+        color: notification.type === 'error' ? '#FF6B6B' : '#00A896',
         padding: '12px 24px',
         borderRadius: 12,
         fontSize: 14,
@@ -1042,9 +1091,9 @@ export default function AdminPage() {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        boxShadow: '0 8px 32px rgba(0, 168, 150, 0.2)'
+        boxShadow: notification.type === 'error' ? '0 8px 32px rgba(255, 107, 107, 0.2)' : '0 8px 32px rgba(0, 168, 150, 0.2)'
       }}>
-        <CheckCircle size={18} />
+        {notification.type === 'error' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
         {notification.msg}
       </div>
 
@@ -1186,6 +1235,22 @@ export default function AdminPage() {
               {staffModal.mode === 'add' && (
                 <Input label="Mật khẩu" type="password" placeholder="Nhập mật khẩu (min 6 ký tự)" value={staffForm.password} onChange={(e: any) => setStaffForm({ ...staffForm, password: e.target.value })} />
               )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ap-text-primary)' }}>Phân loại chức vụ</label>
+                <select
+                  value={staffForm.role}
+                  onChange={(e: any) => setStaffForm({ ...staffForm, role: e.target.value as StaffRole })}
+                  style={{
+                    padding: '10px 14px', borderRadius: 8, fontSize: 13, fontFamily: F,
+                    background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)',
+                    border: '1px solid var(--ap-border)', outline: 'none', cursor: 'pointer', width: '100%',
+                  }}
+                >
+                  <option value="staff_warehouse">Nhân viên kho (Đóng gói)</option>
+                  <option value="staff_shipper">Nhân viên giao hàng & Lắp đặt</option>
+                  <option value="staff_support">Nhân viên hỗ trợ khách hàng</option>
+                </select>
+              </div>
             </>
           )}
         </Dialog>
@@ -1200,14 +1265,25 @@ export default function AdminPage() {
           cancelText="Hủy"
           confirmColor="#10B981"
           onConfirm={async () => {
-            const { error } = await supabase.from('orders').update({ status: 'approved' }).eq('id', approveModal.order!.id)
-            if (error) {
-              alert('Lỗi duyệt đơn: ' + error.message)
-              return
+            const { error: orderError } = await supabase.from('orders').update({ status: 'confirmed' }).eq('id', approveModal.order!.id)
+            if (orderError) {
+              return showNotification(orderError.message, 'error')
             }
-            setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'approved' } : o))
-            const taskLabel = TASK_TYPES.find(t => t.value === selectedTaskType)?.label || ''
-            alert(`✅ Đã duyệt đơn ${approveModal.order!.id}!\n\nTask "${taskLabel}" đã được tạo và giao cho Staff.\nKhách hàng: ${approveModal.order!.customerName}\nĐịa chỉ: ${approveModal.order!.address}`)
+
+            const { error: taskError } = await supabase.from('tasks').insert({
+              task_type: 'packing',
+              customer_id: approveModal.order!.userId,
+              order_id: approveModal.order!.id,
+              title: `Đóng gói đơn hàng #${approveModal.order!.id}`,
+              description: `Khách hàng: ${approveModal.order!.customerName}\nSĐT: ${approveModal.order!.phone}\nĐịa chỉ: ${approveModal.order!.address}`,
+            })
+
+            if (taskError) {
+              return showNotification(taskError.message, 'error')
+            }
+
+            setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'confirmed' } : o))
+            showNotification(`Đã duyệt đơn và tạo việc đóng gói cho Kho!`)
             setApproveModal({ show: false, order: null })
           }}
           onCancel={() => setApproveModal({ show: false, order: null })}

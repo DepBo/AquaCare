@@ -75,7 +75,7 @@ export default function LoginPage() {
       }))
 
       if (role === 'admin') navigate('/admin')
-      else if (role === 'staff') navigate('/staff')
+      else if (role.startsWith('staff')) navigate('/staff')
       else navigate('/dashboard')
     }
 
@@ -129,7 +129,7 @@ export default function LoginPage() {
       localStorage.setItem('cs_role', data.user_info.role)
 
       if (data.user_info.role === 'admin') navigate('/admin')
-      else if (data.user_info.role === 'staff') navigate('/staff')
+      else if (data.user_info.role.startsWith('staff')) navigate('/staff')
       else navigate('/dashboard')
 
     } catch (err: any) {

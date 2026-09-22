@@ -1244,7 +1244,7 @@ export default function DashboardPage() {
     }).select('*, fish_species(*)')
 
     if (data && data.length > 0) {
-      if (mac) await supabase.from('devices').update({ tank_id: data[0].id }).eq('mac_address', mac)
+      if (mac) await supabase.from('devices').update({ tank_id: data[0].id, is_active: true }).eq('mac_address', mac)
 
       const t = data[0]
       const newPond: Pond = {
@@ -1286,8 +1286,8 @@ export default function DashboardPage() {
 
     if (data && data.length > 0) {
       if (mac !== editDialog?.mac_address) {
-        if (editDialog?.mac_address) await supabase.from('devices').update({ tank_id: null }).eq('mac_address', editDialog.mac_address)
-        if (mac) await supabase.from('devices').update({ tank_id: editDialog.id }).eq('mac_address', mac)
+        if (editDialog?.mac_address) await supabase.from('devices').update({ tank_id: null, is_active: false }).eq('mac_address', editDialog.mac_address)
+        if (mac) await supabase.from('devices').update({ tank_id: editDialog.id, is_active: true }).eq('mac_address', mac)
       }
 
       const updatedPond = {
@@ -1322,6 +1322,9 @@ export default function DashboardPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteDialog) return
+    if (deleteDialog.mac_address) {
+      await supabase.from('devices').update({ is_active: false }).eq('mac_address', deleteDialog.mac_address)
+    }
     await supabase.from('tanks').delete().eq('id', deleteDialog.id)
     const remaining = ponds.filter(p => p.id !== deleteDialog.id)
     setPonds(remaining)

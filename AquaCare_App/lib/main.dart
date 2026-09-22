@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +16,8 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<Scaffol
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp();
   FCMService.instance.initPushNotifications();
@@ -32,9 +35,8 @@ void main() async {
   );
 
   await Supabase.initialize(
-    url: 'https://nwmeysspxfgqxtvxeuil.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53bWV5c3NweGZncXh0dnhldWlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjIwNTM4NSwiZXhwIjoyMDk3NzgxMzg1fQ.mZUzdQH9Hj7faBB9SuOYXYc4YEU5-ttmscbjEH_C5-I',
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
   final prefs = await SharedPreferences.getInstance();

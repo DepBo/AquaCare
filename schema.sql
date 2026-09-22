@@ -18,7 +18,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'user' 
-        CHECK (role IN ('user', 'staff', 'admin')),
+        CHECK (role IN ('user', 'staff', 'admin', 'staff_warehouse', 'staff_shipper', 'staff_support')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -430,7 +430,8 @@ ADD COLUMN IF NOT EXISTS shipping_email VARCHAR(255),
 ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50); 
 ADD COLUMN IF NOT EXISTS note TEXT;
 
-ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS device_mac VARCHAR(30);
+ALTER TABLE public.order_items DROP COLUMN IF EXISTS device_mac;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS device_macs JSONB;
 
 -- ── 1. XÓA BẢNG CŨ ──────────────────────────────────────────────────
 DROP TABLE IF EXISTS public.subscriptions CASCADE;
@@ -509,3 +510,78 @@ VALUES
 ('Gói Cao Cấp (Premium)', 'premium', 80000, 1, 10, TRUE, TRUE, 365, TRUE);
 
 DROP TABLE IF EXISTS public.mqtt_messages CASCADE;
+
+-- ── 16. BẢNG QUẢN LÝ CÔNG VIỆC NHÂN VIÊN (TASKS) ──────────────────────
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id BIGSERIAL PRIMARY KEY,
+    task_type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done', 'cancelled')),
+    assigned_to UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    customer_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    order_id BIGINT REFERENCES public.orders(id) ON DELETE SET NULL,
+    tank_id INTEGER REFERENCES public.tanks(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    staff_note TEXT,
+    deadline TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON public.tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_type ON public.tasks(task_type);
+
+GRANT ALL PRIVILEGES ON TABLE public.tasks TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+-- ── 17. TRIGGER CHIA VIỆC TỰ ĐỘNG (LOAD BALANCING) ────────────────────
+CREATE OR REPLACE FUNCTION public.assign_task_automatically()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    target_role VARCHAR;
+    selected_staff_id UUID;
+BEGIN
+    -- Chỉ tự động chia việc nếu chưa có ai được gán
+    IF NEW.assigned_to IS NOT NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Xác định chức vụ phụ trách dựa theo loại công việc
+    IF NEW.task_type = 'packing' THEN
+        target_role := 'staff_warehouse';
+    ELSIF NEW.task_type = 'delivery_install' THEN
+        target_role := 'staff_shipper';
+    ELSIF NEW.task_type IN ('maintenance', 'support') THEN
+        target_role := 'staff_support';
+    ELSE
+        RETURN NEW; -- Không xác định được loại việc, bỏ qua
+    END IF;
+
+    -- Tìm 1 nhân viên đang có ít việc nhất (Cột TODO và IN_PROGRESS)
+    SELECT u.id INTO selected_staff_id
+    FROM public.users u
+    LEFT JOIN public.tasks t ON t.assigned_to = u.id AND t.status IN ('todo', 'in_progress')
+    WHERE u.role = target_role
+    GROUP BY u.id
+    ORDER BY COUNT(t.id) ASC, RANDOM() -- Ưu tiên người ít việc nhất, nếu bằng nhau thì random
+    LIMIT 1;
+
+    -- Nếu tìm được nhân viên phù hợp thì gán việc
+    IF selected_staff_id IS NOT NULL THEN
+        NEW.assigned_to := selected_staff_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_task_created ON public.tasks;
+
+CREATE TRIGGER on_task_created
+    BEFORE INSERT ON public.tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION public.assign_task_automatically();

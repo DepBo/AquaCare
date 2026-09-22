@@ -166,7 +166,7 @@ export default function Navbar({ scrollY }: NavbarProps) {
 
             {isAuth ? (
               <Link
-                to={userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard'}
+                to={userRole === 'admin' ? '/admin' : userRole.startsWith('staff') ? '/staff' : '/dashboard'}
                 style={{
                   padding: '5px 14px 5px 6px',
                   borderRadius: 20,
