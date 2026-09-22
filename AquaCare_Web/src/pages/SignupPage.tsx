@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
 const F = "'Inter', sans-serif"
@@ -92,7 +92,13 @@ export default function SignupPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Đăng ký thất bại')
+      if (!res.ok) {
+        // Map backend rollback error to friendly error
+        if (data.error && data.error.includes('rollback')) {
+          throw new Error('Số điện thoại hoặc Email này đã được đăng ký ở một tài khoản khác. Vui lòng kiểm tra lại.')
+        }
+        throw new Error(data.error || 'Đăng ký thất bại')
+      }
 
       // Success
       navigate('/login')
@@ -171,8 +177,9 @@ export default function SignupPage() {
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>Điền thông tin để bắt đầu</p>
 
           {error && (
-            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              ⚠️ {error}
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10, lineHeight: 1.5 }}>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} /> 
+              <span>{error}</span>
             </div>
           )}
 

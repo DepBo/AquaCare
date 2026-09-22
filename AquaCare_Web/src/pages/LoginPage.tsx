@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
 const F = "'Inter', sans-serif"
@@ -224,8 +224,9 @@ export default function LoginPage() {
           </p>
 
           {error && (
-            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 12, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-              ⚠️ {error}
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10, lineHeight: 1.5 }}>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} /> 
+              <span>{error}</span>
             </div>
           )}
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
