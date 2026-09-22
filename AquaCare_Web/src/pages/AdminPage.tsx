@@ -926,7 +926,7 @@ export default function AdminPage() {
                   <span style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>{orders.length} đơn hàng</span>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 900 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 1200 }}>
                     <thead>
                       <tr style={{ background: 'var(--ap-table-header)', color: 'var(--ap-text-muted)' }}>
                         <th style={{ padding: '12px 16px', fontWeight: 700 }}>Mã đơn</th>
@@ -960,14 +960,14 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: '14px 16px' }}>
                             {order.paymentMethod === 'COD'
-                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', color: '#F97316', fontSize: 11, fontWeight: 700 }}>COD</span>
-                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)', color: '#0ea5e9', fontSize: 11, fontWeight: 700 }}>Chuyển khoản</span>
+                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', color: '#F97316', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>COD</span>
+                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)', color: '#0ea5e9', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Chuyển khoản</span>
                             }
                           </td>
                           <td style={{ padding: '14px 16px' }}>
                             {order.status === 'pending'
-                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 11, fontWeight: 700 }}>⏳ Chờ duyệt</span>
-                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>✓ Đã duyệt</span>
+                              ? <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>⏳ Chờ duyệt</span>
+                              : <span style={{ padding: '4px 10px', borderRadius: 100, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>✓ Đã duyệt</span>
                             }
                           </td>
                           <td style={{ padding: '14px 16px', color: 'var(--ap-text-muted)', fontSize: 12 }}>
