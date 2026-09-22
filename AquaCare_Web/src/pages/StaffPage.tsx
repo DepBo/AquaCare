@@ -4,7 +4,7 @@ import {
   LogOut, Sun, Moon, CheckCircle, Clock, MapPin, Phone,
   Briefcase, History, Wrench, Truck,
   User, CalendarClock, ListChecks, ArrowLeft, ArrowRight, Layout,
-  MessageSquare, Mail, Send, AlertTriangle, Pin, Package, Scan, CheckCircle2
+  MessageSquare, Mail, Send, AlertTriangle, Pin, Package, Scan, CheckCircle2, Eye, X, Tag
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -17,7 +17,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey)
 const ThemeStyles = ({ theme }: { theme: 'dark' | 'light' }) => {
   const isDark = theme === 'dark'
   return (
-    <style dangerouslySetInnerHTML={{ __html: `
+    <style dangerouslySetInnerHTML={{
+      __html: `
       :root[data-theme="${theme}"] {
         --sp-bg-main: ${isDark ? '#060f1e' : '#f8fafc'};
         --sp-bg-sidebar: ${isDark ? 'rgba(10,18,38,0.98)' : 'rgba(255,255,255,0.98)'};
@@ -82,6 +83,14 @@ interface Task {
   address?: string
   phone?: string
   note?: string
+  orderItems?: Array<{
+    id?: string
+    product_name: string
+    quantity: number
+    product_price?: number
+    device_macs?: string[]
+  }>
+  totalAmount?: number
 }
 
 
@@ -106,19 +115,19 @@ const INITIAL_SUPPORT_REQUESTS: SupportRequest[] = [
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<string, { icon: React.ElementType }> = {
-  'packing':          { icon: Package },
+  'packing': { icon: Package },
   'delivery_install': { icon: Truck },
-  'maintenance':      { icon: Wrench },
-  'support':          { icon: MessageSquare },
+  'maintenance': { icon: Wrench },
+  'support': { icon: MessageSquare },
   // Legacy keys
   'Giao hàng & lắp đặt': { icon: Truck },
-  'Bảo trì thiết bị':    { icon: Wrench },
+  'Bảo trì thiết bị': { icon: Wrench },
 }
 
 const COLUMN_CONFIG: Record<string, { label: string; icon: React.ElementType; accent: string; accentBg: string; accentBorder: string }> = {
-  todo:        { label: 'Chờ nhận việc',  icon: Clock,        accent: '#64748b', accentBg: 'rgba(100,116,139,0.1)',  accentBorder: 'rgba(100,116,139,0.2)' },
-  in_progress: { label: 'Đang thực hiện', icon: Briefcase,    accent: TEAL,      accentBg: TEAL_BG,                  accentBorder: TEAL_BORDER },
-  done:        { label: 'Hoàn thành',      icon: CheckCircle,  accent: '#10B981', accentBg: 'rgba(16,185,129,0.1)',   accentBorder: 'rgba(16,185,129,0.25)' },
+  todo: { label: 'Chờ nhận việc', icon: Clock, accent: '#64748b', accentBg: 'rgba(100,116,139,0.1)', accentBorder: 'rgba(100,116,139,0.2)' },
+  in_progress: { label: 'Đang thực hiện', icon: Briefcase, accent: TEAL, accentBg: TEAL_BG, accentBorder: TEAL_BORDER },
+  done: { label: 'Hoàn thành', icon: CheckCircle, accent: '#10B981', accentBg: 'rgba(16,185,129,0.1)', accentBorder: 'rgba(16,185,129,0.25)' },
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -248,10 +257,10 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
         )}
 
         {task.status === 'done' && (
-          <span style={{ 
-            display: 'inline-flex', alignItems: 'center', gap: 4, 
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
             padding: '7px 0px', border: '1px solid transparent', /* Match button height */
-            fontSize: 11, fontWeight: 700, color: '#10B981' 
+            fontSize: 11, fontWeight: 700, color: '#10B981'
           }}>
             <CheckCircle size={11} /> Hoàn thành
           </span>
@@ -314,12 +323,14 @@ function KanbanColumn({ colKey, tasks, onAdvance }: {
 }
 
 // ─── History Row ──────────────────────────────────────────────────────────────
-function HistoryRow({ task }: { task: Task }) {
+function HistoryRow({ task, onViewDetails }: { task: Task; onViewDetails: (task: Task) => void }) {
   const TypeIcon = (TYPE_CONFIG[task.type || task.task_type] || { icon: Briefcase }).icon
+  const hasItems = task.orderItems && task.orderItems.length > 0
+
   return (
     <div
       style={{
-        display: 'grid', gridTemplateColumns: '1fr 150px 145px 130px',
+        display: 'grid', gridTemplateColumns: '1fr 140px 130px 110px 100px',
         alignItems: 'center', padding: '13px 20px', gap: 12,
         transition: 'background 140ms',
         borderBottom: '1px solid var(--sp-border)',
@@ -328,13 +339,23 @@ function HistoryRow({ task }: { task: Task }) {
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
     >
       <div>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)', marginBottom: 3 }}>{task.title}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)', marginBottom: 3 }}>
+          {task.title}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <User size={10} color="var(--sp-text-muted)" />
           <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.customerName || task.description?.split('\n')[0] || 'N/A'}</span>
           <span style={{ color: 'var(--sp-text-muted)', fontSize: 10 }}>·</span>
           <Phone size={10} color="var(--sp-text-muted)" />
           <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.phone || 'N/A'}</span>
+          {hasItems && (
+            <>
+              <span style={{ color: 'var(--sp-text-muted)', fontSize: 10 }}>·</span>
+              <span style={{ fontSize: 11, color: TEAL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Package size={10} /> {task.orderItems?.length} sản phẩm
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -363,6 +384,204 @@ function HistoryRow({ task }: { task: Task }) {
       }}>
         <CheckCircle size={10} /> Xong
       </span>
+
+      <button
+        onClick={() => onViewDetails(task)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'center',
+          padding: '6px 10px', borderRadius: 8,
+          background: TEAL_BG,
+          border: `1px solid ${TEAL_BORDER}`,
+          color: TEAL,
+          fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: F,
+          transition: 'all 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.15)' }}
+        onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)' }}
+      >
+        <Eye size={11} /> Chi tiết
+      </button>
+    </div>
+  )
+}
+
+// ─── Task Details Modal ───────────────────────────────────────────────────────
+function TaskDetailsModal({ task, onClose }: { task: Task; onClose: () => void }) {
+  if (!task) return null
+
+  const items = task.orderItems || []
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(5px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    }}>
+      <div style={{
+        background: 'var(--sp-bg-card)', border: '1px solid var(--sp-border-card)',
+        borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+        overflow: 'hidden', animation: 'fadeIn 0.2s ease-out'
+      }}>
+        {/* Modal Header */}
+        <div style={{
+          padding: '16px 24px', borderBottom: '1px solid var(--sp-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'var(--sp-bg-sidebar)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: TEAL_BG, border: `1px solid ${TEAL_BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEAL }}>
+              <Package size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--sp-text-primary)' }}>
+                Chi tiết đóng gói đơn hàng #{task.order_id || task.id}
+              </h3>
+              <span style={{ fontSize: 12, color: 'var(--sp-text-muted)' }}>
+                Ngày hoàn thành: {formatDate(task.created_at)}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--sp-text-muted)',
+              cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--sp-text-primary)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--sp-text-muted)' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Customer Info Card */}
+          <div style={{
+            background: 'var(--sp-hover-bg)', padding: '14px 18px', borderRadius: 12,
+            border: '1px solid var(--sp-border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12
+          }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-muted)', marginBottom: 2 }}>KHÁCH HÀNG</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)' }}>{task.customerName}</div>
+              <div style={{ fontSize: 12, color: 'var(--sp-text-secondary)', marginTop: 2 }}>{task.phone}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-muted)', marginBottom: 2 }}>ĐỊA CHỈ GIAO HÀNG</div>
+              <div style={{ fontSize: 12, color: 'var(--sp-text-secondary)', lineHeight: 1.4 }}>{task.address}</div>
+            </div>
+          </div>
+
+          {/* Product Items List */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--sp-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+              SẢN PHẨM ĐÃ ĐÓNG GÓI ({items.length})
+            </div>
+
+            {items.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--sp-text-muted)', fontSize: 13, background: 'var(--sp-hover-bg)', borderRadius: 10 }}>
+                Không tìm thấy danh sách chi tiết sản phẩm.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {items.map((item, idx) => {
+                  const macs = item.device_macs || []
+                  const itemPrice = item.product_price || 0
+                  const subtotal = itemPrice * item.quantity
+
+                  return (
+                    <div
+                      key={item.id || idx}
+                      style={{
+                        background: 'var(--sp-bg-main)', border: '1px solid var(--sp-border-card)',
+                        borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{item.product_name}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: TEAL, background: TEAL_BG, padding: '2px 8px', borderRadius: 100 }}>
+                              x{item.quantity}
+                            </span>
+                          </div>
+                          {itemPrice > 0 && (
+                            <div style={{ fontSize: 12, color: 'var(--sp-text-muted)', marginTop: 2 }}>
+                              Đơn giá: {itemPrice.toLocaleString('vi-VN')} ₫
+                            </div>
+                          )}
+                        </div>
+
+                        {subtotal > 0 && (
+                          <div style={{ fontSize: 14, fontWeight: 700, color: TEAL }}>
+                            {subtotal.toLocaleString('vi-VN')} ₫
+                          </div>
+                        )}
+                      </div>
+
+                      {/* MAC Addresses List */}
+                      <div style={{ paddingTop: 8, borderTop: '1px dashed var(--sp-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Scan size={12} color={TEAL} /> MÃ MAC THIẾT BỊ ĐÃ GÓI:
+                        </div>
+                        {macs.length === 0 ? (
+                          <span style={{ fontSize: 12, color: 'var(--sp-text-muted)', fontStyle: 'italic' }}>Chưa ghi nhận mã MAC</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {macs.map((mac, mIdx) => (
+                              <div
+                                key={mIdx}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                                  background: 'var(--sp-hover-bg-strong)', border: '1px solid var(--sp-border-hover)',
+                                  padding: '4px 10px', borderRadius: 6, fontFamily: 'monospace',
+                                  fontSize: 12, fontWeight: 600, color: 'var(--sp-text-primary)'
+                                }}
+                              >
+                                <Tag size={11} color={TEAL} />
+                                <span>{mac}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Total Amount Summary if available */}
+          {task.totalAmount && task.totalAmount > 0 && (
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 18px', background: TEAL_BG, border: `1px solid ${TEAL_BORDER}`,
+              borderRadius: 12
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)' }}>Tổng giá trị đơn hàng:</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: TEAL }}>
+                {task.totalAmount.toLocaleString('vi-VN')} ₫
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--sp-border)', background: 'var(--sp-bg-sidebar)', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 20px', borderRadius: 8, background: 'var(--sp-hover-bg-strong)',
+              border: '1px solid var(--sp-border-hover)', color: 'var(--sp-text-primary)',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F
+            }}
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -480,10 +699,10 @@ function SupportCard({ request, onResolve }: { request: SupportRequest; onResolv
 
 // ─── Packing Station Mockup ───────────────────────────────────────────────────
 // ─── Packing Station Real ───────────────────────────────────────────────────
-function PackingStationUI() {
+function PackingStationUI({ onTaskCompleted }: { onTaskCompleted?: () => void }) {
   const [packingTasks, setPackingTasks] = useState<any[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  
+
   // Lưu trữ các mã MAC đang nhập: key = `itemId_index`, value = chuỗi MAC
   const [macInputs, setMacInputs] = useState<Record<string, string>>({})
   const [successMsg, setSuccessMsg] = useState('')
@@ -502,7 +721,7 @@ function PackingStationUI() {
       // Lấy các task được gán cho nhân viên này (hoặc lấy hết để test)
       // .eq('assigned_to', userInfo.id) 
       .order('created_at', { ascending: true })
-    
+
     if (data) {
       setPackingTasks(data)
       if (data.length > 0 && !selectedTaskId) {
@@ -550,7 +769,7 @@ function PackingStationUI() {
       const macsForThisItem = requiredMacs
         .filter(req => req.itemId === item.id)
         .map(req => macInputs[`${req.itemId}_${req.index}`].trim())
-      
+
       await supabase.from('order_items')
         .update({ device_macs: macsForThisItem })
         .eq('id', item.id)
@@ -573,9 +792,10 @@ function PackingStationUI() {
     setSuccessMsg(`Đã đóng gói xong Đơn #${activeOrder.id}. Đã tạo việc giao hàng!`)
     setMacInputs({})
     setTimeout(() => setSuccessMsg(''), 4000)
-    
+
     setIsSubmitting(false)
     fetchPackingTasks() // Cập nhật lại danh sách bên trái
+    if (onTaskCompleted) onTaskCompleted()
   }
 
   return (
@@ -588,10 +808,10 @@ function PackingStationUI() {
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {packingTasks.map(t => (
-            <div 
-              key={t.id} 
+            <div
+              key={t.id}
               onClick={() => setSelectedTaskId(t.id)}
-              style={{ 
+              style={{
                 padding: 16, borderRadius: 12, cursor: 'pointer',
                 background: selectedTaskId === t.id ? 'var(--sp-hover-bg)' : 'transparent',
                 border: `1px solid ${selectedTaskId === t.id ? TEAL_BORDER : 'var(--sp-border)'}`,
@@ -602,7 +822,7 @@ function PackingStationUI() {
                 <span style={{ fontWeight: 700, color: selectedTaskId === t.id ? TEAL : 'var(--sp-text-primary)' }}>Đơn #{t.order_id}</span>
               </div>
               <div style={{ fontSize: 13, color: 'var(--sp-text-secondary)', display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1.5 }}>
-                <User size={12} style={{ flexShrink: 0 }} /> 
+                <User size={12} style={{ flexShrink: 0 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {t.orders?.shipping_name}
                 </span>
@@ -620,7 +840,7 @@ function PackingStationUI() {
 
       {/* Right Scanner Area */}
       <div style={{ flex: 1, background: 'var(--sp-bg-card)', border: '1px solid var(--sp-border-card)', borderRadius: 16, padding: '24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', position: 'relative' }}>
-        
+
         {successMsg && (
           <div style={{ position: 'absolute', top: 32, background: 'rgba(16,185,129,0.15)', color: '#10B981', padding: '12px 24px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, animation: 'fadeIn 0.3s', zIndex: 10 }}>
             <CheckCircle size={18} /> {successMsg}
@@ -643,10 +863,10 @@ function PackingStationUI() {
                 Quét mã MAC thiết bị
               </h2>
             </div>
-            
+
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--sp-text-muted)', marginBottom: 4 }}>SẢN PHẨM CẦN LẤY:</div>
-              
+
               {requiredMacs.map((req, i) => (
                 <div key={`${req.itemId}_${req.index}`} style={{ background: 'var(--sp-hover-bg)', padding: '16px 20px', borderRadius: 12, border: '1px solid var(--sp-border)' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)', marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
@@ -674,12 +894,12 @@ function PackingStationUI() {
                 </div>
               ))}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSubmitting}
-                style={{ 
-                  marginTop: 8, padding: '18px 24px', background: TEAL, color: '#fff', border: 'none', borderRadius: 12, 
-                  fontSize: 16, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', 
+                style={{
+                  marginTop: 8, padding: '18px 24px', background: TEAL, color: '#fff', border: 'none', borderRadius: 12,
+                  fontSize: 16, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer',
                   opacity: isSubmitting ? 0.7 : 1, transition: 'filter 0.2s'
                 }}
                 onMouseEnter={e => !isSubmitting && (e.currentTarget.style.filter = 'brightness(1.1)')}
@@ -705,6 +925,7 @@ export default function StaffPage() {
   const userInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
 
   const [tasks, setTasks] = useState<Task[]>([])
+  const [selectedDetailTask, setSelectedDetailTask] = useState<Task | null>(null)
   const [supportRequests, setSupportRequests] = useState<SupportRequest[]>(INITIAL_SUPPORT_REQUESTS)
   const [activeTab, setActiveTab] = useState<'board' | 'packing' | 'history' | 'support'>('board')
   const [theme, setTheme] = useState<'dark' | 'light'>(
@@ -720,6 +941,80 @@ export default function StaffPage() {
     localStorage.setItem('dashboard_theme', theme)
   }, [theme])
 
+  const fetchTasks = async () => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*, orders(*, order_items(*))')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Lỗi tải danh sách công việc:', error)
+      return
+    }
+
+    if (data) {
+      const formattedTasks: Task[] = data.map((t: any) => {
+        let customerName = t.orders?.shipping_name
+        let phone = t.orders?.shipping_phone
+        let address = t.orders?.shipping_address
+
+        if (t.description) {
+          const lines = t.description.split('\n')
+          lines.forEach((line: string) => {
+            if (!customerName && line.includes('Khách hàng:')) customerName = line.replace('Khách hàng:', '').trim()
+            if (!phone && line.includes('SĐT:')) phone = line.replace('SĐT:', '').trim()
+            if (!address && line.includes('Địa chỉ:')) address = line.replace('Địa chỉ:', '').trim()
+          })
+        }
+
+        let displayType = t.task_type
+        if (t.task_type === 'packing') displayType = 'Đóng gói hàng'
+        else if (t.task_type === 'delivery_install') displayType = 'Giao hàng & lắp đặt'
+        else if (t.task_type === 'maintenance') displayType = 'Bảo trì thiết bị'
+        else if (t.task_type === 'support') displayType = 'Hỗ trợ kỹ thuật'
+
+        const orderItems = t.orders?.order_items ? t.orders.order_items.map((item: any) => ({
+          id: item.id,
+          product_name: item.product_name,
+          quantity: item.quantity || 1,
+          product_price: item.product_price || 0,
+          device_macs: item.device_macs || []
+        })) : []
+
+        const totalAmount = t.orders?.total_amount || t.orders?.total_price || (
+          orderItems.reduce((sum: number, item: any) => sum + ((item.quantity || 1) * (item.product_price || 0)), 0)
+        )
+
+        const customerOrderNote = t.orders?.note?.trim() || t.orders?.customer_note?.trim() || ''
+
+        return {
+          id: String(t.id),
+          task_type: t.task_type,
+          status: t.status,
+          assigned_to: t.assigned_to,
+          title: t.title || `Nhiệm vụ #${t.id}`,
+          description: t.description,
+          staff_note: t.staff_note,
+          order_id: t.order_id,
+          created_at: t.created_at,
+          deadline: t.deadline || t.created_at,
+          type: displayType,
+          customerName: customerName || 'Khách hàng',
+          address: address || 'Chưa có địa chỉ',
+          phone: phone || 'N/A',
+          note: customerOrderNote,
+          orderItems,
+          totalAmount
+        }
+      })
+      setTasks(formattedTasks)
+    }
+  }
+
+  useEffect(() => {
+    fetchTasks()
+  }, [])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
@@ -729,19 +1024,46 @@ export default function StaffPage() {
     navigate('/login')
   }
 
-  const advanceTask = (id: string) => {
+  const advanceTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    const nextStatus: TaskStatus = task.status === 'todo' ? 'in_progress' : 'done'
+
     setTasks(prev =>
-      prev.map(t => {
-        if (t.id !== id) return t
-        const next: TaskStatus = t.status === 'todo' ? 'in_progress' : 'done'
-        return { ...t, status: next }
-      })
+      prev.map(t => (t.id === id ? { ...t, status: nextStatus } : t))
     )
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: nextStatus,
+        ...(nextStatus === 'done' ? { completed_at: new Date().toISOString() } : {})
+      })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Lỗi khi cập nhật trạng thái công việc:', error)
+      fetchTasks()
+    } else {
+      fetchTasks()
+    }
   }
 
-  const historyTasks = tasks.filter(t => t.status === 'done')
-  const todoCount = tasks.filter(t => t.status === 'todo').length
-  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
+  const userRole = userInfo.role || 'staff'
+
+  const roleTaskTypes: Record<string, string[]> = {
+    staff_warehouse: ['packing'],
+    staff_shipper: ['delivery_install', 'Giao hàng & lắp đặt'],
+    staff_support: ['support'],
+    staff: ['packing', 'delivery_install', 'maintenance', 'support', 'Giao hàng & lắp đặt'],
+  }
+
+  const allowedTaskTypes = roleTaskTypes[userRole] ?? roleTaskTypes['staff']
+  const filteredTasks = tasks.filter(t => allowedTaskTypes.includes(t.task_type) || allowedTaskTypes.includes(t.type || ''))
+
+  const historyTasks = filteredTasks.filter(t => t.status === 'done')
+  const todoCount = filteredTasks.filter(t => t.status === 'todo').length
+  const inProgressCount = filteredTasks.filter(t => t.status === 'in_progress').length
   const doneCount = historyTasks.length
   const pendingSupportCount = supportRequests.filter(r => r.status === 'pending').length
 
@@ -753,27 +1075,26 @@ export default function StaffPage() {
 
   const ROLE_TAB_MAP: Record<string, TabId[]> = {
     'staff_warehouse': ['packing', 'history'],
-    'staff_shipper':   ['board',   'history'],
-    'staff_support':   ['support', 'history'],
-    'staff':           ['board', 'packing', 'history', 'support'],
+    'staff_shipper': ['board', 'history'],
+    'staff_support': ['support', 'history'],
+    'staff': ['board', 'packing', 'history', 'support'],
   }
 
-  const userRole = userInfo.role || 'staff'
   const allowedTabs = ROLE_TAB_MAP[userRole] ?? ROLE_TAB_MAP['staff']
 
   const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; badge?: number }[] = [
-    { id: 'board',   label: 'Bảng Công Việc',  icon: Layout,        badge: todoCount + inProgressCount },
-    { id: 'packing', label: 'Trạm Đóng Gói',   icon: Package },
-    { id: 'history', label: 'Lịch Sử Làm Việc', icon: History,       badge: doneCount },
-    { id: 'support', label: 'Yêu Cầu Hỗ Trợ',  icon: MessageSquare, badge: pendingSupportCount },
+    { id: 'board', label: 'Bảng Công Việc', icon: Layout, badge: todoCount + inProgressCount },
+    { id: 'packing', label: 'Trạm Đóng Gói', icon: Package },
+    { id: 'history', label: 'Lịch Sử Làm Việc', icon: History, badge: doneCount },
+    { id: 'support', label: 'Yêu Cầu Hỗ Trợ', icon: MessageSquare, badge: pendingSupportCount },
   ]
   const visibleTabs = ALL_TABS.filter(t => allowedTabs.includes(t.id))
 
   const ROLE_LABELS: Record<string, string> = {
     staff_warehouse: 'Nhân viên kho',
-    staff_shipper:   'Nhân viên giao hàng',
-    staff_support:   'Nhân viên hỗ trợ',
-    staff:           'Staff',
+    staff_shipper: 'Nhân viên giao hàng',
+    staff_support: 'Nhân viên hỗ trợ',
+    staff: 'Staff',
   }
 
   // Set default tab to first allowed tab for user role
@@ -781,7 +1102,7 @@ export default function StaffPage() {
     if (!allowedTabs.includes(activeTab as TabId)) {
       setActiveTab(allowedTabs[0])
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userRole])
 
   return (
@@ -817,8 +1138,8 @@ export default function StaffPage() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)' }}>{userInfo.full_name || 'Nhân viên'}</div>
             <div style={{ fontSize: 11, color: TEAL, fontWeight: 600 }}>
-              {ROLE_LABELS[userRole] || 'Staff'} 
-              <span style={{ color: 'var(--sp-text-muted)', margin: '0 4px' }}>•</span> 
+              {ROLE_LABELS[userRole] || 'Staff'}
+              <span style={{ color: 'var(--sp-text-muted)', margin: '0 4px' }}>•</span>
               <span style={{ color: 'var(--sp-text-muted)', fontWeight: 400 }}>{userInfo.email || ''}</span>
             </div>
           </div>
@@ -924,62 +1245,70 @@ export default function StaffPage() {
       {/* ── Main Content ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '22px 28px' }}>
 
-          {activeTab === 'board' && (
-            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minHeight: 'calc(100vh - 160px)' }}>
-              {(['todo', 'in_progress', 'done'] as TaskStatus[]).map(colKey => (
-                <KanbanColumn
-                  key={colKey}
-                  colKey={colKey}
-                  tasks={tasks.filter(t => t.status === colKey)}
-                  onAdvance={advanceTask}
-                />
+        {activeTab === 'board' && (
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minHeight: 'calc(100vh - 160px)' }}>
+            {(['todo', 'in_progress'] as TaskStatus[]).map(colKey => (
+              <KanbanColumn
+                key={colKey}
+                colKey={colKey}
+                tasks={filteredTasks.filter(t => t.status === colKey)}
+                onAdvance={advanceTask}
+              />
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'packing' && <PackingStationUI onTaskCompleted={fetchTasks} />}
+
+        {activeTab === 'history' && (
+          <div style={{
+            background: 'var(--sp-bg-card)',
+            borderRadius: 12, border: '1px solid var(--sp-border-card)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 140px 130px 110px 100px',
+              padding: '11px 20px', gap: 12,
+              background: 'var(--sp-bg-history-header)',
+              borderBottom: '1px solid var(--sp-border-card)',
+            }}>
+              {['Công việc', 'Loại', 'Ngày hạn', 'Trạng thái', 'Thao tác'].map(h => (
+                <span key={h} style={{ fontSize: 10, fontWeight: 800, color: 'var(--sp-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</span>
               ))}
             </div>
-          )}
 
-          {activeTab === 'packing' && <PackingStationUI />}
-
-          {activeTab === 'history' && (
-            <div style={{
-              background: 'var(--sp-bg-card)',
-              borderRadius: 12, border: '1px solid var(--sp-border-card)',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 150px 145px 130px',
-                padding: '11px 20px', gap: 12,
-                background: 'var(--sp-bg-history-header)',
-                borderBottom: '1px solid var(--sp-border-card)',
-              }}>
-                {['Công việc', 'Loại', 'Ngày hạn', 'Trạng thái'].map(h => (
-                  <span key={h} style={{ fontSize: 10, fontWeight: 800, color: 'var(--sp-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</span>
-                ))}
+            {historyTasks.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <History size={32} color="#10B981" style={{ opacity: 0.16 }} />
+                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13 }}>Chưa có công việc nào hoàn thành</p>
               </div>
+            ) : (
+              historyTasks.map(task => <HistoryRow key={task.id} task={task} onViewDetails={setSelectedDetailTask} />)
+            )}
+          </div>
+        )}
 
-              {historyTasks.length === 0 ? (
-                <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <History size={32} color="#10B981" style={{ opacity: 0.16 }} />
-                  <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13 }}>Chưa có công việc nào hoàn thành</p>
-                </div>
-              ) : (
-                historyTasks.map(task => <HistoryRow key={task.id} task={task} />)
-              )}
-            </div>
-          )}
-
-          {activeTab === 'support' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 860, margin: '0 auto' }}>
-              {supportRequests.length === 0 ? (
-                <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <MessageSquare size={32} color={TEAL} style={{ opacity: 0.18 }} />
-                  <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13 }}>Không có yêu cầu hỗ trợ nào</p>
-                </div>
-              ) : (
-                supportRequests.map(req => <SupportCard key={req.id} request={req} onResolve={handleResolveSupport} />)
-              )}
-            </div>
-          )}
+        {activeTab === 'support' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 860, margin: '0 auto' }}>
+            {supportRequests.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <MessageSquare size={32} color={TEAL} style={{ opacity: 0.18 }} />
+                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13 }}>Không có yêu cầu hỗ trợ nào</p>
+              </div>
+            ) : (
+              supportRequests.map(req => <SupportCard key={req.id} request={req} onResolve={handleResolveSupport} />)
+            )}
+          </div>
+        )}
       </main>
+
+      {/* ── Details Modal ── */}
+      {selectedDetailTask && (
+        <TaskDetailsModal
+          task={selectedDetailTask}
+          onClose={() => setSelectedDetailTask(null)}
+        />
+      )}
     </div>
   )
 }

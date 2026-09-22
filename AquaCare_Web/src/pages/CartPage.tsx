@@ -14,6 +14,7 @@ export default function CartPage() {
 
   const [isCheckout, setIsCheckout] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -78,48 +79,57 @@ export default function CartPage() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
+    setIsSubmitting(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
 
-    const orderItems: any[] = cart.map(item => ({
-      product_id: item.id,
-      product_name: item.name,
-      product_price: item.price,
-      quantity: item.quantity,
-      device_macs: [] // Sẽ được nhân viên kho cập nhật sau
-    }));
+      const orderItems: any[] = cart.map(item => ({
+        product_id: item.id,
+        product_name: item.name,
+        product_price: item.price,
+        quantity: item.quantity,
+        device_macs: [] // Sẽ được nhân viên kho cập nhật sau
+      }));
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: session?.user?.id || null,
-        shipping_name: formData.fullName,
-        shipping_phone: formData.phone,
-        shipping_email: formData.email,
-        shipping_address: formData.address,
-        total_price: totalPrice,
-        note: formData.note,
-        payment_method: formData.paymentMethod,
-        status: 'pending'
-      })
-      .select()
-      .single()
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: session?.user?.id || null,
+          shipping_name: formData.fullName,
+          shipping_phone: formData.phone,
+          shipping_email: formData.email,
+          shipping_address: formData.address,
+          total_price: totalPrice,
+          note: formData.note,
+          payment_method: formData.paymentMethod,
+          status: 'pending'
+        })
+        .select()
+        .single()
 
-    if (orderError) {
-      alert('Lỗi đặt hàng: ' + orderError.message)
-      return
+      if (orderError) {
+        alert('Lỗi đặt hàng: ' + orderError.message)
+        setIsSubmitting(false)
+        return
+      }
+
+      const finalOrderItems = orderItems.map(oi => ({ ...oi, order_id: order.id }));
+      const { error: itemsError } = await supabase.from('order_items').insert(finalOrderItems)
+
+      if (itemsError) {
+        alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message)
+        setIsSubmitting(false)
+        return
+      }
+
+      setIsSuccess(true)
+      clearCart()
+    } catch (err: any) {
+      alert('Đã xảy ra lỗi không xác định: ' + (err?.message || 'Vui lòng thử lại.'))
+      setIsSubmitting(false)
     }
-
-    const finalOrderItems = orderItems.map(oi => ({ ...oi, order_id: order.id }));
-    const { error: itemsError } = await supabase.from('order_items').insert(finalOrderItems)
-
-    if (itemsError) {
-      alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message)
-      return
-    }
-
-    setIsSuccess(true)
-    clearCart()
   }
 
   if (isSuccess) {
@@ -485,16 +495,26 @@ export default function CartPage() {
               {isCheckout ? (
                 <button
                   type="submit" form="checkout-form"
+                  disabled={isSubmitting}
                   style={{
                     width: '100%', padding: '16px', borderRadius: 12,
-                    backgroundColor: '#00A896', color: '#fff', fontSize: 16, fontWeight: 700,
-                    border: 'none', cursor: 'pointer', transition: 'all 200ms',
-                    boxShadow: '0 4px 15px rgba(0, 168, 150, 0.3)'
+                    backgroundColor: isSubmitting ? 'rgba(0, 168, 150, 0.6)' : '#00A896', color: '#fff', fontSize: 16, fontWeight: 700,
+                    border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 200ms',
+                    boxShadow: '0 4px 15px rgba(0, 168, 150, 0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    opacity: isSubmitting ? 0.7 : 1
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 168, 150, 0.4)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 168, 150, 0.3)' }}
+                  onMouseEnter={e => { if (!isSubmitting) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 168, 150, 0.4)' } }}
+                  onMouseLeave={e => { if (!isSubmitting) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 168, 150, 0.3)' } }}
                 >
-                  Xác nhận đặt hàng
+                  {isSubmitting ? (
+                    <>
+                      <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                      Đang xử lý đơn hàng...
+                    </>
+                  ) : (
+                    'Xác nhận đặt hàng'
+                  )}
                 </button>
               ) : (
                 <button style={{

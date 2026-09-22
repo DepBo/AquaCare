@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Fish, Box, LogOut, ArrowLeft, Sun, Moon,
   Plus, Edit, Trash2, X, Server, Users, Shield, ShoppingCart,
-  CheckCheck, FileText, Truck, Wrench, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle
+  CheckCheck, FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -143,14 +143,11 @@ interface Order {
   createdAt: string
 }
 
-const TASK_TYPES = [
-  { value: 'delivery', label: 'Giao hàng', icon: Truck },
-  { value: 'installation', label: 'Lắp đặt mới', icon: Wrench },
-]
+
 
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
-  confirmColor = 'var(--ap-purple-text)', onConfirm, onCancel, children
+  confirmColor = 'var(--ap-purple-text)', onConfirm, onCancel, loading = false, children
 }: any) {
   return (
     <div style={{
@@ -166,7 +163,7 @@ function Dialog({
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ap-text-primary)' }}>{title}</h3>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ap-text-primary)' }}>
+          <button onClick={onCancel} disabled={loading} style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: 'var(--ap-text-primary)', opacity: loading ? 0.5 : 1 }}>
             <X size={16} />
           </button>
         </div>
@@ -177,23 +174,33 @@ function Dialog({
         {error && <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           {cancelText && (
-            <button onClick={onCancel} style={{
+            <button onClick={onCancel} disabled={loading} style={{
               flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--ap-border)',
-              background: 'var(--ap-btn-cancel)', color: 'var(--ap-text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: F, fontWeight: 600,
-              transition: 'background 160ms'
+              background: 'var(--ap-btn-cancel)', color: 'var(--ap-text-primary)', fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F, fontWeight: 600,
+              transition: 'background 160ms', opacity: loading ? 0.5 : 1
             }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--ap-btn-cancel)'}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--ap-hover-bg)' }}
+              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = 'var(--ap-btn-cancel)' }}
             >{cancelText}</button>
           )}
-          <button onClick={onConfirm} style={{
+          <button onClick={onConfirm} disabled={loading} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
-            transition: 'filter 160ms'
+            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
+            transition: 'filter 160ms', opacity: loading ? 0.7 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
           }}
-            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-            onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
-          >{confirmText}</button>
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.filter = 'brightness(1.1)' }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.filter = 'brightness(1)' }}
+          >
+            {loading ? (
+              <>
+                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                Đang xử lý...
+              </>
+            ) : (
+              confirmText
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -248,7 +255,6 @@ export default function AdminPage() {
   const [approveModal, setApproveModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
   const [receiptModal, setReceiptModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
   const [detailsModal, setDetailsModal] = useState<{ show: boolean, order: Order | null }>({ show: false, order: null })
-  const [selectedTaskType, setSelectedTaskType] = useState('delivery')
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
 
   const [species, setSpecies] = useState<FishSpecies[]>([])
@@ -279,6 +285,7 @@ export default function AdminPage() {
   })
 
   const [errorMsg, setErrorMsg] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const [notification, setNotification] = useState<{ show: boolean, msg: string, type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' })
 
@@ -354,31 +361,37 @@ export default function AdminPage() {
 
   // ---- Species CRUD ----
   const saveSpecies = async () => {
+    if (saving) return
     setErrorMsg('')
     if (!spForm.species_name || spForm.temp_min === undefined || spForm.temp_min === null || spForm.temp_max === undefined || spForm.temp_max === null || spForm.ph_min === undefined || spForm.ph_min === null || spForm.ph_max === undefined || spForm.ph_max === null || spForm.tds_min === undefined || spForm.tds_min === null || spForm.tds_max === undefined || spForm.tds_max === null) {
       return showNotification('Vui lòng điền đầy đủ tất cả thông tin', 'error')
     }
-    if (speciesModal.mode === 'add') {
-      const { error } = await supabase.from('fish_species').insert(spForm)
-      if (error) {
-        if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
-        return showNotification(error.message, 'error')
+    setSaving(true)
+    try {
+      if (speciesModal.mode === 'add') {
+        const { error } = await supabase.from('fish_species').insert(spForm)
+        if (error) {
+          if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
+          return showNotification(error.message, 'error')
+        }
+        showNotification('Thêm loài cá thành công!')
+      } else if (speciesModal.mode === 'edit' && speciesModal.data) {
+        const { error } = await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
+        if (error) {
+          if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
+          return showNotification(error.message, 'error')
+        }
+        showNotification('Cập nhật loài cá thành công!')
+      } else if (speciesModal.mode === 'delete' && speciesModal.data) {
+        const { error } = await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
+        if (error) return showNotification(error.message, 'error')
+        showNotification('Xóa loài cá thành công!')
       }
-      showNotification('Thêm loài cá thành công!')
-    } else if (speciesModal.mode === 'edit' && speciesModal.data) {
-      const { error } = await supabase.from('fish_species').update(spForm).eq('id', speciesModal.data.id)
-      if (error) {
-        if (error.code === '23505' || error.message.includes('unique')) return showNotification('Tên loài cá này đã tồn tại!', 'error')
-        return showNotification(error.message, 'error')
-      }
-      showNotification('Cập nhật loài cá thành công!')
-    } else if (speciesModal.mode === 'delete' && speciesModal.data) {
-      const { error } = await supabase.from('fish_species').delete().eq('id', speciesModal.data.id)
-      if (error) return showNotification(error.message, 'error')
-      showNotification('Xóa loài cá thành công!')
+      setSpeciesModal({ show: false, mode: 'add' })
+      fetchData()
+    } finally {
+      setSaving(false)
     }
-    setSpeciesModal({ show: false, mode: 'add' })
-    fetchData()
   }
 
   const openSpeciesModal = (mode: 'add' | 'edit' | 'delete', data?: FishSpecies) => {
@@ -389,6 +402,7 @@ export default function AdminPage() {
 
   // ---- Devices CRUD ----
   const saveDevice = async () => {
+    if (saving) return
     setErrorMsg('')
     if (deviceModal.mode === 'add') {
       if (!devForm.mac_address) return showNotification('Vui lòng nhập MAC Address', 'error')
@@ -406,31 +420,46 @@ export default function AdminPage() {
         firmware_version: devForm.firmware_version,
       }))
 
-      const { error } = await supabase.from('devices').insert(devicesToInsert)
-      
-      if (error) {
-        if (error.code === '23505' || error.message.includes('unique')) {
-          return showNotification(`Có MAC Address đã tồn tại trong hệ thống!`, 'error')
+      setSaving(true)
+      try {
+        const { error } = await supabase.from('devices').insert(devicesToInsert)
+        
+        if (error) {
+          if (error.code === '23505' || error.message.includes('unique')) {
+            return showNotification(`Có MAC Address đã tồn tại trong hệ thống!`, 'error')
+          }
+          return showNotification(error.message, 'error')
         }
-        return showNotification(error.message, 'error')
+        showNotification(`Đã thêm thành công ${macs.length} thiết bị!`)
+      } finally {
+        setSaving(false)
       }
-      showNotification(`Đã thêm thành công ${macs.length} thiết bị!`)
     } else if (deviceModal.mode === 'edit' && deviceModal.data) {
-      const { error } = await supabase.from('devices').update({
-        mac_address: devForm.mac_address.trim(),
-        firmware_version: devForm.firmware_version,
-      }).eq('id', deviceModal.data.id)
-      if (error) {
-        if (error.code === '23505' || error.message.includes('unique')) {
-          return showNotification('MAC Address này đã tồn tại trong hệ thống!', 'error')
+      setSaving(true)
+      try {
+        const { error } = await supabase.from('devices').update({
+          mac_address: devForm.mac_address.trim(),
+          firmware_version: devForm.firmware_version,
+        }).eq('id', deviceModal.data.id)
+        if (error) {
+          if (error.code === '23505' || error.message.includes('unique')) {
+            return showNotification('MAC Address này đã tồn tại trong hệ thống!', 'error')
+          }
+          return showNotification(error.message, 'error')
         }
-        return showNotification(error.message, 'error')
+        showNotification('Cập nhật thiết bị thành công!')
+      } finally {
+        setSaving(false)
       }
-      showNotification('Cập nhật thiết bị thành công!')
     } else if (deviceModal.mode === 'delete' && deviceModal.data) {
-      const { error } = await supabase.from('devices').delete().eq('id', deviceModal.data.id)
-      if (error) return showNotification(error.message, 'error')
-      showNotification('Xóa thiết bị thành công!')
+      setSaving(true)
+      try {
+        const { error } = await supabase.from('devices').delete().eq('id', deviceModal.data.id)
+        if (error) return showNotification(error.message, 'error')
+        showNotification('Xóa thiết bị thành công!')
+      } finally {
+        setSaving(false)
+      }
     }
     setDeviceModal({ show: false, mode: 'add' })
     fetchData()
@@ -444,32 +473,51 @@ export default function AdminPage() {
 
   // ---- Staff CRUD ----
   const saveStaff = async () => {
+    if (saving) return
     setErrorMsg('')
-    if (staffModal.mode === 'add') {
-      if (!staffForm.email || !staffForm.password || !staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ thông tin bắt buộc (kể cả số điện thoại)', 'error')
+    setSaving(true)
+    try {
+      if (staffModal.mode === 'add') {
+        if (!staffForm.email || !staffForm.password || !staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ thông tin bắt buộc (kể cả số điện thoại)', 'error')
 
-      // Kiểm tra trùng số điện thoại trước khi tạo tài khoản Auth để tránh tạo ra user rác
-      const { data: existingPhone } = await supabase.from('users').select('id').eq('phone', staffForm.phone.trim()).maybeSingle()
-      if (existingPhone) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
+        // Kiểm tra trùng số điện thoại trước khi tạo tài khoản Auth để tránh tạo ra user rác
+        const { data: existingPhone } = await supabase.from('users').select('id').eq('phone', staffForm.phone.trim()).maybeSingle()
+        if (existingPhone) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: staffForm.email,
-        password: staffForm.password,
-      })
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: staffForm.email,
+          password: staffForm.password,
+        })
 
-      if (authError) {
-        if (authError.message.includes('already registered')) return showNotification('Email này đã được sử dụng!', 'error')
-        return showNotification(authError.message, 'error')
-      }
+        if (authError) {
+          if (authError.message.includes('already registered')) return showNotification('Email này đã được sử dụng!', 'error')
+          return showNotification(authError.message, 'error')
+        }
 
-      if (authData.user) {
-        // The DB trigger automatically creates a row in users on sign up.
-        // We just need to update that row with staff details and role.
+        if (authData.user) {
+          // The DB trigger automatically creates a row in users on sign up.
+          // We just need to update that row with staff details and role.
+          const { error: dbError } = await supabase.from('users').update({
+            full_name: staffForm.full_name,
+            phone: staffForm.phone,
+            role: staffForm.role
+          }).eq('id', authData.user.id)
+          if (dbError) {
+            if (dbError.code === '23505' || dbError.message.includes('unique')) {
+              if (dbError.message.includes('phone')) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
+              if (dbError.message.includes('email')) return showNotification('Email này đã được sử dụng!', 'error')
+            }
+            return showNotification(dbError.message, 'error')
+          }
+          showNotification('Thêm nhân viên thành công!')
+        }
+      } else if (staffModal.mode === 'edit' && staffModal.data) {
+        if (!staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ họ tên và số điện thoại', 'error')
         const { error: dbError } = await supabase.from('users').update({
           full_name: staffForm.full_name,
           phone: staffForm.phone,
-          role: staffForm.role
-        }).eq('id', authData.user.id)
+          role: staffForm.role,
+        }).eq('id', staffModal.data.id)
         if (dbError) {
           if (dbError.code === '23505' || dbError.message.includes('unique')) {
             if (dbError.message.includes('phone')) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
@@ -477,30 +525,17 @@ export default function AdminPage() {
           }
           return showNotification(dbError.message, 'error')
         }
-        showNotification('Thêm nhân viên thành công!')
+        showNotification('Cập nhật nhân viên thành công!')
+      } else if (staffModal.mode === 'delete' && staffModal.data) {
+        const { error } = await supabase.from('users').delete().eq('id', staffModal.data.id)
+        if (error) return showNotification(error.message, 'error')
+        showNotification('Xóa nhân viên thành công!')
       }
-    } else if (staffModal.mode === 'edit' && staffModal.data) {
-      if (!staffForm.full_name || !staffForm.phone) return showNotification('Vui lòng điền đủ họ tên và số điện thoại', 'error')
-      const { error: dbError } = await supabase.from('users').update({
-        full_name: staffForm.full_name,
-        phone: staffForm.phone,
-        role: staffForm.role,
-      }).eq('id', staffModal.data.id)
-      if (dbError) {
-        if (dbError.code === '23505' || dbError.message.includes('unique')) {
-          if (dbError.message.includes('phone')) return showNotification('Số điện thoại này đã được sử dụng!', 'error')
-          if (dbError.message.includes('email')) return showNotification('Email này đã được sử dụng!', 'error')
-        }
-        return showNotification(dbError.message, 'error')
-      }
-      showNotification('Cập nhật nhân viên thành công!')
-    } else if (staffModal.mode === 'delete' && staffModal.data) {
-      const { error } = await supabase.from('users').delete().eq('id', staffModal.data.id)
-      if (error) return showNotification(error.message, 'error')
-      showNotification('Xóa nhân viên thành công!')
+      setStaffModal({ show: false, mode: 'add' })
+      fetchData()
+    } finally {
+      setSaving(false)
     }
-    setStaffModal({ show: false, mode: 'add' })
-    fetchData()
   }
 
   const openStaffModal = (mode: 'add' | 'edit' | 'delete', data?: Staff) => {
@@ -514,23 +549,29 @@ export default function AdminPage() {
 
   // ---- Subscription CRUD ----
   const saveSubscription = async () => {
+    if (saving) return
     setErrorMsg('')
     if (subModal.mode === 'add') {
       if (!subForm.name || !subForm.plan_type || subForm.price === undefined || subForm.price === null || subForm.duration_months === undefined || subForm.duration_months === null || subForm.max_tanks === undefined || subForm.max_tanks === null || subForm.history_days === undefined || subForm.history_days === null) {
         return showNotification('Vui lòng điền đầy đủ tất cả thông tin gói cước', 'error')
       }
       
-      const { error } = await supabase.from('subscription_plans').insert({
-        name: subForm.name,
-        plan_type: subForm.plan_type,
-        price: subForm.price,
-        duration_months: subForm.duration_months,
-        max_tanks: subForm.max_tanks,
-        smart_device_setup: subForm.smart_device_setup,
-        history_days: subForm.history_days
-      })
-      if (error) return showNotification(error.message, 'error')
-      showNotification('Thêm gói cước thành công!')
+      setSaving(true)
+      try {
+        const { error } = await supabase.from('subscription_plans').insert({
+          name: subForm.name,
+          plan_type: subForm.plan_type,
+          price: subForm.price,
+          duration_months: subForm.duration_months,
+          max_tanks: subForm.max_tanks,
+          smart_device_setup: subForm.smart_device_setup,
+          history_days: subForm.history_days
+        })
+        if (error) return showNotification(error.message, 'error')
+        showNotification('Thêm gói cước thành công!')
+      } finally {
+        setSaving(false)
+      }
     }
     setSubModal({ show: false, mode: 'add' })
     fetchData()
@@ -1007,7 +1048,7 @@ export default function AdminPage() {
                               )}
                               {order.status === 'pending' && (
                                 <button
-                                  onClick={() => { setApproveModal({ show: true, order }); setSelectedTaskType('delivery') }}
+                                  onClick={() => setApproveModal({ show: true, order })}
                                   style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 7, background: '#a78bfa', color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: F, transition: 'filter 160ms', whiteSpace: 'nowrap' }}
                                   onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
                                   onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
@@ -1116,6 +1157,7 @@ export default function AdminPage() {
         <Dialog
           title="Thêm gói cước mới"
           error={errorMsg}
+          loading={saving}
           confirmText="Lưu"
           confirmColor="#a78bfa"
           onConfirm={saveSubscription}
@@ -1162,6 +1204,7 @@ export default function AdminPage() {
           title={speciesModal.mode === 'add' ? 'Thêm loài cá mới' : speciesModal.mode === 'edit' ? 'Sửa loài cá' : 'Xóa loài cá'}
           message={speciesModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa loài cá "${speciesModal.data?.species_name}"?` : undefined}
           error={errorMsg}
+          loading={saving}
           confirmText={speciesModal.mode === 'delete' ? 'Xóa' : 'Lưu'}
           confirmColor={speciesModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
           onConfirm={saveSpecies}
@@ -1192,6 +1235,7 @@ export default function AdminPage() {
           title={deviceModal.mode === 'add' ? 'Thêm thiết bị mới' : deviceModal.mode === 'edit' ? 'Sửa thiết bị' : 'Xóa thiết bị'}
           message={deviceModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa thiết bị có MAC "${deviceModal.data?.mac_address}"?` : undefined}
           error={errorMsg}
+          loading={saving}
           confirmText={deviceModal.mode === 'delete' ? 'Xóa' : 'Lưu'}
           confirmColor={deviceModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
           onConfirm={saveDevice}
@@ -1255,6 +1299,7 @@ export default function AdminPage() {
           title={staffModal.mode === 'add' ? 'Thêm nhân viên mới' : staffModal.mode === 'edit' ? 'Sửa thông tin nhân viên' : 'Xóa nhân viên'}
           message={staffModal.mode === 'delete' ? `Bạn có chắc chắn muốn xóa nhân viên "${staffModal.data?.full_name}"?` : undefined}
           error={errorMsg}
+          loading={saving}
           confirmText={staffModal.mode === 'delete' ? 'Xóa' : staffModal.mode === 'edit' ? 'Cập nhật' : 'Thêm mới'}
           confirmColor={staffModal.mode === 'delete' ? '#FF6B6B' : '#a78bfa'}
           onConfirm={saveStaff}
@@ -1296,30 +1341,37 @@ export default function AdminPage() {
         <Dialog
           title="Duyệt đơn hàng"
           error=""
+          loading={saving}
           confirmText="Xác nhận & Giao việc"
           cancelText="Hủy"
           confirmColor="#10B981"
           onConfirm={async () => {
-            const { error: orderError } = await supabase.from('orders').update({ status: 'confirmed' }).eq('id', approveModal.order!.id)
-            if (orderError) {
-              return showNotification(orderError.message, 'error')
+            if (saving) return
+            setSaving(true)
+            try {
+              const { error: orderError } = await supabase.from('orders').update({ status: 'confirmed' }).eq('id', approveModal.order!.id)
+              if (orderError) {
+                return showNotification(orderError.message, 'error')
+              }
+
+              const { error: taskError } = await supabase.from('tasks').insert({
+                task_type: 'packing',
+                customer_id: approveModal.order!.userId,
+                order_id: approveModal.order!.id,
+                title: `Đóng gói đơn hàng #${approveModal.order!.id}`,
+                description: `Khách hàng: ${approveModal.order!.customerName}\nSĐT: ${approveModal.order!.phone}\nĐịa chỉ: ${approveModal.order!.address}`,
+              })
+
+              if (taskError) {
+                return showNotification(taskError.message, 'error')
+              }
+
+              setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'confirmed' } : o))
+              showNotification(`Đã duyệt đơn và tạo việc đóng gói cho Kho!`)
+              setApproveModal({ show: false, order: null })
+            } finally {
+              setSaving(false)
             }
-
-            const { error: taskError } = await supabase.from('tasks').insert({
-              task_type: 'packing',
-              customer_id: approveModal.order!.userId,
-              order_id: approveModal.order!.id,
-              title: `Đóng gói đơn hàng #${approveModal.order!.id}`,
-              description: `Khách hàng: ${approveModal.order!.customerName}\nSĐT: ${approveModal.order!.phone}\nĐịa chỉ: ${approveModal.order!.address}`,
-            })
-
-            if (taskError) {
-              return showNotification(taskError.message, 'error')
-            }
-
-            setOrders(prev => prev.map(o => o.id === approveModal.order!.id ? { ...o, status: 'confirmed' } : o))
-            showNotification(`Đã duyệt đơn và tạo việc đóng gói cho Kho!`)
-            setApproveModal({ show: false, order: null })
           }}
           onCancel={() => setApproveModal({ show: false, order: null })}
         >
@@ -1335,7 +1387,7 @@ export default function AdminPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
               <span style={{ color: 'var(--ap-text-muted)' }}>Sản phẩm</span>
-              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>AquaCare {approveModal.order.productVersion}</span>
+              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{approveModal.order.productVersion}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
               <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền</span>
@@ -1347,31 +1399,24 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Task type selector */}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 8 }}>Loại công việc giao cho Staff</label>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {TASK_TYPES.map(task => {
-                const isSelected = selectedTaskType === task.value
-                const TaskIcon = task.icon
-                return (
-                  <button
-                    key={task.value}
-                    onClick={() => setSelectedTaskType(task.value)}
-                    style={{
-                      flex: 1, padding: '12px 10px', borderRadius: 10, cursor: 'pointer', fontFamily: F,
-                      border: `1.5px solid ${isSelected ? '#10B981' : 'var(--ap-border)'}`,
-                      background: isSelected ? 'rgba(16,185,129,0.1)' : 'var(--ap-btn-cancel)',
-                      color: isSelected ? '#10B981' : 'var(--ap-text-secondary)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                      transition: 'all 160ms',
-                    }}
-                  >
-                    <TaskIcon size={20} />
-                    <span style={{ fontSize: 12, fontWeight: 600 }}>{task.label}</span>
-                  </button>
-                )
-              })}
+          {/* Service info card */}
+          <div style={{
+            padding: '14px 16px', borderRadius: 12,
+            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)',
+            display: 'flex', alignItems: 'center', gap: 12, marginTop: 4
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: 'rgba(16,185,129,0.15)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              <Truck size={20} color="#10B981" />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#10B981' }}>Giao hàng & Lắp đặt tận nơi</div>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-secondary)', marginTop: 2, lineHeight: 1.4 }}>
+                Đơn hàng sẽ được Kho đóng gói và giao cho Staff phụ trách mang thiết bị đến tận nơi giao và hỗ trợ lắp đặt cho khách hàng.
+              </div>
             </div>
           </div>
         </Dialog>

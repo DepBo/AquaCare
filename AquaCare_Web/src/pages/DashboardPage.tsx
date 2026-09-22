@@ -124,10 +124,10 @@ function statusLabel(val: number, good: number[], warn: number[], key?: string) 
 // ── Custom Dialog ────────────────────────────────────────────
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
-  confirmColor = '#00A896', onConfirm, onCancel, children
+  confirmColor = '#00A896', onConfirm, onCancel, loading = false, children
 }: {
   title: React.ReactNode | string; message?: string; error?: string; confirmText?: string; cancelText?: string
-  confirmColor?: string; onConfirm: () => void; onCancel: () => void; children?: React.ReactNode
+  confirmColor?: string; onConfirm: () => void; onCancel: () => void; loading?: boolean; children?: React.ReactNode
 }) {
   return (
     <div style={{
@@ -144,7 +144,7 @@ function Dialog({
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6 }}>
+          <button onClick={onCancel} disabled={loading} style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6, opacity: loading ? 0.5 : 1 }}>
             <X size={16} />
           </button>
         </div>
@@ -156,22 +156,32 @@ function Dialog({
           <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>
         )}
         <div style={{ display: 'flex', gap: 10, marginTop: error ? 16 : 24 }}>
-          <button onClick={onCancel} style={{
+          <button onClick={onCancel} disabled={loading} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--border-color)',
-            background: 'var(--bg-btn-cancel)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontFamily: F,
-            transition: 'all 160ms',
+            background: 'var(--bg-btn-cancel)', color: 'var(--text-secondary)', fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
+            transition: 'all 160ms', opacity: loading ? 0.5 : 1
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-btn-cancel)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
+            onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = 'var(--bg-btn-cancel)'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
           >{cancelText}</button>
-          <button onClick={onConfirm} style={{
+          <button onClick={onConfirm} disabled={loading} style={{
             flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: F,
-            transition: 'all 160ms', boxShadow: `0 4px 16px ${confirmColor}40`,
+            background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
+            transition: 'all 160ms', boxShadow: `0 4px 16px ${confirmColor}40`, opacity: loading ? 0.7 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
           }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
-          >{confirmText}</button>
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
+            onMouseLeave={e => { if (!loading) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' } }}
+          >
+            {loading ? (
+              <>
+                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                Đang xử lý...
+              </>
+            ) : (
+              confirmText
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -832,6 +842,7 @@ export default function DashboardPage() {
   const [alertCooldown, setAlertCooldown] = useState<number>(0)
   const [alertSeverity, setAlertSeverity] = useState<string>('both')
   const [dialogError, setDialogError] = useState('')
+  const [tankSaving, setTankSaving] = useState(false)
 
   // Bảo vệ route & khôi phục Supabase session
   useEffect(() => {
@@ -1223,115 +1234,132 @@ export default function DashboardPage() {
   }
 
   const handleAddConfirm = async () => {
+    if (tankSaving) return
     setDialogError('')
     const name = addName.trim()
     if (!name) return
 
-    const mac = addMacAddress.trim()
-    if (mac) {
-      const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
-      if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
-      if (dev.tank_id) return setDialogError('Thiết bị này đã được sử dụng cho bể khác!')
-    }
-
-    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
-
-    const { data } = await supabase.from('tanks').insert({
-      user_id: userInfo.id,
-      tank_name: name,
-      water_volume_liter: Number(addVolume) || null,
-      species_id: addSpeciesId || null
-    }).select('*, fish_species(*)')
-
-    if (data && data.length > 0) {
-      if (mac) await supabase.from('devices').update({ tank_id: data[0].id, is_active: true }).eq('mac_address', mac)
-
-      const t = data[0]
-      const newPond: Pond = {
-        id: t.id,
-        name: t.tank_name,
-        volume: t.water_volume_liter,
-        species_id: t.species_id,
-        species_name: t.fish_species?.species_name,
-        mac_address: mac
+    setTankSaving(true)
+    try {
+      const mac = addMacAddress.trim()
+      if (mac) {
+        const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
+        if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
+        if (dev.tank_id) return setDialogError('Thiết bị này đã được sử dụng cho bể khác!')
       }
-      setPonds(prev => [...prev, newPond])
-      setActiveDevice(newPond.id)
-    }
 
-    setAddName('')
-    setAddVolume('')
-    setAddSpeciesId(0)
-    setAddMacAddress('')
-    setAddDialog(false)
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+
+      const { data } = await supabase.from('tanks').insert({
+        user_id: userInfo.id,
+        tank_name: name,
+        water_volume_liter: Number(addVolume) || null,
+        species_id: addSpeciesId || null
+      }).select('*, fish_species(*)')
+
+      if (data && data.length > 0) {
+        if (mac) await supabase.from('devices').update({ tank_id: data[0].id, is_active: true }).eq('mac_address', mac)
+
+        const t = data[0]
+        const newPond: Pond = {
+          id: t.id,
+          name: t.tank_name,
+          volume: t.water_volume_liter,
+          species_id: t.species_id,
+          species_name: t.fish_species?.species_name,
+          mac_address: mac
+        }
+        setPonds(prev => [...prev, newPond])
+        setActiveDevice(newPond.id)
+      }
+
+      setAddName('')
+      setAddVolume('')
+      setAddSpeciesId(0)
+      setAddMacAddress('')
+      setAddDialog(false)
+    } finally {
+      setTankSaving(false)
+    }
   }
 
   const handleEditConfirm = async () => {
+    if (tankSaving) return
     setDialogError('')
     const name = editName.trim()
     if (!name || !editDialog) return
 
-    const mac = editMacAddress.trim()
-    if (mac && mac !== editDialog?.mac_address) {
-      const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
-      if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
-      if (dev.tank_id && dev.tank_id !== editDialog?.id) return setDialogError('Thiết bị này đã thuộc về bể khác!')
-    }
-
-    const { data } = await supabase.from('tanks').update({
-      tank_name: name,
-      water_volume_liter: Number(editVolume) || null,
-      species_id: editSpeciesId || null
-    }).eq('id', editDialog.id).select('*, fish_species(*)')
-
-    if (data && data.length > 0) {
-      if (mac !== editDialog?.mac_address) {
-        if (editDialog?.mac_address) await supabase.from('devices').update({ tank_id: null, is_active: false }).eq('mac_address', editDialog.mac_address)
-        if (mac) await supabase.from('devices').update({ tank_id: editDialog.id, is_active: true }).eq('mac_address', mac)
+    setTankSaving(true)
+    try {
+      const mac = editMacAddress.trim()
+      if (mac && mac !== editDialog?.mac_address) {
+        const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
+        if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
+        if (dev.tank_id && dev.tank_id !== editDialog?.id) return setDialogError('Thiết bị này đã thuộc về bể khác!')
       }
 
-      const updatedPond = {
-        id: data[0].id,
-        name: data[0].tank_name,
-        volume: data[0].water_volume_liter,
-        species_id: data[0].species_id,
-        species_name: data[0].fish_species?.species_name,
-        mac_address: mac
+      const { data } = await supabase.from('tanks').update({
+        tank_name: name,
+        water_volume_liter: Number(editVolume) || null,
+        species_id: editSpeciesId || null
+      }).eq('id', editDialog.id).select('*, fish_species(*)')
+
+      if (data && data.length > 0) {
+        if (mac !== editDialog?.mac_address) {
+          if (editDialog?.mac_address) await supabase.from('devices').update({ tank_id: null, is_active: false }).eq('mac_address', editDialog.mac_address)
+          if (mac) await supabase.from('devices').update({ tank_id: editDialog.id, is_active: true }).eq('mac_address', mac)
+        }
+
+        const updatedPond = {
+          id: data[0].id,
+          name: data[0].tank_name,
+          volume: data[0].water_volume_liter,
+          species_id: data[0].species_id,
+          species_name: data[0].fish_species?.species_name,
+          mac_address: mac
+        }
+        setPonds(prev => prev.map(p => p.id === editDialog.id ? updatedPond : p))
       }
-      setPonds(prev => prev.map(p => p.id === editDialog.id ? updatedPond : p))
-    }
 
-    // Save notification settings
-    const payload = {
-      notify_via_email: notifyViaEmail,
-      notify_via_web_push: notifyViaWebPush,
-      notify_via_app_noti: notifyViaAppNoti,
-      alert_cooldown_minutes: alertCooldown,
-      alert_severity_preference: alertSeverity
-    };
-    const { data: existing } = await supabase.from('tank_notification_settings').select('tank_id').eq('tank_id', editDialog.id).single();
-    if (existing) {
-      await supabase.from('tank_notification_settings').update(payload).eq('tank_id', editDialog.id);
-    } else {
-      await supabase.from('tank_notification_settings').insert({ tank_id: editDialog.id, ...payload });
-    }
+      // Save notification settings
+      const payload = {
+        notify_via_email: notifyViaEmail,
+        notify_via_web_push: notifyViaWebPush,
+        notify_via_app_noti: notifyViaAppNoti,
+        alert_cooldown_minutes: alertCooldown,
+        alert_severity_preference: alertSeverity
+      };
+      const { data: existing } = await supabase.from('tank_notification_settings').select('tank_id').eq('tank_id', editDialog.id).single();
+      if (existing) {
+        await supabase.from('tank_notification_settings').update(payload).eq('tank_id', editDialog.id);
+      } else {
+        await supabase.from('tank_notification_settings').insert({ tank_id: editDialog.id, ...payload });
+      }
 
-    showNotification("Đã cập nhật thông tin bể cá thành công!");
-    setEditDialog(null)
+      showNotification("Đã cập nhật thông tin bể cá thành công!");
+      setEditDialog(null)
+    } finally {
+      setTankSaving(false)
+    }
   }
 
   const handleDeleteConfirm = async () => {
-    if (!deleteDialog) return
-    if (deleteDialog.mac_address) {
-      await supabase.from('devices').update({ is_active: false }).eq('mac_address', deleteDialog.mac_address)
+    if (!deleteDialog || tankSaving) return
+    setTankSaving(true)
+    try {
+      if (deleteDialog.mac_address) {
+        await supabase.from('devices').update({ is_active: false }).eq('mac_address', deleteDialog.mac_address)
+      }
+      await supabase.from('tanks').delete().eq('id', deleteDialog.id)
+      const remaining = ponds.filter(p => p.id !== deleteDialog.id)
+      setPonds(remaining)
+      if (activeDevice === deleteDialog.id) {
+        setActiveDevice(remaining[0]?.id ?? null)
+      }
+      setDeleteDialog(null)
+    } finally {
+      setTankSaving(false)
     }
-    await supabase.from('tanks').delete().eq('id', deleteDialog.id)
-    const remaining = ponds.filter(p => p.id !== deleteDialog.id)
-    setPonds(remaining)
-    if (activeDevice === deleteDialog.id) {
-      setActiveDevice(remaining[0]?.id ?? null)
-    }
-    setDeleteDialog(null)
   }
 
   const latest = Object.fromEntries(
@@ -2824,6 +2852,7 @@ export default function DashboardPage() {
           title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18} color="#00A896" /> Thêm bể cá mới</div>}
           confirmText="Thêm bể"
           error={dialogError}
+          loading={tankSaving}
           onConfirm={handleAddConfirm}
           onCancel={() => setAddDialog(false)}
         >
@@ -2914,6 +2943,7 @@ export default function DashboardPage() {
           title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#4DA6FF" /> Cấu hình & Cảnh báo</div>}
           confirmText="Lưu thay đổi"
           error={dialogError}
+          loading={tankSaving}
           onConfirm={handleEditConfirm}
           onCancel={() => setEditDialog(null)}
         >
@@ -3031,6 +3061,7 @@ export default function DashboardPage() {
           message={`Bạn có chắc muốn xóa "${deleteDialog.name}"? Hành động này không thể hoàn tác.`}
           confirmText="Xóa bể"
           confirmColor="#FF6B6B"
+          loading={tankSaving}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteDialog(null)}
         />
