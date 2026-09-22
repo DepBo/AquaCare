@@ -128,6 +128,7 @@ const getNormalizedVersion = (version: string) => {
 // ─── Orders ──────────────────────────────────────────────────────────────────
 interface Order {
   id: string
+  userId: string
   customerName: string
   phone: string
   email: string
@@ -138,7 +139,7 @@ interface Order {
   totalQuantity: number
   totalPrice: number
   paymentMethod: 'COD' | 'Chuyển khoản'
-  status: 'pending' | 'approved'
+  status: 'pending' | 'approved' | 'confirmed' | 'shipping' | 'delivered' | 'cancelled'
   createdAt: string
 }
 
@@ -312,6 +313,7 @@ export default function AdminPage() {
     if (ordersData) {
       const mappedOrders = ordersData.map((o: any) => ({
         id: o.id,
+        userId: o.user_id,
         customerName: o.shipping_name,
         phone: o.shipping_phone,
         email: o.shipping_email || 'N/A',

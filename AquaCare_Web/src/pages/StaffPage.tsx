@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   LogOut, Sun, Moon, CheckCircle, Clock, MapPin, Phone,
-  Briefcase, History, Wrench, Truck, Gauge, Zap,
+  Briefcase, History, Wrench, Truck,
   User, CalendarClock, ListChecks, ArrowLeft, ArrowRight, Layout,
   MessageSquare, Mail, Send, AlertTriangle, Pin, Package, Scan, CheckCircle2
 } from 'lucide-react'
@@ -76,6 +76,12 @@ interface Task {
   tank_id?: number
   deadline?: string
   created_at: string
+  // Legacy display fields (populated from joins for Kanban)
+  type?: string
+  customerName?: string
+  address?: string
+  phone?: string
+  note?: string
 }
 
 
@@ -99,12 +105,17 @@ const INITIAL_SUPPORT_REQUESTS: SupportRequest[] = [
 ]
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const TYPE_CONFIG: Record<TaskType, { icon: React.ElementType }> = {
+const TYPE_CONFIG: Record<string, { icon: React.ElementType }> = {
+  'packing':          { icon: Package },
+  'delivery_install': { icon: Truck },
+  'maintenance':      { icon: Wrench },
+  'support':          { icon: MessageSquare },
+  // Legacy keys
   'Giao hàng & lắp đặt': { icon: Truck },
   'Bảo trì thiết bị':    { icon: Wrench },
 }
 
-const COLUMN_CONFIG = {
+const COLUMN_CONFIG: Record<string, { label: string; icon: React.ElementType; accent: string; accentBg: string; accentBorder: string }> = {
   todo:        { label: 'Chờ nhận việc',  icon: Clock,        accent: '#64748b', accentBg: 'rgba(100,116,139,0.1)',  accentBorder: 'rgba(100,116,139,0.2)' },
   in_progress: { label: 'Đang thực hiện', icon: Briefcase,    accent: TEAL,      accentBg: TEAL_BG,                  accentBorder: TEAL_BORDER },
   done:        { label: 'Hoàn thành',      icon: CheckCircle,  accent: '#10B981', accentBg: 'rgba(16,185,129,0.1)',   accentBorder: 'rgba(16,185,129,0.25)' },
@@ -130,9 +141,9 @@ const ghostBtnBase: React.CSSProperties = {
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
 function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => void }) {
-  const typeEntry = TYPE_CONFIG[task.type]
+  const typeEntry = TYPE_CONFIG[task.type || task.task_type] || { icon: Briefcase }
   const TypeIcon = typeEntry.icon
-  const overdue = isOverdue(task.deadline, task.status)
+  const overdue = task.deadline ? isOverdue(task.deadline, task.status) : false
   const actionLabel = task.status === 'todo' ? 'Nhận việc' : task.status === 'in_progress' ? 'Hoàn thành' : null
 
   return (
@@ -165,7 +176,7 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
           color: 'var(--sp-text-secondary)', fontSize: 11, fontWeight: 600,
         }}>
           <TypeIcon size={10} />
-          {task.type}
+          {task.type || task.task_type}
         </span>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sp-text-muted)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
           #{task.id}
@@ -213,7 +224,7 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
             : <CalendarClock size={11} color="var(--sp-text-muted)" />
           }
           <span style={{ fontSize: 11, fontWeight: 600, color: overdue ? '#FF6B6B' : 'var(--sp-text-secondary)' }}>
-            {overdue ? 'Quá hạn: ' : 'Hạn: '}{formatDate(task.deadline)}
+            {task.deadline ? (overdue ? 'Quá hạn: ' : 'Hạn: ') + formatDate(task.deadline) : 'Chưa có hạn'}
           </span>
         </div>
 
@@ -304,7 +315,7 @@ function KanbanColumn({ colKey, tasks, onAdvance }: {
 
 // ─── History Row ──────────────────────────────────────────────────────────────
 function HistoryRow({ task }: { task: Task }) {
-  const TypeIcon = TYPE_CONFIG[task.type].icon
+  const TypeIcon = (TYPE_CONFIG[task.type || task.task_type] || { icon: Briefcase }).icon
   return (
     <div
       style={{
@@ -320,10 +331,10 @@ function HistoryRow({ task }: { task: Task }) {
         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)', marginBottom: 3 }}>{task.title}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <User size={10} color="var(--sp-text-muted)" />
-          <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.customerName}</span>
+          <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.customerName || task.description?.split('\n')[0] || 'N/A'}</span>
           <span style={{ color: 'var(--sp-text-muted)', fontSize: 10 }}>·</span>
           <Phone size={10} color="var(--sp-text-muted)" />
-          <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.phone}</span>
+          <span style={{ fontSize: 11, color: 'var(--sp-text-secondary)' }}>{task.phone || 'N/A'}</span>
         </div>
       </div>
 
@@ -335,12 +346,12 @@ function HistoryRow({ task }: { task: Task }) {
         fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
       }}>
         <TypeIcon size={10} />
-        {task.type}
+        {task.type || task.task_type}
       </span>
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--sp-text-secondary)' }}>
         <CalendarClock size={11} color="var(--sp-text-muted)" />
-        {formatDate(task.deadline)}
+        {task.deadline ? formatDate(task.deadline) : formatDate(task.created_at)}
       </span>
 
       <span style={{
@@ -469,7 +480,7 @@ function SupportCard({ request, onResolve }: { request: SupportRequest; onResolv
 
 // ─── Packing Station Mockup ───────────────────────────────────────────────────
 // ─── Packing Station Real ───────────────────────────────────────────────────
-function PackingStationUI({ userInfo }: { userInfo: any }) {
+function PackingStationUI() {
   const [packingTasks, setPackingTasks] = useState<any[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   
@@ -914,13 +925,19 @@ export default function StaffPage() {
       <main style={{ flex: 1, overflowY: 'auto', padding: '22px 28px' }}>
 
           {activeTab === 'board' && (
-            <div style={{ display: 'flex', gap: 24, overflowX: 'auto', flex: 1, paddingBottom: 16 }}>
-              {/* Kanban will be updated in next steps */}
-              <h2 style={{ padding: 20 }}>Bảng công việc (Đang bảo trì)</h2>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minHeight: 'calc(100vh - 160px)' }}>
+              {(['todo', 'in_progress', 'done'] as TaskStatus[]).map(colKey => (
+                <KanbanColumn
+                  key={colKey}
+                  colKey={colKey}
+                  tasks={tasks.filter(t => t.status === colKey)}
+                  onAdvance={advanceTask}
+                />
+              ))}
             </div>
           )}
 
-          {activeTab === 'packing' && <PackingStationUI userInfo={userInfo} />}
+          {activeTab === 'packing' && <PackingStationUI />}
 
           {activeTab === 'history' && (
             <div style={{
