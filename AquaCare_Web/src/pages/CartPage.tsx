@@ -81,34 +81,13 @@ export default function CartPage() {
 
     const { data: { session } } = await supabase.auth.getSession()
 
-    const orderItems: any[] = [];
-
-    // Check stock and reserve devices for each item
-    for (const item of cart) {
-      const { data: devices } = await supabase.from('devices')
-        .select('id, mac_address')
-        .eq('firmware_version', 'V' + item.version)
-        .eq('is_active', false)
-        .is('tank_id', null)
-        .limit(item.quantity);
-
-      if (!devices || devices.length < item.quantity) {
-        alert(`Rất tiếc, sản phẩm ${item.name} không đủ số lượng trong kho! Vui lòng giảm số lượng.`);
-        return;
-      }
-      
-      // Update devices to active
-      for (const device of devices) {
-        await supabase.from('devices').update({ is_active: true }).eq('id', device.id);
-        orderItems.push({
-          product_id: item.id,
-          product_name: item.name,
-          product_price: item.price,
-          quantity: 1, // Split into 1 item per row to track specific MAC address
-          device_mac: device.mac_address
-        });
-      }
-    }
+    const orderItems: any[] = cart.map(item => ({
+      product_id: item.id,
+      product_name: item.name,
+      product_price: item.price,
+      quantity: item.quantity,
+      device_macs: [] // Sẽ được nhân viên kho cập nhật sau
+    }));
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
