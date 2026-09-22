@@ -392,17 +392,29 @@ export default function AdminPage() {
     setErrorMsg('')
     if (deviceModal.mode === 'add') {
       if (!devForm.mac_address) return showNotification('Vui lòng nhập MAC Address', 'error')
-      const { error } = await supabase.from('devices').insert({
-        mac_address: devForm.mac_address.trim(),
+      
+      // Split by comma or newline, remove empty strings and trim whitespace
+      const macs = devForm.mac_address
+        .split(/[\n,]+/)
+        .map(m => m.trim())
+        .filter(m => m.length > 0)
+
+      if (macs.length === 0) return showNotification('MAC Address không hợp lệ', 'error')
+
+      const devicesToInsert = macs.map(mac => ({
+        mac_address: mac,
         firmware_version: devForm.firmware_version,
-      })
+      }))
+
+      const { error } = await supabase.from('devices').insert(devicesToInsert)
+      
       if (error) {
         if (error.code === '23505' || error.message.includes('unique')) {
-          return showNotification('MAC Address này đã tồn tại trong hệ thống!', 'error')
+          return showNotification(`Có MAC Address đã tồn tại trong hệ thống!`, 'error')
         }
         return showNotification(error.message, 'error')
       }
-      showNotification('Thêm thiết bị thành công!')
+      showNotification(`Đã thêm thành công ${macs.length} thiết bị!`)
     } else if (deviceModal.mode === 'edit' && deviceModal.data) {
       const { error } = await supabase.from('devices').update({
         mac_address: devForm.mac_address.trim(),
@@ -1187,7 +1199,28 @@ export default function AdminPage() {
         >
           {deviceModal.mode !== 'delete' && (
             <>
-              <Input label="MAC Address" value={devForm.mac_address} onChange={(e: any) => setDevForm({ ...devForm, mac_address: e.target.value })} placeholder="VD: AA:BB:CC:DD:EE:FF" />
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>
+                  MAC Address {deviceModal.mode === 'add' && '(Có thể nhập nhiều mã, cách nhau bằng dấu phẩy hoặc xuống dòng)'}
+                </label>
+                {deviceModal.mode === 'add' ? (
+                  <textarea
+                    value={devForm.mac_address}
+                    onChange={(e: any) => setDevForm({ ...devForm, mac_address: e.target.value })}
+                    placeholder="VD: AA:BB:CC:DD:EE:FF&#10;11:22:33:44:55:66"
+                    rows={12}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--ap-input-border)',
+                      background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 13, fontFamily: 'monospace',
+                      outline: 'none', transition: 'border-color 160ms', resize: 'vertical'
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--ap-purple-text)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--ap-input-border)'}
+                  />
+                ) : (
+                  <Input value={devForm.mac_address} onChange={(e: any) => setDevForm({ ...devForm, mac_address: e.target.value })} placeholder="VD: AA:BB:CC:DD:EE:FF" />
+                )}
+              </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ap-text-primary)', marginBottom: 6 }}>Phiên bản</label>
                 <select style={{
