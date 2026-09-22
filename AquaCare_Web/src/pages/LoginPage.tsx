@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
 const F = "'Inter', sans-serif"
