@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'admin_screen.dart';
-import 'staff_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -144,11 +143,8 @@ class _LoginScreenState extends State<LoginScreen>
         throw 'Missing Google ID Token';
       }
 
-      final AuthResponse res =
-          await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-      );
+      final AuthResponse res = await Supabase.instance.client.auth
+          .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
 
       final user = res.user;
       if (user == null) {
@@ -168,9 +164,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (userData == null) {
         // Insert new user
         role = 'user';
-        final fullName = user.userMetadata?['full_name'] ??
-            user.userMetadata?['name'] ??
-            '';
+        final fullName =
+            user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '';
         await Supabase.instance.client.from('users').insert({
           'id': user.id,
           'email': user.email,
@@ -189,9 +184,11 @@ class _LoginScreenState extends State<LoginScreen>
       final userInfo = {
         'id': user.id,
         'email': user.email,
-        'full_name': user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '',
-        'avatar_url': user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
-        'role': role
+        'full_name':
+            user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '',
+        'avatar_url':
+            user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        'role': role,
       };
       await prefs.setString('user_info', jsonEncode(userInfo));
 
@@ -411,7 +408,9 @@ class _LoginScreenState extends State<LoginScreen>
                                     'hoặc',
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
-                                      color: Colors.white.withValues(alpha: 0.25),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.25,
+                                      ),
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -465,7 +464,9 @@ class _LoginScreenState extends State<LoginScreen>
                                     TextSpan(
                                       text: 'Chưa có tài khoản? ',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.35),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.35,
+                                        ),
                                       ),
                                     ),
                                     const TextSpan(
@@ -611,7 +612,11 @@ class _LoginScreenState extends State<LoginScreen>
         fontSize: 13,
         color: Colors.white.withValues(alpha: 0.2),
       ),
-      prefixIcon: Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.2)),
+      prefixIcon: Icon(
+        icon,
+        size: 18,
+        color: Colors.white.withValues(alpha: 0.2),
+      ),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -712,7 +717,10 @@ class _LoginScreenState extends State<LoginScreen>
         onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white.withValues(alpha: 0.04),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

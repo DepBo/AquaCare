@@ -10,15 +10,14 @@ import 'alerts_screen.dart';
 import '../widgets/alerts_pie_chart.dart';
 import 'control_screen.dart';
 import '../widgets/sensor_history_drill_down.dart';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
 
 import '../services/fcm_service.dart';
 import 'dart:math' as math;
 import 'dart:convert';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
   String id;
@@ -309,12 +308,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       Map<String, dynamic> parsedInfo = jsonDecode(userInfoStr);
 
       // Nếu full_name rỗng, thử lấy từ Supabase Auth metadata
-      final storedName = (parsedInfo['full_name'] ?? parsedInfo['name'] ?? '') as String;
+      final storedName =
+          (parsedInfo['full_name'] ?? parsedInfo['name'] ?? '') as String;
       final authUser = Supabase.instance.client.auth.currentUser;
 
       if (storedName.trim().isEmpty) {
-        final metaName = authUser?.userMetadata?['full_name'] ??
-            authUser?.userMetadata?['name'] ?? '';
+        final metaName =
+            authUser?.userMetadata?['full_name'] ??
+            authUser?.userMetadata?['name'] ??
+            '';
         if (metaName.toString().trim().isNotEmpty) {
           parsedInfo['full_name'] = metaName;
         } else {
@@ -338,8 +340,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
 
       // Khôi phục avatar_url nếu backend login không trả về
-      if (parsedInfo['avatar_url'] == null || parsedInfo['avatar_url'].toString().isEmpty) {
-        final metaAvatar = authUser?.userMetadata?['avatar_url'] ?? authUser?.userMetadata?['picture'];
+      if (parsedInfo['avatar_url'] == null ||
+          parsedInfo['avatar_url'].toString().isEmpty) {
+        final metaAvatar =
+            authUser?.userMetadata?['avatar_url'] ??
+            authUser?.userMetadata?['picture'];
         if (metaAvatar != null && metaAvatar.toString().isNotEmpty) {
           parsedInfo['avatar_url'] = metaAvatar;
         } else {
@@ -390,22 +395,34 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       final bytes = await pickedFile.readAsBytes();
       final fileExt = pickedFile.path.split('.').last;
-      final fileName = '${_userInfo!['id']}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final fileName =
+          '${_userInfo!['id']}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
 
       await Supabase.instance.client.storage
           .from('avatars')
-          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
-      final publicUrl = Supabase.instance.client.storage.from('avatars').getPublicUrl(fileName);
+      final publicUrl = Supabase.instance.client.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
 
       try {
-        await Supabase.instance.client.auth.updateUser(UserAttributes(data: {'avatar_url': publicUrl}));
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(data: {'avatar_url': publicUrl}),
+        );
       } catch (e) {
         debugPrint('Auth session missing, ignoring update user metadata');
       }
 
       try {
-        await Supabase.instance.client.from('users').update({'avatar_url': publicUrl}).eq('id', _userInfo!['id']);
+        await Supabase.instance.client
+            .from('users')
+            .update({'avatar_url': publicUrl})
+            .eq('id', _userInfo!['id']);
       } catch (e) {
         debugPrint('RLS blocked public.users update');
       }
@@ -415,11 +432,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       await prefs.setString('user_info', jsonEncode(_userInfo));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật ảnh đại diện thành công')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật ảnh đại diện thành công')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tải ảnh lên: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi tải ảnh lên: $e')));
       }
     } finally {
       if (mounted) setState(() => _isUploadingAvatar = false);
@@ -461,8 +482,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       debugPrint('--- DEBUG: Received data from getTanks: $data ---');
       if (data.isNotEmpty) {
         setState(() {
-          _ponds = data
-              .map((json) {
+          _ponds = data.map((json) {
             String? mac;
             String? lastCalib;
             var devicesData = json['devices'];
@@ -720,11 +740,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -802,7 +826,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor: const Color(0xFF0F1A30),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 1,
+          ),
         ),
         title: Text(
           'Đăng xuất',
@@ -1057,9 +1084,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.5),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  height: 1.5,
+                ),
                 children: [
-                  TextSpan(text: '$title ', style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+                  TextSpan(
+                    text: '$title ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                   TextSpan(text: desc),
                 ],
               ),
@@ -1072,20 +1109,31 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildOnboardingSection() {
     bool isOverlay = !_hideOnboarding;
-    
+
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (isOverlay) ...[
-          Text('Chào mừng đến với AquaCare!', 
-            style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
+          Text(
+            'Chào mừng đến với AquaCare!',
+            style: GoogleFonts.inter(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text('Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.white70, height: 1.5),
+            child: Text(
+              'Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.white70,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -1098,8 +1146,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF0F1A30),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF00A896).withValues(alpha: 0.3)),
-            boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
+            border: Border.all(
+              color: const Color(0xFF00A896).withValues(alpha: 0.3),
+            ),
+            boxShadow: isOverlay
+                ? [
+                    const BoxShadow(
+                      color: Colors.black54,
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
+                    ),
+                  ]
+                : [],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1107,16 +1165,33 @@ class _DashboardScreenState extends State<DashboardScreen>
               Row(
                 children: [
                   Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF00A896), Color(0xFF028090)]),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00A896), Color(0xFF028090)],
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
-                    child: Text('1', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                    child: Text(
+                      '1',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Text('Khám phá tính năng', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(
+                    'Khám phá tính năng',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -1135,8 +1210,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF0F1A30),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF4DA6FF).withValues(alpha: 0.3)),
-            boxShadow: isOverlay ? [const BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(0, 8))] : [],
+            border: Border.all(
+              color: const Color(0xFF4DA6FF).withValues(alpha: 0.3),
+            ),
+            boxShadow: isOverlay
+                ? [
+                    const BoxShadow(
+                      color: Colors.black54,
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
+                    ),
+                  ]
+                : [],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1144,21 +1229,43 @@ class _DashboardScreenState extends State<DashboardScreen>
               Row(
                 children: [
                   Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF4DA6FF), Color(0xFF0066CC)]),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4DA6FF), Color(0xFF0066CC)],
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
-                    child: Text('2', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                    child: Text(
+                      '2',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Text('Bắt đầu sử dụng', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(
+                    'Bắt đầu sử dụng',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
-              Text('Để trải nghiệm đầy đủ các tính năng, hãy tạo bể cá đầu tiên của bạn.',
-                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.5),
+              Text(
+                'Để trải nghiệm đầy đủ các tính năng, hãy tạo bể cá đầu tiên của bạn.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  height: 1.5,
+                ),
               ),
               if (!isOverlay) ...[
                 const SizedBox(height: 20),
@@ -1169,16 +1276,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00A896),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text('+ Thêm bể cá mới', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                    child: Text(
+                      '+ Thêm bể cá mới',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ],
           ),
         ),
-        
+
         if (isOverlay) ...[
           const SizedBox(height: 32),
           GestureDetector(
@@ -1193,14 +1309,22 @@ class _DashboardScreenState extends State<DashboardScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 20, height: 20,
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.white54),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text('Không hiển thị lại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+                Text(
+                  'Không hiển thị lại',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1226,18 +1350,28 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           // Arrow up (to "Chọn bể cá")
           Positioned(
-            top: 10, right: 60,
-            width: 80, height: 60,
+            top: 10,
+            right: 60,
+            width: 80,
+            height: 60,
             child: CustomPaint(
-              painter: ArrowPainter(color: const Color(0xFF4DA6FF), pointUp: true),
+              painter: ArrowPainter(
+                color: const Color(0xFF4DA6FF),
+                pointUp: true,
+              ),
             ),
           ),
           // Arrow down (to Bottom Tabs)
           Positioned(
-            bottom: 10, left: 40,
-            width: 80, height: 80,
+            bottom: 10,
+            left: 40,
+            width: 80,
+            height: 80,
             child: CustomPaint(
-              painter: ArrowPainter(color: const Color(0xFF00A896), pointUp: false),
+              painter: ArrowPainter(
+                color: const Color(0xFF00A896),
+                pointUp: false,
+              ),
             ),
           ),
           Center(
@@ -1260,7 +1394,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1),
+          bottom: BorderSide(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 1,
+          ),
         ),
       ),
       child: Column(
@@ -1279,27 +1416,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                       height: 36,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF00E5A0).withValues(alpha: 0.5), width: 1.5),
-                        gradient: _userInfo?['avatar_url'] != null ? null : const LinearGradient(
-                          colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        border: Border.all(
+                          color: const Color(0xFF00E5A0).withValues(alpha: 0.5),
+                          width: 1.5,
                         ),
-                        image: _userInfo?['avatar_url'] != null ? DecorationImage(
-                          image: NetworkImage(_userInfo!['avatar_url']),
-                          fit: BoxFit.cover,
-                        ) : null,
+                        gradient: _userInfo?['avatar_url'] != null
+                            ? null
+                            : const LinearGradient(
+                                colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        image: _userInfo?['avatar_url'] != null
+                            ? DecorationImage(
+                                image: NetworkImage(_userInfo!['avatar_url']),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: _userInfo?['avatar_url'] == null ? Center(
-                        child: Text(
-                          getInitialsAvatar(_userInfo?['full_name'] ?? _userInfo?['name']),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ) : null,
+                      child: _userInfo?['avatar_url'] == null
+                          ? Center(
+                              child: Text(
+                                getInitialsAvatar(
+                                  _userInfo?['full_name'] ?? _userInfo?['name'],
+                                ),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : null,
                     ),
                     if (_isUploadingAvatar)
                       Positioned.fill(
@@ -1310,8 +1458,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           child: const Center(
                             child: SizedBox(
-                              width: 16, height: 16,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
                         ),
@@ -1368,7 +1520,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 (_isLoading
                                         ? const Color(0xFFFFB347)
                                         : const Color(0xFF00E5A0))
-                                    .withValues(alpha: _pulseAnimation.value * 0.6),
+                                    .withValues(
+                                      alpha: _pulseAnimation.value * 0.6,
+                                    ),
                             blurRadius: 5,
                             spreadRadius: 1,
                           ),
@@ -1601,7 +1755,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF060E1A).withValues(alpha: 0.95),
         border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.06), width: 1),
+          top: BorderSide(
+            color: Colors.white.withValues(alpha: 0.06),
+            width: 1,
+          ),
         ),
         boxShadow: [
           BoxShadow(
@@ -1642,7 +1799,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(14),
                     border: isSelected
                         ? Border.all(
-                            color: const Color(0xFF00A896).withValues(alpha: 0.25),
+                            color: const Color(
+                              0xFF00A896,
+                            ).withValues(alpha: 0.25),
                             width: 1,
                           )
                         : null,
@@ -1831,7 +1990,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF00A896).withValues(alpha: 0.15)),
+        border: Border.all(
+          color: const Color(0xFF00A896).withValues(alpha: 0.15),
+        ),
       ),
       child: Row(
         children: [
@@ -1883,7 +2044,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════
   Widget _buildSensorsTab() {
     if (_currentSensors.isEmpty) return const SizedBox();
-    
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -1909,23 +2070,33 @@ class _DashboardScreenState extends State<DashboardScreen>
                       margin: const EdgeInsets.only(right: 12),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: isSelected ? s.color.withValues(alpha: 0.15) : Colors.transparent,
+                        color: isSelected
+                            ? s.color.withValues(alpha: 0.15)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? s.color : Colors.white.withValues(alpha: 0.1),
+                          color: isSelected
+                              ? s.color
+                              : Colors.white.withValues(alpha: 0.1),
                           width: 1,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Row(
                         children: [
-                          Icon(s.icon, size: 16, color: isSelected ? s.color : Colors.white54),
+                          Icon(
+                            s.icon,
+                            size: 16,
+                            color: isSelected ? s.color : Colors.white54,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             s.name,
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
                               color: isSelected ? s.color : Colors.white54,
                             ),
                           ),
@@ -1938,12 +2109,14 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ),
-        
+
         // Thẻ cảm biến được chọn
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SensorDetailCard(sensor: _currentSensors[_selectedSensorIndex]),
+            child: SensorDetailCard(
+              sensor: _currentSensors[_selectedSensorIndex],
+            ),
           ),
         ),
 
@@ -1981,17 +2154,25 @@ class _DashboardScreenState extends State<DashboardScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isCalibNeeded ? const Color(0xFFFFB347).withValues(alpha: 0.1) : const Color(0xFF00A896).withValues(alpha: 0.1),
+              color: isCalibNeeded
+                  ? const Color(0xFFFFB347).withValues(alpha: 0.1)
+                  : const Color(0xFF00A896).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+                color: isCalibNeeded
+                    ? const Color(0xFFFFB347)
+                    : const Color(0xFF00A896),
               ),
             ),
             child: Row(
               children: [
                 Icon(
-                  isCalibNeeded ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                  color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+                  isCalibNeeded
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle_outline,
+                  color: isCalibNeeded
+                      ? const Color(0xFFFFB347)
+                      : const Color(0xFF00A896),
                   size: 28,
                 ),
                 const SizedBox(width: 12),
@@ -2000,11 +2181,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isCalibNeeded ? 'Đã đến lúc cần hiệu chuẩn cảm biến pH!' : 'Cảm biến pH đang hoạt động tốt',
+                        isCalibNeeded
+                            ? 'Đã đến lúc cần hiệu chuẩn cảm biến pH!'
+                            : 'Cảm biến pH đang hoạt động tốt',
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: isCalibNeeded ? const Color(0xFFFFB347) : const Color(0xFF00A896),
+                          color: isCalibNeeded
+                              ? const Color(0xFFFFB347)
+                              : const Color(0xFF00A896),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2024,11 +2209,15 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 12),
           Text(
             'Lưu ý: Bạn có thể thực hiện hiệu chuẩn bất cứ lúc nào.',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.white54, fontStyle: FontStyle.italic),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white54,
+              fontStyle: FontStyle.italic,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          
+
           // Hướng dẫn
           Container(
             padding: const EdgeInsets.all(20),
@@ -2049,24 +2238,50 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInstructionStep('1', 'Nhấn nút Bắt đầu hiệu chuẩn để thiết bị vào chế độ hiệu chuẩn.'),
-                _buildInstructionStep('2', 'Lấy cảm biến pH ra khỏi hồ, rửa sạch bằng nước cất và lau khô bằng giấy mềm.'),
-                _buildInstructionStep('3', 'Nhúng cảm biến vào dung dịch chuẩn pH 7.0, đợi giá trị ổn định rồi nhấn nút Calib 7.0.'),
-                _buildInstructionStep('4', 'Rửa sạch cảm biến bằng nước cất, lau khô.'),
-                _buildInstructionStep('5', 'Nhúng cảm biến vào dung dịch chuẩn pH 4.0, đợi ổn định rồi nhấn nút Calib 4.0.'),
-                _buildInstructionStep('6', 'Nhấn nút Lưu & Hoàn tất để lưu kết quả và thoát chế độ hiệu chuẩn.'),
+                _buildInstructionStep(
+                  '1',
+                  'Nhấn nút Bắt đầu hiệu chuẩn để thiết bị vào chế độ hiệu chuẩn.',
+                ),
+                _buildInstructionStep(
+                  '2',
+                  'Lấy cảm biến pH ra khỏi hồ, rửa sạch bằng nước cất và lau khô bằng giấy mềm.',
+                ),
+                _buildInstructionStep(
+                  '3',
+                  'Nhúng cảm biến vào dung dịch chuẩn pH 7.0, đợi giá trị ổn định rồi nhấn nút Calib 7.0.',
+                ),
+                _buildInstructionStep(
+                  '4',
+                  'Rửa sạch cảm biến bằng nước cất, lau khô.',
+                ),
+                _buildInstructionStep(
+                  '5',
+                  'Nhúng cảm biến vào dung dịch chuẩn pH 4.0, đợi ổn định rồi nhấn nút Calib 4.0.',
+                ),
+                _buildInstructionStep(
+                  '6',
+                  'Nhấn nút Lưu & Hoàn tất để lưu kết quả và thoát chế độ hiệu chuẩn.',
+                ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Các nút bấm
           _buildCalibButton(
             '1. Bắt đầu hiệu chuẩn',
             const Color(0xFF3B82F6),
             () async {
-              await SupabaseService.instance.sendDeviceCommand(_activePondId, 'enterph');
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn')));
+              await SupabaseService.instance.sendDeviceCommand(
+                _activePondId,
+                'enterph',
+              );
+              if (mounted)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn'),
+                  ),
+                );
             },
           ),
           const SizedBox(height: 12),
@@ -2077,8 +2292,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                   '2. Calib pH 7.0',
                   const Color(0xFFC77DFF),
                   () async {
-                    await SupabaseService.instance.sendDeviceCommand(_activePondId, '7.0');
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Calib pH 7.0')));
+                    await SupabaseService.instance.sendDeviceCommand(
+                      _activePondId,
+                      '7.0',
+                    );
+                    if (mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã gửi lệnh Calib pH 7.0'),
+                        ),
+                      );
                   },
                   isOutlined: true,
                 ),
@@ -2089,8 +2312,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                   '3. Calib pH 4.0',
                   const Color(0xFFFF8C42),
                   () async {
-                    await SupabaseService.instance.sendDeviceCommand(_activePondId, '4.0');
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi lệnh Calib pH 4.0')));
+                    await SupabaseService.instance.sendDeviceCommand(
+                      _activePondId,
+                      '4.0',
+                    );
+                    if (mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã gửi lệnh Calib pH 4.0'),
+                        ),
+                      );
                   },
                   isOutlined: true,
                 ),
@@ -2102,10 +2333,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             '4. Lưu & Hoàn tất',
             const Color(0xFF00A896),
             () async {
-              await SupabaseService.instance.sendDeviceCommand(_activePondId, 'exitph');
+              await SupabaseService.instance.sendDeviceCommand(
+                _activePondId,
+                'exitph',
+              );
               final now = DateTime.now().toUtc().toIso8601String();
-              await SupabaseService.instance.updateLastCalibPh(_activePondId, now);
-              
+              await SupabaseService.instance.updateLastCalibPh(
+                _activePondId,
+                now,
+              );
+
               // Cập nhật lại UI lập tức
               final pIndex = _ponds.indexWhere((p) => p.id == _activePondId);
               if (pIndex != -1) {
@@ -2120,7 +2357,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                   );
                 });
               }
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!')));
+              if (mounted)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!'),
+                  ),
+                );
             },
           ),
         ],
@@ -2136,13 +2378,21 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Text(
             '$step.',
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.4),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.white70,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -2150,7 +2400,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildCalibButton(String label, Color color, VoidCallback onPressed, {bool isOutlined = false}) {
+  Widget _buildCalibButton(
+    String label,
+    Color color,
+    VoidCallback onPressed, {
+    bool isOutlined = false,
+  }) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -2160,15 +2415,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: isOutlined ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+          side: isOutlined
+              ? BorderSide(color: color, width: 1.5)
+              : BorderSide.none,
         ),
       ),
       child: Text(
         label,
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -2293,7 +2547,10 @@ class SensorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1A30).withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: sensor.color.withValues(alpha: 0.15), width: 1),
+        border: Border.all(
+          color: sensor.color.withValues(alpha: 0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: sensor.color.withValues(alpha: 0.05),
@@ -2484,7 +2741,10 @@ class SparklineChart extends StatelessWidget {
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
+                colors: [
+                  color.withValues(alpha: 0.25),
+                  color.withValues(alpha: 0.0),
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -2509,7 +2769,10 @@ class SensorDetailCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: sensor.color.withValues(alpha: 0.15), width: 1),
+        border: Border.all(
+          color: sensor.color.withValues(alpha: 0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: sensor.color.withValues(alpha: 0.05),
@@ -2732,29 +2995,66 @@ class ArrowPainter extends CustomPainter {
       // Curve up to top right
       path.moveTo(0, size.height);
       path.quadraticBezierTo(size.width * 0.5, size.height, size.width, 0);
-      
+
       // Draw arrow head at (size.width, 0)
       final headLength = 12.0;
-      final angle = math.atan2(-size.height, size.width * 0.5); // Approx tangent
-      canvas.drawLine(Offset(size.width, 0), Offset(size.width - headLength * math.cos(angle - math.pi/6), 0 - headLength * math.sin(angle - math.pi/6)), paint);
-      canvas.drawLine(Offset(size.width, 0), Offset(size.width - headLength * math.cos(angle + math.pi/6), 0 - headLength * math.sin(angle + math.pi/6)), paint);
+      final angle = math.atan2(
+        -size.height,
+        size.width * 0.5,
+      ); // Approx tangent
+      canvas.drawLine(
+        Offset(size.width, 0),
+        Offset(
+          size.width - headLength * math.cos(angle - math.pi / 6),
+          0 - headLength * math.sin(angle - math.pi / 6),
+        ),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(size.width, 0),
+        Offset(
+          size.width - headLength * math.cos(angle + math.pi / 6),
+          0 - headLength * math.sin(angle + math.pi / 6),
+        ),
+        paint,
+      );
     } else {
       // Curve down to bottom left
       path.moveTo(size.width, 0);
       path.quadraticBezierTo(size.width * 0.5, 0, 0, size.height);
-      
+
       // Draw arrow head at (0, size.height)
       final headLength = 12.0;
-      final angle = math.atan2(size.height, -size.width * 0.5); // Approx tangent
-      canvas.drawLine(Offset(0, size.height), Offset(0 - headLength * math.cos(angle - math.pi/6), size.height - headLength * math.sin(angle - math.pi/6)), paint);
-      canvas.drawLine(Offset(0, size.height), Offset(0 - headLength * math.cos(angle + math.pi/6), size.height - headLength * math.sin(angle + math.pi/6)), paint);
+      final angle = math.atan2(
+        size.height,
+        -size.width * 0.5,
+      ); // Approx tangent
+      canvas.drawLine(
+        Offset(0, size.height),
+        Offset(
+          0 - headLength * math.cos(angle - math.pi / 6),
+          size.height - headLength * math.sin(angle - math.pi / 6),
+        ),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(0, size.height),
+        Offset(
+          0 - headLength * math.cos(angle + math.pi / 6),
+          size.height - headLength * math.sin(angle + math.pi / 6),
+        ),
+        paint,
+      );
     }
 
     // Draw dashed path
     double dashWidth = 8, dashSpace = 8, distance = 0;
     for (ui.PathMetric pathMetric in path.computeMetrics()) {
       while (distance < pathMetric.length) {
-        final extractPath = pathMetric.extractPath(distance, distance + dashWidth);
+        final extractPath = pathMetric.extractPath(
+          distance,
+          distance + dashWidth,
+        );
         canvas.drawPath(extractPath, paint);
         distance += dashWidth + dashSpace;
       }
@@ -2797,7 +3097,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
   bool _web = false;
   bool _app = true;
   int _cooldown = 15;
-  String _severity = 'both'; 
+  String _severity = 'both';
 
   @override
   void initState() {
@@ -2828,8 +3128,15 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
           _cooldown = validCooldowns.contains(rawCooldown) ? rawCooldown : 15;
           final rawSeverity = res['alert_severity_preference'] ?? 'both';
           // Ensure severity value exists in dropdown options
-          const validSeverities = ['both', 'critical_only', 'warning_only', 'none'];
-          _severity = validSeverities.contains(rawSeverity) ? rawSeverity : 'both';
+          const validSeverities = [
+            'both',
+            'critical_only',
+            'warning_only',
+            'none',
+          ];
+          _severity = validSeverities.contains(rawSeverity)
+              ? rawSeverity
+              : 'both';
         });
       }
     } catch (e) {
@@ -2850,52 +3157,66 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
 
     try {
       final tankId = int.parse(widget.pond.id);
-      
+
       // Update tanks
-      await SupabaseService.instance.client.from('tanks').update({
-        'tank_name': _nameCtrl.text.trim(),
-        'water_volume_liter': _volumeCtrl.text.trim().isNotEmpty ? double.tryParse(_volumeCtrl.text.trim()) : null,
-        'species_id': _speciesId,
-      }).eq('id', tankId);
+      await SupabaseService.instance.client
+          .from('tanks')
+          .update({
+            'tank_name': _nameCtrl.text.trim(),
+            'water_volume_liter': _volumeCtrl.text.trim().isNotEmpty
+                ? double.tryParse(_volumeCtrl.text.trim())
+                : null,
+            'species_id': _speciesId,
+          })
+          .eq('id', tankId);
 
       // Update mac address
       final mac = _macCtrl.text.trim();
       if (mac != widget.pond.macAddress) {
-        if (widget.pond.macAddress != null && widget.pond.macAddress!.isNotEmpty) {
-           await SupabaseService.instance.client.from('devices').update({'tank_id': null}).eq('mac_address', widget.pond.macAddress!);
+        if (widget.pond.macAddress != null &&
+            widget.pond.macAddress!.isNotEmpty) {
+          await SupabaseService.instance.client
+              .from('devices')
+              .update({'tank_id': null})
+              .eq('mac_address', widget.pond.macAddress!);
         }
         if (mac.isNotEmpty) {
-           final existingDevice = await SupabaseService.instance.client
-               .from('devices')
-               .select('id')
-               .eq('mac_address', mac)
-               .maybeSingle();
-           if (existingDevice != null) {
-               await SupabaseService.instance.client.from('devices').update({'tank_id': tankId}).eq('mac_address', mac);
-           } else {
-               throw Exception('Không tìm thấy thiết bị với địa chỉ MAC này.');
-           }
+          final existingDevice = await SupabaseService.instance.client
+              .from('devices')
+              .select('id')
+              .eq('mac_address', mac)
+              .maybeSingle();
+          if (existingDevice != null) {
+            await SupabaseService.instance.client
+                .from('devices')
+                .update({'tank_id': tankId})
+                .eq('mac_address', mac);
+          } else {
+            throw Exception('Không tìm thấy thiết bị với địa chỉ MAC này.');
+          }
         }
       }
 
       // Update notif settings
-      await SupabaseService.instance.client.from('tank_notification_settings').upsert({
-        'tank_id': tankId,
-        'notify_via_email': _email,
-        'notify_via_web_push': _web,
-        'notify_via_app_noti': _app,
-        'alert_cooldown_minutes': _cooldown,
-        'alert_severity_preference': _severity,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      await SupabaseService.instance.client
+          .from('tank_notification_settings')
+          .upsert({
+            'tank_id': tankId,
+            'notify_via_email': _email,
+            'notify_via_web_push': _web,
+            'notify_via_app_noti': _app,
+            'alert_cooldown_minutes': _cooldown,
+            'alert_severity_preference': _severity,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
 
       widget.onSaved();
       if (mounted) {
-         Navigator.pop(context);
+        Navigator.pop(context);
       }
     } catch (e) {
       setState(() {
-         _errorMsg = e.toString().replaceAll('Exception:', '').trim();
+        _errorMsg = e.toString().replaceAll('Exception:', '').trim();
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -2910,11 +3231,23 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
     super.dispose();
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {String? hint, TextInputType? type}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    String? hint,
+    TextInputType? type,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -2925,14 +3258,21 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
             hintStyle: GoogleFonts.inter(color: Colors.white30),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.04),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -2945,11 +3285,23 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
     );
   }
 
-  Widget _buildDropdown<T>(String label, T? value, List<DropdownMenuItem<T>> items, ValueChanged<T?> onChanged) {
+  Widget _buildDropdown<T>(
+    String label,
+    T? value,
+    List<DropdownMenuItem<T>> items,
+    ValueChanged<T?> onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -2979,7 +3331,10 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+        ),
         Switch(
           value: value,
           onChanged: onChanged,
@@ -3022,15 +3377,26 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: _tabIndex == 0 ? const Color(0xFF4DA6FF) : Colors.transparent, width: 2)),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _tabIndex == 0
+                                ? const Color(0xFF4DA6FF)
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
                       ),
                       child: Text(
                         'Thông tin chung',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          fontWeight: _tabIndex == 0 ? FontWeight.w600 : FontWeight.w400,
-                          color: _tabIndex == 0 ? const Color(0xFF4DA6FF) : Colors.white54,
+                          fontWeight: _tabIndex == 0
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: _tabIndex == 0
+                              ? const Color(0xFF4DA6FF)
+                              : Colors.white54,
                         ),
                       ),
                     ),
@@ -3042,15 +3408,26 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: _tabIndex == 1 ? const Color(0xFF00A896) : Colors.transparent, width: 2)),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _tabIndex == 1
+                                ? const Color(0xFF00A896)
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
                       ),
                       child: Text(
                         'Cài đặt cảnh báo',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          fontWeight: _tabIndex == 1 ? FontWeight.w600 : FontWeight.w400,
-                          color: _tabIndex == 1 ? const Color(0xFF00A896) : Colors.white54,
+                          fontWeight: _tabIndex == 1
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: _tabIndex == 1
+                              ? const Color(0xFF00A896)
+                              : Colors.white54,
                         ),
                       ),
                     ),
@@ -3059,88 +3436,179 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Tab Content
             if (_tabIndex == 0) ...[
-              _buildTextField('TÊN BỂ CÁ', _nameCtrl, hint: 'VD: Bể Rồng Phòng Khách'),
-              _buildTextField('THỂ TÍCH (LÍT)', _volumeCtrl, type: TextInputType.number, hint: 'VD: 250'),
-              Builder(builder: (_) {
-                // Validate _speciesId exists in the list to prevent DropdownButton crash
-                final speciesIds = widget.fishSpeciesList.map((s) => s['id'] as int).toList();
-                final safeSpeciesId = (_speciesId != null && speciesIds.contains(_speciesId)) ? _speciesId : null;
-                return _buildDropdown<int>(
-                  'LOÀI CÁ',
-                  safeSpeciesId,
-                  [
-                    const DropdownMenuItem(value: null, child: Text('Không xác định')),
-                    ...widget.fishSpeciesList.map((s) => DropdownMenuItem(
-                      value: s['id'] as int,
-                      child: Text(s['species_name'] as String),
-                    )),
-                  ],
-                  (val) => setState(() => _speciesId = val),
-                );
-              }),
-              _buildTextField('MÃ THIẾT BỊ (MAC)', _macCtrl, hint: 'AA:BB:CC:DD:EE:FF'),
+              _buildTextField(
+                'TÊN BỂ CÁ',
+                _nameCtrl,
+                hint: 'VD: Bể Rồng Phòng Khách',
+              ),
+              _buildTextField(
+                'THỂ TÍCH (LÍT)',
+                _volumeCtrl,
+                type: TextInputType.number,
+                hint: 'VD: 250',
+              ),
+              Builder(
+                builder: (_) {
+                  // Validate _speciesId exists in the list to prevent DropdownButton crash
+                  final speciesIds = widget.fishSpeciesList
+                      .map((s) => s['id'] as int)
+                      .toList();
+                  final safeSpeciesId =
+                      (_speciesId != null && speciesIds.contains(_speciesId))
+                      ? _speciesId
+                      : null;
+                  return _buildDropdown<int>(
+                    'LOÀI CÁ',
+                    safeSpeciesId,
+                    [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Không xác định'),
+                      ),
+                      ...widget.fishSpeciesList.map(
+                        (s) => DropdownMenuItem(
+                          value: s['id'] as int,
+                          child: Text(s['species_name'] as String),
+                        ),
+                      ),
+                    ],
+                    (val) => setState(() => _speciesId = val),
+                  );
+                },
+              ),
+              _buildTextField(
+                'MÃ THIẾT BỊ (MAC)',
+                _macCtrl,
+                hint: 'AA:BB:CC:DD:EE:FF',
+              ),
             ] else ...[
-              Text('KÊNH NHẬN THÔNG BÁO', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
+              Text(
+                'KÊNH NHẬN THÔNG BÁO',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white70,
+                ),
+              ),
               const SizedBox(height: 8),
-              _buildSwitch('Thông báo qua Email', _email, (v) => setState(() => _email = v)),
-              _buildSwitch('Thông báo qua trình duyệt web', _web, (v) => setState(() => _web = v)),
-              _buildSwitch('Thông báo trên App', _app, (v) => setState(() => _app = v)),
+              _buildSwitch(
+                'Thông báo qua Email',
+                _email,
+                (v) => setState(() => _email = v),
+              ),
+              _buildSwitch(
+                'Thông báo qua trình duyệt web',
+                _web,
+                (v) => setState(() => _web = v),
+              ),
+              _buildSwitch(
+                'Thông báo trên App',
+                _app,
+                (v) => setState(() => _app = v),
+              ),
               const SizedBox(height: 16),
               _buildDropdown<int>(
                 'THỜI GIAN NHẮC LẠI (COOLDOWN)',
                 _cooldown,
                 const [
                   DropdownMenuItem(value: 0, child: Text('Không nhắc lại')),
-                  DropdownMenuItem(value: 1, child: Text('Nhắc nhở liên tục (1 phút)')),
-                  DropdownMenuItem(value: 15, child: Text('Nhắc lại sau 15 phút')),
-                  DropdownMenuItem(value: 30, child: Text('Nhắc lại sau 30 phút')),
-                  DropdownMenuItem(value: 60, child: Text('Nhắc lại sau 1 giờ')),
+                  DropdownMenuItem(
+                    value: 1,
+                    child: Text('Nhắc nhở liên tục (1 phút)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 15,
+                    child: Text('Nhắc lại sau 15 phút'),
+                  ),
+                  DropdownMenuItem(
+                    value: 30,
+                    child: Text('Nhắc lại sau 30 phút'),
+                  ),
+                  DropdownMenuItem(
+                    value: 60,
+                    child: Text('Nhắc lại sau 1 giờ'),
+                  ),
                 ],
                 (val) => setState(() => _cooldown = val!),
               ),
-              _buildDropdown<String>(
-                'BỘ LỌC MỨC ĐỘ',
-                _severity,
-                const [
-                  DropdownMenuItem(value: 'both', child: Text('Nhận tất cả cảnh báo')),
-                  DropdownMenuItem(value: 'critical_only', child: Text('Chỉ nhận cảnh báo Nguy hiểm')),
-                  DropdownMenuItem(value: 'warning_only', child: Text('Chỉ nhận cảnh báo Cảnh báo')),
-                  DropdownMenuItem(value: 'none', child: Text('Tắt thông báo')),
-                ],
-                (val) => setState(() => _severity = val!),
-              ),
+              _buildDropdown<String>('BỘ LỌC MỨC ĐỘ', _severity, const [
+                DropdownMenuItem(
+                  value: 'both',
+                  child: Text('Nhận tất cả cảnh báo'),
+                ),
+                DropdownMenuItem(
+                  value: 'critical_only',
+                  child: Text('Chỉ nhận cảnh báo Nguy hiểm'),
+                ),
+                DropdownMenuItem(
+                  value: 'warning_only',
+                  child: Text('Chỉ nhận cảnh báo Cảnh báo'),
+                ),
+                DropdownMenuItem(value: 'none', child: Text('Tắt thông báo')),
+              ], (val) => setState(() => _severity = val!)),
             ],
 
             if (_errorMsg.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: Text(_errorMsg, style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13)),
+                child: Text(
+                  _errorMsg,
+                  style: GoogleFonts.inter(
+                    color: Colors.redAccent,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-              
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Hủy', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
+                  child: Text(
+                    'Hủy',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _saveSettings,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00A896),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text('Lưu thay đổi', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Lưu thay đổi',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

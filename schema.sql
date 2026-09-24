@@ -18,7 +18,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'user' 
-        CHECK (role IN ('user', 'staff', 'admin', 'staff_warehouse', 'staff_shipper', 'staff_support')),
+        CHECK (role IN ('user', 'staff', 'admin')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -430,8 +430,7 @@ ADD COLUMN IF NOT EXISTS shipping_email VARCHAR(255),
 ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50); 
 ADD COLUMN IF NOT EXISTS note TEXT;
 
-ALTER TABLE public.order_items DROP COLUMN IF EXISTS device_mac;
-ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS device_macs JSONB;
+ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS device_mac VARCHAR(30);
 
 -- ── 1. XÓA BẢNG CŨ ──────────────────────────────────────────────────
 DROP TABLE IF EXISTS public.subscriptions CASCADE;
@@ -511,6 +510,7 @@ VALUES
 
 DROP TABLE IF EXISTS public.mqtt_messages CASCADE;
 
+
 -- ── 16. BẢNG QUẢN LÝ CÔNG VIỆC NHÂN VIÊN (TASKS) ──────────────────────
 CREATE TABLE IF NOT EXISTS public.tasks (
     id BIGSERIAL PRIMARY KEY,
@@ -585,3 +585,280 @@ CREATE TRIGGER on_task_created
     BEFORE INSERT ON public.tasks
     FOR EACH ROW
     EXECUTE FUNCTION public.assign_task_automatically();
+
+-- 1. Tạo bảng lưu trữ các yêu cầu hỗ trợ / tin nhắn liên hệ
+CREATE TABLE IF NOT EXISTS public.support_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending' (Chờ trả lời), 'replied' (Đã trả lời)
+  staff_reply TEXT,                       -- Nội dung phản hồi từ nhân viên CS
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- ID người dùng nếu đã đăng nhập
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- 2. Bật Row Level Security (RLS)
+ALTER TABLE public.support_requests ENABLE ROW LEVEL SECURITY;
+-- 3. Cho phép bất kỳ ai (Khách vãng lai & User) đều có thể gửi tin nhắn hỗ trợ
+CREATE POLICY "Cho phap tat ca moi nguoi gui ho tro" ON public.support_requests
+  FOR INSERT WITH CHECK (true);
+-- 4. Cho phép Nhân viên / Admin (đã xác thực) xem danh sách tin nhắn
+CREATE POLICY "Cho phap Nhan vien xem ho tro" ON public.support_requests
+  FOR SELECT USING (auth.role() = 'authenticated');
+-- 5. Cho phép Nhân viên / Admin cập nhật câu trả lời
+CREATE POLICY "Cho phap Nhan vien cap nhat phan hoi" ON public.support_requests
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- 1. Chỉ cấp quyền GHI (INSERT) cho Khách vãng lai, chặn toàn bộ quyền ĐỌC/SỬA/XÓA
+GRANT INSERT ON TABLE public.support_requests TO anon;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.support_requests TO authenticated;
+
+-- 2. Dọn dẹp các Policy cũ
+DROP POLICY IF EXISTS "Cho phap tat ca moi nguoi gui ho tro" ON public.support_requests;
+DROP POLICY IF EXISTS "Cho phap Nhan vien xem ho tro" ON public.support_requests;
+DROP POLICY IF EXISTS "Cho phap Nhan vien cap nhat phan hoi" ON public.support_requests;
+DROP POLICY IF EXISTS "Public write-only insert for support_requests" ON public.support_requests;
+DROP POLICY IF EXISTS "Secure select for support_requests" ON public.support_requests;
+DROP POLICY IF EXISTS "Staff update policy for support_requests" ON public.support_requests;
+
+-- 3. POLICY 1: INSERT (Bất kỳ ai cũng có thể gửi hỗ trợ, nhưng không được đọc lại dữ liệu)
+CREATE POLICY "Public write-only insert for support_requests" 
+ON public.support_requests 
+FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+-- 4. POLICY 2: SELECT (Chỉ Staff/Admin xem được tất cả, Customer thường chỉ xem được của chính mình)
+CREATE POLICY "Secure select for support_requests" 
+ON public.support_requests 
+FOR SELECT 
+TO authenticated 
+USING (
+  -- Trường hợp 1: Là chính chủ người gửi
+  (user_id IS NOT NULL AND user_id::text = auth.uid()::text)
+  OR
+  -- Trường hợp 2: Phải là Staff hoặc Admin hợp lệ trong bảng users
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper')
+  )
+);
+
+-- 5. POLICY 3: UPDATE (Chỉ Staff/Admin mới được quyền trả lời / cập nhật)
+CREATE POLICY "Staff update policy for support_requests" 
+ON public.support_requests 
+FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper')
+  )
+);
+
+-- 1. Cấp quyền GHI (INSERT) cho Khách vãng lai (anon)
+GRANT INSERT ON TABLE public.support_requests TO anon;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.support_requests TO authenticated;
+-- 2. Dọn dẹp các Policy cũ
+DROP POLICY IF EXISTS "Cho phap tat ca moi nguoi gui ho tro" ON public.support_requests;
+DROP POLICY IF EXISTS "Cho phap Nhan vien xem ho tro" ON public.support_requests;
+DROP POLICY IF EXISTS "Cho phap Nhan vien cap nhat phan hoi" ON public.support_requests;
+DROP POLICY IF EXISTS "Public write-only insert for support_requests" ON public.support_requests;
+DROP POLICY IF EXISTS "Secure select for support_requests" ON public.support_requests;
+DROP POLICY IF EXISTS "Allow select support requests by email or staff" ON public.support_requests;
+DROP POLICY IF EXISTS "Staff update policy for support_requests" ON public.support_requests;
+-- 3. POLICY 1: INSERT (Bất kỳ ai cũng có thể gửi câu hỏi hỗ trợ)
+CREATE POLICY "Public write-only insert for support_requests" 
+ON public.support_requests 
+FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+-- 4. POLICY 2: SELECT (BẢO MẬT: Chỉ Staff/Admin hoặc Người dùng đã đăng nhập chính chủ mới được ĐỌC trực tiếp bảng)
+CREATE POLICY "Secure select for support_requests" 
+ON public.support_requests 
+FOR SELECT 
+TO authenticated 
+USING (
+  (user_id IS NOT NULL AND user_id::text = auth.uid()::text)
+  OR
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper')
+  )
+);
+-- 5. POLICY 3: UPDATE (Chỉ Staff/Admin mới được quyền trả lời / cập nhật)
+CREATE POLICY "Staff update policy for support_requests" 
+ON public.support_requests 
+FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper')
+  )
+);
+-- 6. HÀM RPC BẢO MẬT CAO CHO KHÁCH VÃNG LAI TRA CỨU THEO EMAIL (Chặn thu thập toàn bộ dữ liệu)
+CREATE OR REPLACE FUNCTION public.get_support_history_by_email(p_email TEXT)
+RETURNS TABLE (
+  id UUID,
+  full_name TEXT,
+  email TEXT,
+  phone TEXT,
+  message TEXT,
+  status TEXT,
+  staff_reply TEXT,
+  created_at TIMESTAMP WITH TIME ZONE
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Bắt buộc phải truyền email hợp lệ
+  IF p_email IS NULL OR TRIM(p_email) = '' THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+  SELECT 
+    sr.id,
+    sr.full_name,
+    sr.email,
+    sr.phone,
+    sr.message,
+    sr.status,
+    sr.staff_reply,
+    sr.created_at
+  FROM public.support_requests sr
+  WHERE LOWER(sr.email) = LOWER(TRIM(p_email))
+  ORDER BY sr.created_at DESC;
+END;
+$$;
+-- Cấp quyền thực thi hàm tra cứu cho anon và authenticated
+GRANT EXECUTE ON FUNCTION public.get_support_history_by_email(TEXT) TO anon, authenticated;
+
+-- 1. Dọn dẹp các Policy cũ để tránh lỗi "already exists"
+DROP POLICY IF EXISTS "Secure select for support_requests" ON public.support_requests;
+DROP POLICY IF EXISTS "Staff update policy for support_requests" ON public.support_requests;
+
+-- 2. POLICY 2: SELECT (Đã cập nhật thêm quyền cho staff_maintenance)
+CREATE POLICY "Secure select for support_requests" 
+ON public.support_requests 
+FOR SELECT 
+TO authenticated 
+USING (
+  (user_id IS NOT NULL AND user_id::text = auth.uid()::text)
+  OR
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper', 'staff_maintenance')
+  )
+);
+
+-- 3. POLICY 3: UPDATE (Đã cập nhật thêm quyền cho staff_maintenance)
+CREATE POLICY "Staff update policy for support_requests" 
+ON public.support_requests 
+FOR UPDATE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.role IN ('admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper', 'staff_maintenance')
+  )
+);
+
+-- 1. Xóa ràng buộc cũ
+ALTER TABLE public.users 
+DROP CONSTRAINT IF EXISTS users_role_check;
+
+-- 2. Thêm lại ràng buộc mới (Đã bổ sung 'staff_maintenance')
+ALTER TABLE public.users 
+ADD CONSTRAINT users_role_check 
+CHECK (role IN ('customer', 'user', 'admin', 'staff', 'staff_support', 'staff_warehouse', 'staff_shipper', 'staff_maintenance'));
+
+-- Cập nhật hàm phân chia công việc tự động cân bằng số lượng cho các role
+CREATE OR REPLACE FUNCTION public.assign_task_automatically()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    target_role VARCHAR;
+    selected_staff_id UUID;
+BEGIN
+    -- Nếu đã gán nhân viên thủ công thì giữ nguyên
+    IF NEW.assigned_to IS NOT NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Xác định vai trò phụ trách theo loại công việc
+    IF NEW.task_type = 'packing' THEN
+        target_role := 'staff_warehouse';
+    ELSIF NEW.task_type = 'delivery_install' THEN
+        target_role := 'staff_shipper';
+    ELSIF NEW.task_type = 'maintenance' THEN
+        target_role := 'staff_maintenance';
+    ELSIF NEW.task_type = 'support' THEN
+        target_role := 'staff_support';
+    ELSE
+        RETURN NEW;
+    END IF;
+
+    -- Tìm 1 nhân viên thuộc vai trò đó đang có ít việc chưa hoàn thành nhất (todo, in_progress)
+    SELECT u.id INTO selected_staff_id
+    FROM public.users u
+    LEFT JOIN public.tasks t ON t.assigned_to = u.id AND t.status IN ('todo', 'in_progress')
+    WHERE u.role = target_role
+    GROUP BY u.id
+    ORDER BY COUNT(t.id) ASC, RANDOM() -- Ưu tiên người ít việc nhất, nếu bằng nhau thì ngẫu nhiên
+    LIMIT 1;
+
+    -- Gán ID nhân viên được chọn vào task mới
+    IF selected_staff_id IS NOT NULL THEN
+        NEW.assigned_to := selected_staff_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- Đảm bảo Trigger kích hoạt khi có task mới được thêm vào
+DROP TRIGGER IF EXISTS on_task_created ON public.tasks;
+CREATE TRIGGER on_task_created
+    BEFORE INSERT ON public.tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION public.assign_task_automatically();
+
+-- Tự động phân bổ lại các task đang có sẵn trong DB nhưng chưa gán cho ai
+DO $$
+DECLARE
+    r RECORD;
+    target_role VARCHAR;
+    selected_staff_id UUID;
+BEGIN
+    FOR r IN SELECT * FROM public.tasks WHERE assigned_to IS NULL AND status IN ('todo', 'in_progress') LOOP
+        IF r.task_type = 'packing' THEN target_role := 'staff_warehouse';
+        ELSIF r.task_type = 'delivery_install' THEN target_role := 'staff_shipper';
+        ELSIF r.task_type = 'maintenance' THEN target_role := 'staff_maintenance';
+        ELSIF r.task_type = 'support' THEN target_role := 'staff_support';
+        ELSE CONTINUE;
+        END IF;
+
+        SELECT u.id INTO selected_staff_id
+        FROM public.users u
+        LEFT JOIN public.tasks t ON t.assigned_to = u.id AND t.status IN ('todo', 'in_progress')
+        WHERE u.role = target_role
+        GROUP BY u.id
+        ORDER BY COUNT(t.id) ASC, RANDOM()
+        LIMIT 1;
+
+        IF selected_staff_id IS NOT NULL THEN
+            UPDATE public.tasks SET assigned_to = selected_staff_id WHERE id = r.id;
+        END IF;
+    END LOOP;
+END $$;

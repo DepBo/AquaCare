@@ -20,7 +20,10 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> getFishSpecies() async {
-    final response = await client.from('fish_species').select('*').order('species_name');
+    final response = await client
+        .from('fish_species')
+        .select('*')
+        .order('species_name');
     return response;
   }
 
@@ -179,11 +182,16 @@ class SupabaseService {
   ) async {
     try {
       int pin = 0;
-      if (relayType == 'pump') pin = 3;
-      else if (relayType == 'aerator') pin = 2;
-      else if (relayType == 'light') pin = 1;
-      
-      final url = Uri.parse('https://aquacare-p78r.onrender.com/api/device/relay');
+      if (relayType == 'pump') {
+        pin = 3;
+      } else if (relayType == 'aerator')
+        pin = 2;
+      else if (relayType == 'light')
+        pin = 1;
+
+      final url = Uri.parse(
+        'https://aquacare-p78r.onrender.com/api/device/relay',
+      );
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -191,7 +199,7 @@ class SupabaseService {
           'pin': pin,
           'state': newState,
           'tank_id': int.parse(tankId),
-          'relay_field': 'relay_${relayType}_state'
+          'relay_field': 'relay_${relayType}_state',
         }),
       );
 
@@ -200,7 +208,9 @@ class SupabaseService {
           '✅ [MQTT API]: Đã gửi lệnh bật/tắt $relayType thành $newState cho bể $tankId (0-delay)',
         );
       } else {
-        throw Exception('API trả về lỗi ${response.statusCode}: ${response.body}');
+        throw Exception(
+          'API trả về lỗi ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint('❌ [MQTT API ERROR]: Lỗi khi gọi API Relay: $e');
@@ -211,20 +221,23 @@ class SupabaseService {
   /// Gửi lệnh raw tới MQTT thông qua Backend (Zero Delay)
   Future<void> sendDeviceCommand(String tankId, String command) async {
     try {
-      final url = Uri.parse('https://aquacare-p78r.onrender.com/api/device/command');
+      final url = Uri.parse(
+        'https://aquacare-p78r.onrender.com/api/device/command',
+      );
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'tank_id': int.parse(tankId),
-          'command': command,
-        }),
+        body: jsonEncode({'tank_id': int.parse(tankId), 'command': command}),
       );
 
       if (response.statusCode == 200) {
-        debugPrint('✅ [MQTT API]: Đã gửi lệnh "$command" cho bể $tankId (0-delay)');
+        debugPrint(
+          '✅ [MQTT API]: Đã gửi lệnh "$command" cho bể $tankId (0-delay)',
+        );
       } else {
-        throw Exception('API trả về lỗi ${response.statusCode}: ${response.body}');
+        throw Exception(
+          'API trả về lỗi ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint('❌ [MQTT API ERROR]: Lỗi khi gọi API Command: $e');
@@ -239,7 +252,9 @@ class SupabaseService {
           .from('devices')
           .update({'last_calib_ph': isoTime})
           .eq('tank_id', int.parse(tankId));
-      debugPrint('✅ [DB UPDATE]: Cập nhật last_calib_ph thành công cho bể $tankId');
+      debugPrint(
+        '✅ [DB UPDATE]: Cập nhật last_calib_ph thành công cho bể $tankId',
+      );
     } catch (e) {
       debugPrint('❌ [DB ERROR]: Lỗi khi cập nhật last_calib_ph: $e');
       rethrow;
@@ -273,7 +288,9 @@ class SupabaseService {
           .from('users')
           .update({'app_fcm_token': token})
           .eq('id', userId);
-      debugPrint('✅ [DB UPDATE]: Cập nhật app_fcm_token thành công cho user $userId');
+      debugPrint(
+        '✅ [DB UPDATE]: Cập nhật app_fcm_token thành công cho user $userId',
+      );
     } catch (e) {
       debugPrint('❌ [DB ERROR]: Lỗi khi cập nhật fcm_token: $e');
     }

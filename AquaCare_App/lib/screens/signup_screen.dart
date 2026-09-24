@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboard_screen.dart';
 import 'admin_screen.dart';
-import 'staff_screen.dart';
 
 const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
 
@@ -122,11 +121,8 @@ class _SignupScreenState extends State<SignupScreen>
         throw 'Missing Google ID Token';
       }
 
-      final AuthResponse res =
-          await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-      );
+      final AuthResponse res = await Supabase.instance.client.auth
+          .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
 
       final user = res.user;
       if (user == null) {
@@ -481,7 +477,9 @@ class _SignupScreenState extends State<SignupScreen>
                                       Expanded(
                                         child: Container(
                                           height: 1,
-                                          color: Colors.white.withValues(alpha: 0.06),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.06,
+                                          ),
                                         ),
                                       ),
                                       Padding(
@@ -502,7 +500,9 @@ class _SignupScreenState extends State<SignupScreen>
                                       Expanded(
                                         child: Container(
                                           height: 1,
-                                          color: Colors.white.withValues(alpha: 0.06),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.06,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -526,7 +526,9 @@ class _SignupScreenState extends State<SignupScreen>
                                     TextSpan(
                                       text: 'Đã có tài khoản? ',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.35),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.35,
+                                        ),
                                       ),
                                     ),
                                     const TextSpan(
@@ -675,7 +677,11 @@ class _SignupScreenState extends State<SignupScreen>
         fontSize: 13,
         color: Colors.white.withValues(alpha: 0.2),
       ),
-      prefixIcon: Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.2)),
+      prefixIcon: Icon(
+        icon,
+        size: 18,
+        color: Colors.white.withValues(alpha: 0.2),
+      ),
       filled: true,
       fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -775,7 +781,10 @@ class _SignupScreenState extends State<SignupScreen>
         onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white.withValues(alpha: 0.04),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

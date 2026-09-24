@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Droplets, Thermometer, Zap, Fish, Bell, AlertCircle,
+  Droplets, Thermometer, Zap, Fish, Bell, AlertCircle, HelpCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft, ArrowRight,
   Sun, Moon, Wind
@@ -1451,9 +1451,16 @@ export default function DashboardPage() {
             { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
             { id: 'calibration', icon: CheckCircle, label: 'Hiệu chuẩn pH' },
             { id: 'alerts', icon: Bell, label: `Cảnh báo${alerts.length ? ` (${alerts.length})` : ''}` },
+            { id: 'support', icon: HelpCircle, label: 'Hỗ trợ' },
           ].map(item => (
             <button key={item.id}
-              onClick={() => setActiveTab(item.id as typeof activeTab)}
+              onClick={() => {
+                if (item.id === 'support') {
+                  window.location.href = '/#contact'
+                } else {
+                  setActiveTab(item.id as typeof activeTab)
+                }
+              }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
                 border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 500,
