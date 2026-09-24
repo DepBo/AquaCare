@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Fish, Box, LogOut, ArrowLeft,
   Plus, Edit, Trash2, X, Users, ShoppingCart,
-  FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle, RefreshCw, User
+  FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle, RefreshCw, User, Search
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
@@ -270,7 +270,9 @@ export default function AdminPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'light')
 
   const [species, setSpecies] = useState<FishSpecies[]>([])
+  const [speciesSearch, setSpeciesSearch] = useState('')
   const [devices, setDevices] = useState<Device[]>([])
+  const [deviceSearch, setDeviceSearch] = useState('')
   const [devicePage, setDevicePage] = useState(0)
   const [devicePageInput, setDevicePageInput] = useState('1')
   const [deviceFilterVersion, setDeviceFilterVersion] = useState('all')
@@ -290,6 +292,12 @@ export default function AdminPage() {
 
   const [deviceModal, setDeviceModal] = useState<{ show: boolean, data?: Device, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
   const [devForm, setDevForm] = useState<{ mac_address: string, firmware_version: string }>({ mac_address: '', firmware_version: 'V1' })
+
+  const [staffSearch, setStaffSearch] = useState('')
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all')
+
+  const [orderSearch, setOrderSearch] = useState('')
+  const [orderFilterStatus, setOrderFilterStatus] = useState('all')
 
   const [staffModal, setStaffModal] = useState<{ show: boolean, data?: Staff, mode: 'add' | 'edit' | 'delete' }>({ show: false, mode: 'add' })
   const [staffForm, setStaffForm] = useState({ full_name: '', email: '', phone: '', password: '', role: 'staff_warehouse' as StaffRole })
@@ -864,10 +872,25 @@ export default function AdminPage() {
         </div>
 
         {/* TAB SPECIES */}
-        {activeTab === 'species' && (
+        {activeTab === 'species' && (() => {
+          const filteredSpecies = species.filter(s =>
+            s.species_name.toLowerCase().includes(speciesSearch.toLowerCase().trim())
+          );
+          return (
           <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách loài cá ({species.length})</span>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách loài cá ({filteredSpecies.length})</span>
+              <input
+                type="text"
+                placeholder="Tìm theo tên loài cá..."
+                value={speciesSearch}
+                onChange={e => setSpeciesSearch(e.target.value)}
+                style={{
+                  padding: '6px 12px', borderRadius: 6, border: '1px solid var(--ap-border)',
+                  background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 12.5, fontFamily: F, outline: 'none',
+                  minWidth: 220
+                }}
+              />
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -882,7 +905,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {species.map(s => (
+                  {filteredSpecies.map(s => (
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -899,24 +922,26 @@ export default function AdminPage() {
                       </td>
                     </tr>
                   ))}
-                  {species.length === 0 && !loading && (
+                  {filteredSpecies.length === 0 && !loading && (
                     <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có dữ liệu loài cá nào</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
+        )
+        })()}
 
         {/* TAB DEVICES */}
         {activeTab === 'devices' && (() => {
           const filteredDevices = devices.filter(d => {
+            const mMatch = deviceSearch.trim() === '' || d.mac_address.toUpperCase().includes(deviceSearch.trim().toUpperCase());
             const vMatch = deviceFilterVersion === 'all' || d.firmware_version === deviceFilterVersion;
             let sMatch = true;
             if (deviceFilterStatus === 'active') sMatch = !!d.tank_id;
             else if (deviceFilterStatus === 'bought') sMatch = !d.tank_id && !!d.is_active;
             else if (deviceFilterStatus === 'inactive') sMatch = !d.tank_id && !d.is_active;
-            return vMatch && sMatch;
+            return mMatch && vMatch && sMatch;
           });
           const totalDevicePages = Math.max(1, Math.ceil(filteredDevices.length / 12));
           const paginatedDevices = filteredDevices.slice(devicePage * 12, (devicePage + 1) * 12);
@@ -927,6 +952,18 @@ export default function AdminPage() {
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Kho thiết bị ({filteredDevices.length})</span>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Tìm theo mã MAC..."
+                  value={deviceSearch}
+                  onChange={e => { setDeviceSearch(e.target.value); setDevicePage(0); setDevicePageInput('1'); }}
+                  style={{
+                    padding: '5px 10px', borderRadius: 4, border: '1px solid var(--ap-border)',
+                    background: 'var(--ap-input-bg)', color: 'var(--ap-text-primary)', fontSize: 12, fontFamily: F, outline: 'none',
+                    minWidth: 180
+                  }}
+                />
+
                 <select
                   value={deviceFilterVersion}
                   onChange={e => { setDeviceFilterVersion(e.target.value); setDevicePage(0); setDevicePageInput('1'); }}
@@ -1094,65 +1131,174 @@ export default function AdminPage() {
         })()}
 
         {/* TAB STAFF */}
-        {activeTab === 'staff' && (
-          <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách nhân viên ({staff.length})</span>
-            </div>
+        {activeTab === 'staff' && (() => {
+          const filteredStaff = staff.filter(s => {
+            const query = staffSearch.trim().toLowerCase();
+            const matchesSearch = !query ||
+              (s.email && String(s.email).toLowerCase().includes(query)) ||
+              (s.full_name && String(s.full_name).toLowerCase().includes(query)) ||
+              (s.phone && String(s.phone).toLowerCase().includes(query));
+            const matchesRole = staffRoleFilter === 'all' || s.role === staffRoleFilter;
+            return matchesSearch && matchesRole;
+          });
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13.5, minWidth: 650 }}>
-                <thead>
-                  <tr style={{ background: 'var(--ap-table-header)', borderBottom: '1px solid var(--ap-border)' }}>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Họ và tên</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Email</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Số điện thoại</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Chức vụ</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Ngày tạo</th>
-                    <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase', width: 100, textAlign: 'right' }}>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.map(s => (
-                    <tr key={s.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--ap-text-primary)' }}>{s.full_name}</td>
-                      <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.email}</td>
-                      <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.phone || '-'}</td>
-                      <td style={{ padding: '12px 20px', color: 'var(--ap-primary)', fontWeight: 600 }}>
-                        {STAFF_ROLE_LABELS[s.role as StaffRole] || 'Staff'}
-                      </td>
-                      <td style={{ padding: '12px 20px', color: 'var(--ap-text-muted)', fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
-                      <td style={{ padding: '12px 20px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                          <button onClick={() => openStaffModal('edit', s)} title="Sửa" style={{ background: 'none', border: 'none', color: 'var(--ap-primary)', cursor: 'pointer', padding: 3 }}><Edit size={14} /></button>
-                          <button onClick={() => openStaffModal('delete', s)} title="Xóa" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 3 }}><Trash2 size={14} /></button>
-                        </div>
-                      </td>
+          return (
+            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách nhân viên ({filteredStaff.length}/{staff.length})</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ap-text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Tìm theo email, tên, SĐT..."
+                      value={staffSearch}
+                      onChange={e => setStaffSearch(e.target.value)}
+                      style={{
+                        padding: '6px 12px 6px 30px',
+                        borderRadius: 6,
+                        border: '1px solid var(--ap-border)',
+                        background: 'var(--ap-input-bg)',
+                        color: 'var(--ap-text-primary)',
+                        fontSize: 13,
+                        outline: 'none',
+                        width: 220
+                      }}
+                    />
+                  </div>
+                  <select
+                    value={staffRoleFilter}
+                    onChange={e => setStaffRoleFilter(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      border: '1px solid var(--ap-border)',
+                      background: 'var(--ap-input-bg)',
+                      color: 'var(--ap-text-primary)',
+                      fontSize: 13,
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">Tất cả chức vụ</option>
+                    <option value="staff_warehouse">Nhân viên kho</option>
+                    <option value="staff_shipper">Nhân viên giao hàng</option>
+                    <option value="staff_support">Nhân viên hỗ trợ</option>
+                    <option value="staff_maintenance">Nhân viên bảo trì</option>
+                    <option value="staff">Staff</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13.5, minWidth: 650 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--ap-table-header)', borderBottom: '1px solid var(--ap-border)' }}>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Họ và tên</th>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Email</th>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Số điện thoại</th>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Chức vụ</th>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase' }}>Ngày tạo</th>
+                      <th style={{ padding: '12px 20px', fontWeight: 700, color: 'var(--ap-text-primary)', fontSize: 12, textTransform: 'uppercase', width: 100, textAlign: 'right' }}>Thao tác</th>
                     </tr>
-                  ))}
-                  {staff.length === 0 && !loading && (
-                    <tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có nhân viên nào trong danh sách</td></tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredStaff.map(s => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--ap-text-primary)' }}>{s.full_name}</td>
+                        <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.email}</td>
+                        <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.phone || '-'}</td>
+                        <td style={{ padding: '12px 20px', color: 'var(--ap-primary)', fontWeight: 600 }}>
+                          {STAFF_ROLE_LABELS[s.role as StaffRole] || 'Staff'}
+                        </td>
+                        <td style={{ padding: '12px 20px', color: 'var(--ap-text-muted)', fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
+                        <td style={{ padding: '12px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button onClick={() => openStaffModal('edit', s)} title="Sửa" style={{ background: 'none', border: 'none', color: 'var(--ap-primary)', cursor: 'pointer', padding: 3 }}><Edit size={14} /></button>
+                            <button onClick={() => openStaffModal('delete', s)} title="Xóa" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 3 }}><Trash2 size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredStaff.length === 0 && !loading && (
+                      <tr><td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có nhân viên nào phù hợp</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* TAB ORDERS */}
         {activeTab === 'orders' && (() => {
+          const filteredOrders = orders.filter(o => {
+            const query = orderSearch.trim().toLowerCase();
+            const matchesSearch = !query ||
+              (o.customerName && String(o.customerName).toLowerCase().includes(query)) ||
+              (o.phone && String(o.phone).toLowerCase().includes(query)) ||
+              (o.id && String(o.id).toLowerCase().includes(query)) ||
+              (o.productVersion && String(o.productVersion).toLowerCase().includes(query));
+            const matchesStatus = orderFilterStatus === 'all' || o.status === orderFilterStatus;
+            return matchesSearch && matchesStatus;
+          });
+
           return (
             <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách đơn hàng ({orders.length})</span>
-                {pendingOrdersCount > 0 && (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '3px 10px', borderRadius: 100 }}>
-                    {pendingOrdersCount} đơn chờ duyệt
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách đơn hàng ({filteredOrders.length}/{orders.length})</span>
+                  {pendingOrdersCount > 0 && (
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '3px 10px', borderRadius: 100 }}>
+                      {pendingOrdersCount} đơn chờ duyệt
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ap-text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Tìm tên, SĐT, mã đơn..."
+                      value={orderSearch}
+                      onChange={e => setOrderSearch(e.target.value)}
+                      style={{
+                        padding: '6px 12px 6px 30px',
+                        borderRadius: 6,
+                        border: '1px solid var(--ap-border)',
+                        background: 'var(--ap-input-bg)',
+                        color: 'var(--ap-text-primary)',
+                        fontSize: 13,
+                        outline: 'none',
+                        width: 220
+                      }}
+                    />
+                  </div>
+                  <select
+                    value={orderFilterStatus}
+                    onChange={e => setOrderFilterStatus(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      border: '1px solid var(--ap-border)',
+                      background: 'var(--ap-input-bg)',
+                      color: 'var(--ap-text-primary)',
+                      fontSize: 13,
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="pending">Chờ duyệt</option>
+                    <option value="confirmed">Đã duyệt</option>
+                    <option value="shipping">Đang giao</option>
+                    <option value="delivered">Đã giao</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -1170,7 +1316,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map(order => (
+                    {filteredOrders.map(order => (
                       <tr key={order.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -1226,6 +1372,9 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ))}
+                    {filteredOrders.length === 0 && !loading && (
+                      <tr><td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: 'var(--ap-text-muted)' }}>Chưa có đơn hàng nào phù hợp</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
