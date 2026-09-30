@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../customer_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
@@ -17,6 +20,63 @@ import '../services/fcm_service.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+
+// All symbols used by the customer overview are vector SVGs, not font icons.
+class _AquaSvg extends StatelessWidget {
+  final String name;
+  final double size;
+  final Color color;
+
+  const _AquaSvg(this.name, {required this.size, required this.color});
+
+  static const _paths = <String, String>{
+    'home':
+        '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+    'chart': '<path d="M3 19h18M4 15l5-5 4 3 7-8"/><path d="M17 5h3v3"/>',
+    'controls':
+        '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="#000" stroke="none"/><circle cx="16" cy="12" r="2" fill="#000" stroke="none"/><circle cx="8" cy="18" r="2" fill="#000" stroke="none"/>',
+    'check': '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
+    'bell':
+        '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/>',
+    'sun':
+        '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    'moon': '<path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"/>',
+    'logout':
+        '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 16l4-4-4-4M8 12h10"/>',
+    'plus': '<path d="M12 5v14M5 12h14"/>',
+    'chevronDown': '<path d="m6 9 6 6 6-6"/>',
+    'arrowRight': '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+    'drop':
+        '<path d="M12 2c-3.2 4.3-7 8.4-7 12a7 7 0 0 0 14 0c0-3.6-3.8-7.7-7-12Z"/>',
+    'thermometer':
+        '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0Z"/><path d="M12 10v7"/>',
+    'tds':
+        '<circle cx="12" cy="5" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><path d="m11 7-5 8m7-8 5 8M7 17h10"/>',
+    'waves':
+        '<path d="M2 8c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2M2 14c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/>',
+    'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    'settings':
+        '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+    'trash': '<path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/>',
+    'alert': '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
+  };
+
+  @override
+  Widget build(BuildContext context) => SvgPicture.string(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${_paths[name] ?? _paths['check']}</svg>',
+    width: size,
+    height: size,
+    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    semanticsLabel: name,
+  );
+}
+
+String _sensorSvgName(String name) => switch (name) {
+  'pH' => 'drop',
+  'Nhiệt độ' => 'thermometer',
+  'TDS' => 'tds',
+  _ => 'waves',
+};
 
 // ─────────────────── POND MODEL ─────────────────────────────
 class Pond {
@@ -46,6 +106,7 @@ class SensorData {
   final IconData icon;
   final String status;
   final List<double> history;
+  final bool hasData;
 
   const SensorData({
     required this.name,
@@ -55,7 +116,88 @@ class SensorData {
     required this.icon,
     required this.status,
     required this.history,
+    this.hasData = true,
   });
+}
+
+String sensorStatus(String name, double? value) {
+  if (value == null || !value.isFinite) return 'Chưa có dữ liệu';
+  if (name == 'Mực nước') return value == 1 ? 'Ổn định' : 'Cạn nước';
+  final bounds = switch (name) {
+    'pH' => [6.5, 7.5, 6.0, 8.0],
+    'Nhiệt độ' => [24.0, 28.0, 22.0, 30.0],
+    'TDS' => [150.0, 300.0, 100.0, 400.0],
+    _ => null,
+  };
+  if (bounds == null) return 'Chưa có dữ liệu';
+  if (value >= bounds[0] && value <= bounds[1]) return 'Tốt';
+  if (value >= bounds[2] && value <= bounds[3]) return 'Cảnh báo';
+  return 'Nguy hiểm';
+}
+
+Color sensorStatusColor(String status) => switch (status) {
+  'Tốt' || 'Ổn định' => CustomerColors.accentText,
+  'Cảnh báo' =>
+    CustomerColors.dark ? const Color(0xFFFFB347) : const Color(0xFF995300),
+  'Nguy hiểm' || 'Cạn nước' =>
+    CustomerColors.dark ? const Color(0xFFFF6B6B) : const Color(0xFFB42318),
+  _ => CustomerColors.mutedText,
+};
+
+/// Supabase sends the newest reading first. Missing readings stay unknown.
+List<SensorData> sensorsFromTelemetry(List<Map<String, dynamic>> logs) {
+  const configs = [
+    (
+      name: 'pH',
+      field: 'ph',
+      unit: '',
+      color: Color(0xFF00A896),
+      icon: Icons.science_outlined,
+    ),
+    (
+      name: 'Nhiệt độ',
+      field: 'temp',
+      unit: '°C',
+      color: Color(0xFFFF8C42),
+      icon: Icons.thermostat_outlined,
+    ),
+    (
+      name: 'TDS',
+      field: 'tds',
+      unit: 'ppm',
+      color: Color(0xFFC77DFF),
+      icon: Icons.water_drop_outlined,
+    ),
+    (
+      name: 'Mực nước',
+      field: 'water_level_ok',
+      unit: '',
+      color: Color(0xFF4DA6FF),
+      icon: Icons.waves_outlined,
+    ),
+  ];
+  return configs.map((config) {
+    double? reading(Map<String, dynamic> log) {
+      final raw = log[config.field];
+      if (config.field == 'water_level_ok') {
+        return raw is bool ? (raw ? 1.0 : 0.0) : null;
+      }
+      final value = raw is num ? raw.toDouble() : null;
+      return value != null && value.isFinite ? value : null;
+    }
+
+    final latest = logs.isEmpty ? null : reading(logs.first);
+    return SensorData(
+      name: config.name,
+      unit: config.unit,
+      value: latest ?? 0,
+      color: config.color,
+      icon: config.icon,
+      status: sensorStatus(config.name, latest),
+      history: logs.reversed.map(reading).whereType<double>().toList(),
+      hasData: latest != null,
+    );
+  }).toList();
 }
 
 // ─────────────── MOCK SENSOR DATA ───────────────────────────
@@ -64,7 +206,7 @@ final List<SensorData> sensorList = [
     name: 'pH',
     unit: '',
     value: 7.20,
-    color: const Color(0xFF00A896),
+    color: Color(0xFF00A896),
     icon: Icons.science_outlined,
     status: 'Tốt',
     history: [7.1, 7.0, 7.2, 7.3, 7.15, 7.25, 7.20, 7.18, 7.22, 7.20],
@@ -73,7 +215,7 @@ final List<SensorData> sensorList = [
     name: 'Nhiệt độ',
     unit: '°C',
     value: 26.50,
-    color: const Color(0xFFFF8C42),
+    color: Color(0xFFFF8C42),
     icon: Icons.thermostat_outlined,
     status: 'Tốt',
     history: [26.0, 26.3, 26.8, 27.0, 26.6, 26.4, 26.5, 26.7, 26.5, 26.5],
@@ -82,7 +224,7 @@ final List<SensorData> sensorList = [
     name: 'TDS',
     unit: 'ppm',
     value: 245.00,
-    color: const Color(0xFFC77DFF),
+    color: Color(0xFFC77DFF),
     icon: Icons.water_drop_outlined,
     status: 'Tốt',
     history: [
@@ -102,7 +244,7 @@ final List<SensorData> sensorList = [
     name: 'Mực nước',
     unit: '',
     value: 1.0,
-    color: const Color(0xFF4DA6FF),
+    color: Color(0xFF4DA6FF),
     icon: Icons.waves_outlined,
     status: 'Ổn định',
     history: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -133,7 +275,7 @@ final List<AlertItem> alertList = [
     title: 'pH ổn định',
     message: 'Giá trị pH đang ở mức lý tưởng 7.2',
     time: '2 phút trước',
-    color: const Color(0xFF00A896),
+    color: Color(0xFF00A896),
     icon: Icons.check_circle_outline,
     isWarning: false,
   ),
@@ -141,7 +283,7 @@ final List<AlertItem> alertList = [
     title: 'Nhiệt độ bình thường',
     message: 'Nhiệt độ nước ổn định 26.5°C',
     time: '5 phút trước',
-    color: const Color(0xFF00A896),
+    color: Color(0xFF00A896),
     icon: Icons.check_circle_outline,
     isWarning: false,
   ),
@@ -149,7 +291,7 @@ final List<AlertItem> alertList = [
     title: 'Mực nước thấp',
     message: 'Cảnh báo cạn nước, vui lòng kiểm tra van cấp và châm thêm nước',
     time: '12 phút trước',
-    color: const Color(0xFFFF6B6B),
+    color: Color(0xFFFF6B6B),
     icon: Icons.warning_amber_outlined,
     isWarning: true,
   ),
@@ -157,7 +299,7 @@ final List<AlertItem> alertList = [
     title: 'TDS tăng',
     message: 'Nồng độ TDS tăng lên 245 ppm, cân nhắc thay 20% nước',
     time: '30 phút trước',
-    color: const Color(0xFFFF8C42),
+    color: Color(0xFFFF8C42),
     icon: Icons.info_outline,
     isWarning: true,
   ),
@@ -196,11 +338,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _fishSpecies = [];
 
   void _updateStream() {
+    _currentSensors = sensorsFromTelemetry([]);
     if (_activePondId.isNotEmpty) {
       _telemetryStream = SupabaseService.instance.getTelemetryStream(
         _activePondId,
       );
       _alertsStream = SupabaseService.instance.getAlertsStream(_activePondId);
+    } else {
+      _telemetryStream = null;
+      _alertsStream = null;
     }
   }
 
@@ -215,44 +361,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  List<SensorData> _currentSensors = [
-    SensorData(
-      name: 'pH',
-      unit: '',
-      value: 0,
-      color: const Color(0xFF00A896),
-      icon: Icons.science_outlined,
-      status: '...',
-      history: [0],
-    ),
-    SensorData(
-      name: 'Nhiệt độ',
-      unit: '°C',
-      value: 0,
-      color: const Color(0xFFFF8C42),
-      icon: Icons.thermostat_outlined,
-      status: '...',
-      history: [0],
-    ),
-    SensorData(
-      name: 'TDS',
-      unit: 'ppm',
-      value: 0,
-      color: const Color(0xFFC77DFF),
-      icon: Icons.water_drop_outlined,
-      status: '...',
-      history: [0],
-    ),
-    SensorData(
-      name: 'Mực nước',
-      unit: '',
-      value: 0,
-      color: const Color(0xFF4DA6FF),
-      icon: Icons.waves_outlined,
-      status: '...',
-      history: [0],
-    ),
-  ];
+  List<SensorData> _currentSensors = sensorsFromTelemetry([]);
 
   final List<String> _tabTitles = [
     'Tổng quan',
@@ -267,21 +376,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     debugPrint('🚀 DashboardScreen đã khởi tạo');
     _updateTime();
-    _clockTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _updateTime(),
-    );
+    _clockTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateTime());
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
     _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _pulseTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
+    _pulseTimer = Timer.periodic(Duration(milliseconds: 600), (_) {
       if (mounted) setState(() => _liveDot = !_liveDot);
     });
 
@@ -403,7 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           .uploadBinary(
             fileName,
             bytes,
-            fileOptions: const FileOptions(upsert: true),
+            fileOptions: FileOptions(upsert: true),
           );
 
       final publicUrl = Supabase.instance.client.storage
@@ -433,7 +539,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật ảnh đại diện thành công')),
+          SnackBar(content: Text('Cập nhật ảnh đại diện thành công')),
         );
       }
     } catch (e) {
@@ -463,24 +569,20 @@ class _DashboardScreenState extends State<DashboardScreen>
       int retries = 0;
       while (user == null && retries < 5) {
         debugPrint('⏳ Đợi Supabase Session... ($retries/5)');
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(Duration(milliseconds: 500));
         user = Supabase.instance.client.auth.currentUser;
         retries++;
       }
 
       if (user == null) {
-        debugPrint(
-          '❌ [LỖI NGHIÊM TRỌNG]: Supabase currentUser đang là NULL! Client gửi request ẩn danh nên RLS sẽ chặn lại.',
-        );
-      } else {
-        debugPrint('✅ [SUCCESS]: User hiện tại: ${user.id} - ${user.email}');
+        throw StateError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       }
-      final currentUserId = user?.id ?? '3da8dc87-687c-4a01-970a-2d8f2c7a04c6';
+      final currentUserId = user.id;
 
       debugPrint('--- DEBUG: _loadPonds started for user: $currentUserId ---');
       final data = await SupabaseService.instance.getTanks(currentUserId);
       debugPrint('--- DEBUG: Received data from getTanks: $data ---');
-      if (data.isNotEmpty) {
+      if (mounted) {
         setState(() {
           _ponds = data.map((json) {
             String? mac;
@@ -504,12 +606,18 @@ class _DashboardScreenState extends State<DashboardScreen>
               lastCalibPh: lastCalib,
             );
           }).toList();
-          _activePondId = _ponds.first.id;
+          if (!_ponds.any((pond) => pond.id == _activePondId)) {
+            _activePondId = _ponds.isEmpty ? '' : _ponds.first.id;
+          }
           _updateStream();
         });
       }
     } catch (e) {
-      print('Error loading ponds: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không tải được danh sách bể: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -539,7 +647,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Simulate data reload ──────────────────────────────────
   void _simulateReload() {
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future.delayed(Duration(milliseconds: 600), () {
       if (mounted) setState(() => _isLoading = false);
     });
   }
@@ -549,37 +657,69 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _showAddPondDialog() {
     final ctrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    showDialog(
+    var saving = false;
+    var error = '';
+    showCustomerDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => _buildPondDialog(
-        title: '➕ Thêm bể cá mới',
-        confirmLabel: 'Thêm bể',
-        confirmColor: const Color(0xFF00A896),
-        controller: ctrl,
-        formKey: formKey,
-        hint: 'VD: Bể Rồng Phòng Ngủ',
-        onConfirm: () {
-          if (formKey.currentState!.validate()) {
-            final name = ctrl.text.trim();
-            final newPond = Pond(
-              id: 'pond_${DateTime.now().millisecondsSinceEpoch}',
-              name: name,
-            );
-            Navigator.pop(ctx);
-            setState(() {
-              _ponds.add(newPond);
-              _activePondId = newPond.id;
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, updateDialog) => _buildPondDialog(
+          title: '➕ Thêm bể cá mới',
+          confirmLabel: 'Thêm bể',
+          confirmColor: Color(0xFF00A896),
+          controller: ctrl,
+          formKey: formKey,
+          hint: 'VD: Bể Rồng Phòng Ngủ',
+          isSaving: saving,
+          error: error,
+          onCancel: () => Navigator.pop(ctx),
+          onConfirm: () async {
+            if (saving || !formKey.currentState!.validate()) return;
+            final userId = Supabase.instance.client.auth.currentUser?.id;
+            if (userId == null) {
+              updateDialog(() => error = 'Vui lòng đăng nhập lại.');
+              return;
+            }
+            updateDialog(() {
+              saving = true;
+              error = '';
             });
-            _simulateReload();
-          }
-        },
+            try {
+              final created = await SupabaseService.instance.createTank(
+                userId: userId,
+                name: ctrl.text,
+              );
+              if (!mounted) return;
+              setState(() {
+                _ponds.add(
+                  Pond(
+                    id: created['id'].toString(),
+                    name: created['tank_name'] as String,
+                  ),
+                );
+                _activePondId = created['id'].toString();
+                _updateStream();
+              });
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
+            } catch (e) {
+              if (ctx.mounted) {
+                updateDialog(() => error = 'Không thể thêm bể: $e');
+              }
+            } finally {
+              if (ctx.mounted) {
+                updateDialog(() => saving = false);
+              }
+            }
+          },
+        ),
       ),
-    );
+    ).whenComplete(ctrl.dispose);
   }
 
   void _showPondSettingsDialog(Pond pond) {
-    showDialog(
+    showCustomerDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (ctx) => PondSettingsDialog(
@@ -593,91 +733,152 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _showDeletePondDialog(Pond pond) {
-    showDialog(
+    var saving = false;
+    var error = '';
+    showCustomerDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F1A30),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        title: Text(
-          '🗑️ Xóa bể cá',
-          style: GoogleFonts.inter(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, updateDialog) => AlertDialog(
+          backgroundColor: CustomerColors.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: CustomerColors.border),
           ),
-        ),
-        content: RichText(
-          text: TextSpan(
+          title: Text(
+            '🗑️ Xóa bể cá',
             style: GoogleFonts.inter(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.5),
-              height: 1.6,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: CustomerColors.text,
             ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const TextSpan(text: 'Bạn có chắc muốn xóa '),
-              TextSpan(
-                text: '"${pond.name}"',
-                style: const TextStyle(
-                  color: Colors.white,
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: CustomerColors.secondaryText,
+                    height: 1.6,
+                  ),
+                  children: [
+                    TextSpan(text: 'Bạn có chắc muốn xóa '),
+                    TextSpan(
+                      text: '"${pond.name}"',
+                      style: TextStyle(
+                        color: CustomerColors.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextSpan(text: '?\nHành động này không thể hoàn tác.'),
+                  ],
+                ),
+              ),
+              if (error.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    error,
+                    style: const TextStyle(color: Color(0xFFFF6B6B)),
+                  ),
+                ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(
+                foregroundColor: CustomerColors.secondaryText,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Hủy',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final userId =
+                          Supabase.instance.client.auth.currentUser?.id;
+                      if (userId == null) {
+                        updateDialog(() => error = 'Vui lòng đăng nhập lại.');
+                        return;
+                      }
+                      updateDialog(() {
+                        saving = true;
+                        error = '';
+                      });
+                      try {
+                        final cleaned = await SupabaseService.instance
+                            .deleteTank(userId: userId, tankId: pond.id);
+                        if (!mounted) return;
+                        setState(() {
+                          _ponds.removeWhere((item) => item.id == pond.id);
+                          if (_activePondId == pond.id) {
+                            _activePondId = _ponds.isEmpty
+                                ? ''
+                                : _ponds.first.id;
+                            _updateStream();
+                          }
+                        });
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (!cleaned && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Đã xóa bể nhưng chưa cập nhật được thiết bị. Vui lòng kiểm tra lại.',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          updateDialog(() => error = 'Không thể xóa bể: $e');
+                        }
+                      } finally {
+                        if (ctx.mounted) {
+                          updateDialog(() => saving = false);
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFFF6B6B),
+                foregroundColor: CustomerColors.text,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Xóa bể',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const TextSpan(text: '?\nHành động này không thể hoàn tác.'),
-            ],
-          ),
+            ),
+          ],
         ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withValues(alpha: 0.5),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              'Hủy',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _ponds.removeWhere((p) => p.id == pond.id);
-                if (_activePondId == pond.id && _ponds.isNotEmpty) {
-                  _activePondId = _ponds.first.id;
-                }
-              });
-              _simulateReload();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B6B),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Xóa bể',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -691,19 +892,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     required GlobalKey<FormState> formKey,
     required String hint,
     required VoidCallback onConfirm,
+    required VoidCallback onCancel,
+    bool isSaving = false,
+    String error = '',
   }) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF0F1A30),
+      backgroundColor: CustomerColors.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        side: BorderSide(color: CustomerColors.text.withValues(alpha: 0.08)),
       ),
       title: Text(
         title,
         style: GoogleFonts.inter(
           fontSize: 17,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: CustomerColors.text,
         ),
       ),
       content: Form(
@@ -717,57 +921,53 @@ class _DashboardScreenState extends State<DashboardScreen>
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.35),
+                color: CustomerColors.mutedText,
                 letterSpacing: 0.8,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             TextFormField(
               controller: controller,
               autofocus: true,
-              style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: CustomerColors.text,
+              ),
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: CustomerColors.mutedText,
                 ),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.04),
+                fillColor: CustomerColors.text.withValues(alpha: 0.04),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 12,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  borderSide: BorderSide(color: CustomerColors.border),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  borderSide: BorderSide(color: CustomerColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF00A896),
-                    width: 1.5,
-                  ),
+                  borderSide: BorderSide(color: Color(0xFF00A896), width: 1.5),
                 ),
                 errorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+                  borderSide: BorderSide(color: Color(0xFFFF6B6B)),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+                  borderSide: BorderSide(color: Color(0xFFFF6B6B)),
                 ),
                 errorStyle: GoogleFonts.inter(
                   fontSize: 11,
-                  color: const Color(0xFFFF6B6B),
+                  color: Color(0xFFFF6B6B),
                 ),
               ),
               onFieldSubmitted: (_) => onConfirm(),
@@ -778,15 +978,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                 return null;
               },
             ),
+            if (error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  error,
+                  style: const TextStyle(color: Color(0xFFFF6B6B)),
+                ),
+              ),
           ],
         ),
       ),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: isSaving ? null : onCancel,
           style: TextButton.styleFrom(
-            foregroundColor: Colors.white.withValues(alpha: 0.5),
+            foregroundColor: CustomerColors.secondaryText,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -798,10 +1006,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         ElevatedButton(
-          onPressed: onConfirm,
+          onPressed: isSaving ? null : onConfirm,
           style: ElevatedButton.styleFrom(
             backgroundColor: confirmColor,
-            foregroundColor: Colors.white,
+            foregroundColor: CustomerColors.text,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -819,15 +1027,15 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ─────────────── LOGOUT ──────────────────────────────────
   void _handleLogout() {
-    showDialog(
+    showCustomerDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F1A30),
+        backgroundColor: CustomerColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: CustomerColors.text.withValues(alpha: 0.08),
             width: 1,
           ),
         ),
@@ -836,14 +1044,14 @@ class _DashboardScreenState extends State<DashboardScreen>
           style: GoogleFonts.inter(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: CustomerColors.text,
           ),
         ),
         content: Text(
           'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: CustomerColors.secondaryText,
             height: 1.5,
           ),
         ),
@@ -852,7 +1060,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withValues(alpha: 0.5),
+              foregroundColor: CustomerColors.secondaryText,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -872,17 +1080,17 @@ class _DashboardScreenState extends State<DashboardScreen>
               Navigator.pushAndRemoveUntil(
                 context,
                 PageRouteBuilder(
-                  pageBuilder: (_, _, _) => const LoginScreen(),
+                  pageBuilder: (_, _, _) => LoginScreen(),
                   transitionsBuilder: (_, anim, _, child) =>
                       FadeTransition(opacity: anim, child: child),
-                  transitionDuration: const Duration(milliseconds: 350),
+                  transitionDuration: Duration(milliseconds: 350),
                 ),
                 (route) => false,
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B6B),
-              foregroundColor: Colors.white,
+              backgroundColor: Color(0xFFFF6B6B),
+              foregroundColor: CustomerColors.text,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -912,161 +1120,120 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            transform: GradientRotation(135 * pi / 180),
-            colors: [Color(0xFF060E1A), Color(0xFF0A1628), Color(0xFF0D2235)],
-            stops: [0.0, 0.5, 1.0],
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: CustomerTheme.mode,
+      builder: (context, mode, _) => Theme(
+        data: CustomerTheme.data,
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: mode == ThemeMode.dark
+                ? Brightness.light
+                : Brightness.dark,
+            systemNavigationBarColor: CustomerColors.background,
+            systemNavigationBarIconBrightness: mode == ThemeMode.dark
+                ? Brightness.light
+                : Brightness.dark,
           ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  _buildTopBar(),
-                  Expanded(
-                    child: AnimatedOpacity(
-                      opacity: _isLoading ? 0.35 : 1.0,
-                      duration: const Duration(milliseconds: 250),
-                      child: _activePondId.isEmpty
-                          ? _buildOnboardingSection()
-                          : StreamBuilder<List<Map<String, dynamic>>>(
-                              stream: _telemetryStream,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFF00A896),
-                                    ),
-                                  );
-                                }
-
-                                final logs = snapshot.data ?? [];
-                                // debugPrint('🔔 [REALTIME]: Nhận data mới lúc: ${DateTime.now()} - ${logs.length} bản ghi');
-
-                                List<double> phHistory = [];
-                                List<double> tempHistory = [];
-                                List<double> tdsHistory = [];
-                                List<double> waterLevelHistory = [];
-
-                                for (var log in logs.reversed) {
-                                  try {
-                                    phHistory.add(
-                                      (log['ph'] as num?)?.toDouble() ?? 7.0,
-                                    );
-                                    tempHistory.add(
-                                      (log['temp'] as num?)?.toDouble() ?? 26.0,
-                                    );
-                                    tdsHistory.add(
-                                      (log['tds'] as num?)?.toDouble() ?? 250.0,
-                                    );
-                                    waterLevelHistory.add(
-                                      log['water_level_ok'] == true ? 1.0 : 0.0,
-                                    );
-                                  } catch (e) {
-                                    debugPrint(
-                                      '❌ [DB ERROR]: Lỗi khi map dữ liệu từ log: $e',
-                                    );
-                                  }
-                                }
-
-                                if (phHistory.isEmpty) phHistory = [7.0];
-                                if (tempHistory.isEmpty) tempHistory = [26.0];
-                                if (tdsHistory.isEmpty) tdsHistory = [250.0];
-                                if (waterLevelHistory.isEmpty) {
-                                  waterLevelHistory = [1.0];
-                                }
-
-                                // Cập nhật state biến _currentSensors trực tiếp trong quá trình build
-                                _currentSensors = [
-                                  SensorData(
-                                    name: 'pH',
-                                    unit: '',
-                                    value: phHistory.last,
-                                    color: const Color(0xFF00A896),
-                                    icon: Icons.science_outlined,
-                                    status: 'Tốt',
-                                    history: phHistory,
-                                  ),
-                                  SensorData(
-                                    name: 'Nhiệt độ',
-                                    unit: '°C',
-                                    value: tempHistory.last,
-                                    color: const Color(0xFFFF8C42),
-                                    icon: Icons.thermostat_outlined,
-                                    status: 'Tốt',
-                                    history: tempHistory,
-                                  ),
-                                  SensorData(
-                                    name: 'TDS',
-                                    unit: 'ppm',
-                                    value: tdsHistory.last,
-                                    color: const Color(0xFFC77DFF),
-                                    icon: Icons.water_drop_outlined,
-                                    status: 'Tốt',
-                                    history: tdsHistory,
-                                  ),
-                                  SensorData(
-                                    name: 'Mực nước',
-                                    unit: '',
-                                    value: waterLevelHistory.last,
-                                    color: const Color(0xFF4DA6FF),
-                                    icon: Icons.waves_outlined,
-                                    status: waterLevelHistory.last == 1.0
-                                        ? 'Ổn định'
-                                        : 'Cạn nước',
-                                    history: waterLevelHistory,
-                                  ),
-                                ];
-
-                                return _buildTabContent();
-                              },
-                            ),
-                    ),
-                  ),
-                ],
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  transform: GradientRotation(135 * pi / 180),
+                  colors: [
+                    CustomerColors.background,
+                    CustomerColors.backgroundMid,
+                    CustomerColors.backgroundEnd,
+                  ],
+                  stops: [0.0, 0.5, 1.0],
+                ),
               ),
-              // Loading overlay
-              if (_isLoading)
-                Positioned.fill(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+              child: SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: [
+                    Column(
                       children: [
-                        const SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(0xFF00A896),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Đang đồng bộ dữ liệu...',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.5),
+                        _buildTopBar(),
+                        Expanded(
+                          child: AnimatedOpacity(
+                            opacity: _isLoading ? 0.35 : 1.0,
+                            duration: Duration(milliseconds: 250),
+                            child: _activePondId.isEmpty
+                                ? _buildOnboardingSection()
+                                : StreamBuilder<List<Map<String, dynamic>>>(
+                                    key: ValueKey(_activePondId),
+                                    stream: _telemetryStream,
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF00A896),
+                                          ),
+                                        );
+                                      }
+
+                                      _currentSensors = sensorsFromTelemetry(
+                                        snapshot.hasError
+                                            ? []
+                                            : (snapshot.data ?? []),
+                                      );
+
+                                      return _buildTabContent();
+                                    },
+                                  ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: _buildBottomNav(),
+                    ),
+                    // Loading overlay
+                    if (_isLoading)
+                      Positioned.fill(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF00A896),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                'Đang đồng bộ dữ liệu...',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: CustomerColors.text.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -1076,25 +1243,25 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 2),
-            child: Icon(Icons.widgets, size: 12, color: Color(0xFF00A896)),
+            child: _AquaSvg('controls', size: 12, color: Color(0xFF00A896)),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Colors.white70,
+                  color: CustomerColors.secondaryText,
                   height: 1.5,
                 ),
                 children: [
                   TextSpan(
                     text: '$title ',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: CustomerColors.text,
                     ),
                   ),
                   TextSpan(text: desc),
@@ -1119,39 +1286,37 @@ class _DashboardScreenState extends State<DashboardScreen>
             style: GoogleFonts.inter(
               fontSize: 26,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: CustomerColors.text,
               letterSpacing: -0.5,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.white70,
+                color: CustomerColors.secondaryText,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: 32),
         ],
         // Card 1
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1A30),
+            color: CustomerColors.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF00A896).withValues(alpha: 0.3),
-            ),
+            border: Border.all(color: Color(0xFF00A896).withValues(alpha: 0.3)),
             boxShadow: isOverlay
                 ? [
-                    const BoxShadow(
+                    BoxShadow(
                       color: Colors.black54,
                       blurRadius: 24,
                       offset: Offset(0, 8),
@@ -1168,7 +1333,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [Color(0xFF00A896), Color(0xFF028090)],
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -1179,22 +1344,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: CustomerColors.text,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(
                     'Khám phá tính năng',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: CustomerColors.text,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildFeatureRow('Tổng quan:', 'Theo dõi trạng thái chung.'),
               _buildFeatureRow('Cảm biến:', 'Phân tích biểu đồ dữ liệu.'),
               _buildFeatureRow('Điều khiển:', 'Điều khiển thiết bị từ xa.'),
@@ -1202,20 +1367,18 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         // Card 2
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1A30),
+            color: CustomerColors.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF4DA6FF).withValues(alpha: 0.3),
-            ),
+            border: Border.all(color: Color(0xFF4DA6FF).withValues(alpha: 0.3)),
             boxShadow: isOverlay
                 ? [
-                    const BoxShadow(
+                    BoxShadow(
                       color: Colors.black54,
                       blurRadius: 24,
                       offset: Offset(0, 8),
@@ -1232,7 +1395,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [Color(0xFF4DA6FF), Color(0xFF0066CC)],
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -1243,38 +1406,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: CustomerColors.text,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(
                     'Bắt đầu sử dụng',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: CustomerColors.text,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 'Để trải nghiệm đầy đủ các tính năng, hãy tạo bể cá đầu tiên của bạn.',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Colors.white70,
+                  color: CustomerColors.secondaryText,
                   height: 1.5,
                 ),
               ),
               if (!isOverlay) ...[
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _showAddPondDialog,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00A896),
+                      backgroundColor: Color(0xFF00A896),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1285,7 +1448,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: CustomerColors.text,
                       ),
                     ),
                   ),
@@ -1296,7 +1459,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
 
         if (isOverlay) ...[
-          const SizedBox(height: 32),
+          SizedBox(height: 32),
           GestureDetector(
             onTap: () async {
               final prefs = await SharedPreferences.getInstance();
@@ -1312,17 +1475,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white54),
+                    border: Border.all(color: CustomerColors.mutedText),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text(
                   'Không hiển thị lại',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: CustomerColors.text,
                   ),
                 ),
               ],
@@ -1335,7 +1498,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (!isOverlay) {
       return Center(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: content,
@@ -1355,10 +1518,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             width: 80,
             height: 60,
             child: CustomPaint(
-              painter: ArrowPainter(
-                color: const Color(0xFF4DA6FF),
-                pointUp: true,
-              ),
+              painter: ArrowPainter(color: Color(0xFF4DA6FF), pointUp: true),
             ),
           ),
           // Arrow down (to Bottom Tabs)
@@ -1368,15 +1528,12 @@ class _DashboardScreenState extends State<DashboardScreen>
             width: 80,
             height: 80,
             child: CustomPaint(
-              painter: ArrowPainter(
-                color: const Color(0xFF00A896),
-                pointUp: false,
-              ),
+              painter: ArrowPainter(color: Color(0xFF00A896), pointUp: false),
             ),
           ),
           Center(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: BouncingScrollPhysics(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: content,
@@ -1391,11 +1548,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ───────────────── TOP BAR ──────────────────────────────
   Widget _buildTopBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+      padding: const EdgeInsets.fromLTRB(18, 16, 16, 12),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: CustomerColors.text.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -1417,12 +1574,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFF00E5A0).withValues(alpha: 0.5),
+                          color: CustomerColors.accentText.withValues(
+                            alpha: 0.5,
+                          ),
                           width: 1.5,
                         ),
                         gradient: _userInfo?['avatar_url'] != null
                             ? null
-                            : const LinearGradient(
+                            : LinearGradient(
                                 colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -1443,7 +1602,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: CustomerColors.text,
                                 ),
                               ),
                             )
@@ -1456,12 +1615,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                             color: Colors.black54,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: CustomerColors.text,
                                 strokeWidth: 2,
                               ),
                             ),
@@ -1471,7 +1630,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
 
               Expanded(
                 child: Column(
@@ -1480,17 +1639,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                     Text(
                       _tabTitles[_selectedTab],
                       style: GoogleFonts.inter(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        fontSize: _selectedTab == 0 ? 23 : 17,
+                        fontWeight: FontWeight.w800,
+                        color: CustomerColors.text,
                         letterSpacing: -0.4,
                       ),
                     ),
                     Text(
-                      'Cập nhật lúc $_currentTime',
+                      _selectedTab == 0
+                          ? 'Theo dõi bể cá của bạn'
+                          : 'Cập nhật lúc $_currentTime',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: CustomerColors.secondaryText,
                       ),
                     ),
                   ],
@@ -1506,20 +1667,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                       width: 7,
                       height: 7,
                       decoration: BoxDecoration(
-                        color: _isLoading
-                            ? const Color(
-                                0xFFFFB347,
-                              ).withValues(alpha: _pulseAnimation.value)
-                            : const Color(
-                                0xFF00E5A0,
-                              ).withValues(alpha: _pulseAnimation.value),
+                        color:
+                            (_isLoading
+                                    ? CustomerColors.waterText
+                                    : CustomerColors.accentText)
+                                .withValues(alpha: _pulseAnimation.value),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color:
                                 (_isLoading
-                                        ? const Color(0xFFFFB347)
-                                        : const Color(0xFF00E5A0))
+                                        ? CustomerColors.waterText
+                                        : CustomerColors.accentText)
                                     .withValues(
                                       alpha: _pulseAnimation.value * 0.6,
                                     ),
@@ -1530,31 +1689,45 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 5),
+                  SizedBox(width: 5),
                   Text(
-                    _isLoading ? 'Sync' : 'Live',
+                    _isLoading
+                        ? 'Sync'
+                        : _currentSensors.every((sensor) => sensor.hasData)
+                        ? 'Live'
+                        : 'Chờ dữ liệu',
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: _isLoading
-                          ? const Color(0xFFFFB347)
-                          : const Color(0xFF00E5A0),
+                          ? CustomerColors.waterText
+                          : CustomerColors.accentText,
                       letterSpacing: 0.4,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => CustomerTheme.toggle(),
+                    icon: _AquaSvg(
+                      CustomerColors.dark ? 'sun' : 'moon',
+                      size: 19,
+                      color: CustomerColors.secondaryText,
+                    ),
+                    tooltip: CustomerColors.dark
+                        ? 'Chuyển sang giao diện sáng'
+                        : 'Chuyển sang giao diện tối',
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(minWidth: 30, minHeight: 30),
+                  ),
                   IconButton(
                     onPressed: _handleLogout,
-                    icon: Icon(
-                      Icons.logout_rounded,
+                    icon: _AquaSvg(
+                      'logout',
                       size: 19,
-                      color: Colors.white.withValues(alpha: 0.45),
+                      color: CustomerColors.secondaryText,
                     ),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 30,
-                      minHeight: 30,
-                    ),
+                    constraints: BoxConstraints(minWidth: 30, minHeight: 30),
                     tooltip: 'Đăng xuất',
                     splashRadius: 18,
                   ),
@@ -1563,52 +1736,44 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: 16),
 
           // ── Pond Selector Row ──────────────────────────────
           Row(
             children: [
-              Text(
-                'Bể cá:',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.35),
-                ),
-              ),
-              const SizedBox(width: 8),
               Expanded(child: _buildPondSelector()),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Add pond button
               GestureDetector(
                 onTap: _showAddPondDialog,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 6,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: const Color(0xFF00A896).withValues(alpha: 0.3),
+                      color: CustomerColors.border,
                       style: BorderStyle.solid,
                     ),
-                    color: const Color(0xFF00A896).withValues(alpha: 0.06),
+                    color: CustomerColors.card,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.add,
+                      _AquaSvg(
+                        'plus',
                         size: 13,
-                        color: const Color(0xFF00A896).withValues(alpha: 0.8),
+                        color: CustomerColors.accentText,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Thêm bể',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF00A896).withValues(alpha: 0.8),
+                          color: CustomerColors.accentText,
                         ),
                       ),
                     ],
@@ -1636,13 +1801,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           _simulateReload();
         }
       },
-      color: const Color(0xFF0F1A30),
+      color: CustomerColors.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        side: BorderSide(color: CustomerColors.text.withValues(alpha: 0.08)),
       ),
       elevation: 10,
-      offset: const Offset(0, 8),
+      offset: Offset(0, 8),
       itemBuilder: (ctx) => [
         // Pond items
         ..._ponds.map(
@@ -1660,17 +1825,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Navigator.pop(ctx);
                 _showPondSettingsDialog(pond);
               },
-              onDelete: _ponds.length > 1
-                  ? () {
-                      Navigator.pop(ctx);
-                      _showDeletePondDialog(pond);
-                    }
-                  : null,
+              onDelete: () {
+                Navigator.pop(ctx);
+                _showDeletePondDialog(pond);
+              },
             ),
           ),
         ),
         // Divider
-        const PopupMenuDivider(height: 1),
+        PopupMenuDivider(height: 1),
         // Add item
         PopupMenuItem<String>(
           value: '__add__',
@@ -1681,22 +1844,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00A896).withValues(alpha: 0.12),
+                  color: Color(0xFF00A896).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.add,
+                child: _AquaSvg(
+                  'plus',
                   size: 16,
-                  color: Color(0xFF00A896),
+                  color: CustomerColors.accentText,
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Text(
                 'Thêm bể mới',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF00A896),
+                  color: CustomerColors.accentText,
                 ),
               ),
             ],
@@ -1704,37 +1867,29 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+          color: CustomerColors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: CustomerColors.border),
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.water,
-              size: 13,
-              color: const Color(0xFF00A896).withValues(alpha: 0.8),
-            ),
-            const SizedBox(width: 7),
+            _AquaSvg('drop', size: 13, color: CustomerColors.accentText),
+            SizedBox(width: 7),
             Expanded(
               child: Text(
                 _activePond.name,
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF00A896),
+                  color: CustomerColors.text,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.expand_more_rounded,
-              size: 16,
-              color: Colors.white.withValues(alpha: 0.35),
-            ),
+            SizedBox(width: 4),
+            _AquaSvg('chevronDown', size: 16, color: CustomerColors.mutedText),
           ],
         ),
       ),
@@ -1744,137 +1899,115 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ─────────────── BOTTOM NAV BAR ─────────────────────────
   Widget _buildBottomNav() {
     final items = [
-      {'icon': Icons.home_rounded, 'label': 'Tổng quan'},
-      {'icon': Icons.analytics_rounded, 'label': 'Cảm biến'},
-      {'icon': Icons.power_settings_new_rounded, 'label': 'Điều khiển'},
-      {'icon': Icons.check_circle_rounded, 'label': 'Hiệu chuẩn'},
-      {'icon': Icons.notifications_rounded, 'label': 'Cảnh báo'},
+      {'icon': 'home', 'label': 'Tổng quan'},
+      {'icon': 'chart', 'label': 'Cảm biến'},
+      {'icon': 'controls', 'label': 'Điều khiển'},
+      {'icon': 'check', 'label': 'Hiệu chuẩn'},
+      {'icon': 'bell', 'label': 'Cảnh báo'},
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF060E1A).withValues(alpha: 0.95),
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.06),
-            width: 1,
-          ),
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.only(left: 32, right: 32, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+        decoration: BoxDecoration(
+          color: CustomerColors.card,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: CustomerColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: CustomerColors.dark ? 0.4 : 0.08,
+              ),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(items.length, (i) {
-              final isSelected = _selectedTab == i;
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedTab = i);
-                  // Reset badge khi bấm vào tab Cảnh báo
-                  if (i == 4) {
-                    setState(() => _unreadAlertCount = 0);
-                  }
-                },
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF00A896).withValues(alpha: 0.12)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
-                    border: isSelected
-                        ? Border.all(
-                            color: const Color(
-                              0xFF00A896,
-                            ).withValues(alpha: 0.25),
-                            width: 1,
-                          )
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Icon(
-                            items[i]['icon'] as IconData,
-                            size: 22,
-                            color: isSelected
-                                ? const Color(0xFF00A896)
-                                : Colors.white.withValues(alpha: 0.3),
-                          ),
-                          // Badge cho tab Cảnh báo
-                          if (i == 4 && _unreadAlertCount > 0)
-                            Positioned(
-                              right: -8,
-                              top: -4,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF6B6B),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFFFF6B6B,
-                                      ).withValues(alpha: 0.4),
-                                      blurRadius: 6,
+        child: Row(
+          children: List.generate(items.length, (i) {
+            final isSelected = _selectedTab == i;
+            return Expanded(
+              child: Semantics(
+                button: true,
+                selected: isSelected,
+                label: items[i]['label']!,
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _selectedTab = i);
+                    // Reset badge khi bấm vào tab Cảnh báo
+                    if (i == 4) {
+                      setState(() => _unreadAlertCount = 0);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? CustomerColors.accentText.withValues(alpha: 0.14)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _AquaSvg(
+                              items[i]['icon']!,
+                              size: 22,
+                              color: isSelected
+                                  ? CustomerColors.accentText
+                                  : CustomerColors.mutedText,
+                            ),
+                            // Badge cho tab Cảnh báo
+                            if (i == 4 && _unreadAlertCount > 0)
+                              Positioned(
+                                right: -8,
+                                top: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFFF6B6B),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.4),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    _unreadAlertCount > 99
+                                        ? '99+'
+                                        : '$_unreadAlertCount',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                      color: CustomerColors.text,
                                     ),
-                                  ],
-                                ),
-                                child: Text(
-                                  _unreadAlertCount > 99
-                                      ? '99+'
-                                      : '$_unreadAlertCount',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        items[i]['label'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: isSelected
-                              ? const Color(0xFF00A896)
-                              : Colors.white.withValues(alpha: 0.3),
-                          letterSpacing: 0.2,
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              );
-            }),
-          ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -1899,11 +2032,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════
   Widget _buildOverviewTab() {
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+      physics: BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: _buildSummaryBanner(),
           ),
         ),
@@ -1913,34 +2046,33 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Row(
               children: [
                 Text(
-                  'Cảm biến theo dõi',
+                  'Chỉ số môi trường',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.7),
-                    letterSpacing: 0.1,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: CustomerColors.text,
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00A896).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: const Color(0xFF00A896).withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Text(
-                    '4 hoạt động',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF00A896),
-                    ),
+                Spacer(),
+                GestureDetector(
+                  onTap: () => setState(() => _selectedTab = 1),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Chi tiết',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: CustomerColors.accentText,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      _AquaSvg(
+                        'arrowRight',
+                        size: 14,
+                        color: CustomerColors.accentText,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1950,11 +2082,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 0.82,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.92,
             ),
             delegate: SliverChildBuilderDelegate(
               (ctx, i) => SensorCard(sensor: _currentSensors[i]),
@@ -1965,76 +2097,264 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (_alertsStream != null)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: AlertsPieChart(
-                tankId: _activePondId,
-                alertsStream: _alertsStream!,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+              child: _buildRecentActivityCard(),
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        if (_alertsStream != null)
+          SliverToBoxAdapter(
+            child: AlertsPieChart(
+              tankId: _activePondId,
+              alertsStream: _alertsStream!,
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: SizedBox(height: 96 + MediaQuery.paddingOf(context).bottom),
+        ),
       ],
     );
   }
 
   Widget _buildSummaryBanner() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF00A896).withValues(alpha: 0.12),
-            const Color(0xFF1B4F72).withValues(alpha: 0.12),
+    final hasData = _currentSensors.every((sensor) => sensor.hasData);
+    final healthy =
+        hasData &&
+        _currentSensors.every(
+          (sensor) => sensor.status == 'Tốt' || sensor.status == 'Ổn định',
+        );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 216,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/overview_aquarium.png',
+              fit: BoxFit.cover,
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.08),
+                    Colors.black.withValues(alpha: 0.84),
+                  ],
+                  stops: [0.25, 1],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: Color(0xFF42C99C),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      _isLoading
+                          ? 'Đang đồng bộ'
+                          : hasData
+                          ? 'Trực tuyến'
+                          : 'Chưa có dữ liệu',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: healthy ? Color(0xFF279F80) : Color(0xFF2E87B0),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: _AquaSvg(
+                      !hasData
+                          ? 'clock'
+                          : healthy
+                          ? 'check'
+                          : 'alert',
+                      size: 25,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          !hasData
+                              ? 'Đang chờ dữ liệu'
+                              : healthy
+                              ? 'Bể đang ổn định'
+                              : 'Bể cần chú ý',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          !hasData
+                              ? 'Chưa có đủ dữ liệu cảm biến'
+                              : healthy
+                              ? 'Các cảm biến đang hoạt động bình thường'
+                              : 'Hãy kiểm tra chỉ số và cảnh báo',
+                          style: GoogleFonts.inter(
+                            color: Color(0xFFE1E9ED),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFF00A896).withValues(alpha: 0.15),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00A896).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.check_circle_outline,
-              color: Color(0xFF00A896),
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildRecentActivityCard() {
+    final hasNewAlerts = _unreadAlertCount > 0;
+    return InkWell(
+      onTap: () => setState(() {
+        _selectedTab = 4;
+        _unreadAlertCount = 0;
+      }),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: CustomerColors.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: CustomerColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  _activePond.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                _AquaSvg('bell', size: 19, color: CustomerColors.accentText),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'Diễn biến gần đây',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: CustomerColors.text,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
                 Text(
-                  'Tất cả 4 cảm biến trong ngưỡng an toàn',
+                  'Xem tất cả',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.4),
+                    fontWeight: FontWeight.w600,
+                    color: CustomerColors.accentText,
+                  ),
+                ),
+                SizedBox(width: 4),
+                _AquaSvg(
+                  'arrowRight',
+                  size: 14,
+                  color: CustomerColors.accentText,
+                ),
+              ],
+            ),
+            SizedBox(height: 15),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color:
+                        (hasNewAlerts ? Color(0xFF2E87B0) : Color(0xFF279F80))
+                            .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: _AquaSvg(
+                    hasNewAlerts ? 'alert' : 'check',
+                    size: 18,
+                    color: hasNewAlerts
+                        ? CustomerColors.waterText
+                        : CustomerColors.accentText,
+                  ),
+                ),
+                SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasNewAlerts
+                            ? 'Có $_unreadAlertCount cảnh báo mới'
+                            : 'Chưa có cảnh báo mới',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: CustomerColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        hasNewAlerts
+                            ? 'Chạm để xem chi tiết cảnh báo'
+                            : 'Mọi thay đổi quan trọng sẽ hiện ở đây',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: CustomerColors.secondaryText,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2043,10 +2363,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   //                   TAB: CẢM BIẾN
   // ══════════════════════════════════════════════════════════
   Widget _buildSensorsTab() {
-    if (_currentSensors.isEmpty) return const SizedBox();
+    if (_currentSensors.isEmpty) return SizedBox();
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+      physics: BouncingScrollPhysics(),
       slivers: [
         // Thanh bộ lọc ngang các cảm biến
         SliverToBoxAdapter(
@@ -2077,19 +2397,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                         border: Border.all(
                           color: isSelected
                               ? s.color
-                              : Colors.white.withValues(alpha: 0.1),
+                              : CustomerColors.text.withValues(alpha: 0.1),
                           width: 1,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Row(
                         children: [
-                          Icon(
-                            s.icon,
+                          _AquaSvg(
+                            _sensorSvgName(s.name),
                             size: 16,
-                            color: isSelected ? s.color : Colors.white54,
+                            color: isSelected
+                                ? s.color
+                                : CustomerColors.mutedText,
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           Text(
                             s.name,
                             style: GoogleFonts.inter(
@@ -2097,7 +2419,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
-                              color: isSelected ? s.color : Colors.white54,
+                              color: isSelected
+                                  ? s.color
+                                  : CustomerColors.mutedText,
                             ),
                           ),
                         ],
@@ -2130,6 +2454,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ),
+        SliverToBoxAdapter(
+          child: SizedBox(height: 96 + MediaQuery.paddingOf(context).bottom),
+        ),
       ],
     );
   }
@@ -2141,12 +2468,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     bool isCalibNeeded = true;
     if (_activePond.lastCalibPh != null) {
       final lastCalib = DateTime.parse(_activePond.lastCalibPh!);
-      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+      final sixMonthsAgo = DateTime.now().subtract(Duration(days: 180));
       isCalibNeeded = lastCalib.isBefore(sixMonthsAgo);
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        96 + MediaQuery.paddingOf(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2155,27 +2487,21 @@ class _DashboardScreenState extends State<DashboardScreen>
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isCalibNeeded
-                  ? const Color(0xFFFFB347).withValues(alpha: 0.1)
-                  : const Color(0xFF00A896).withValues(alpha: 0.1),
+                  ? Color(0xFFFFB347).withValues(alpha: 0.1)
+                  : Color(0xFF00A896).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isCalibNeeded
-                    ? const Color(0xFFFFB347)
-                    : const Color(0xFF00A896),
+                color: isCalibNeeded ? Color(0xFFFFB347) : Color(0xFF00A896),
               ),
             ),
             child: Row(
               children: [
-                Icon(
-                  isCalibNeeded
-                      ? Icons.warning_amber_rounded
-                      : Icons.check_circle_outline,
-                  color: isCalibNeeded
-                      ? const Color(0xFFFFB347)
-                      : const Color(0xFF00A896),
+                _AquaSvg(
+                  isCalibNeeded ? 'alert' : 'check',
+                  color: isCalibNeeded ? Color(0xFFFFB347) : Color(0xFF00A896),
                   size: 28,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2188,16 +2514,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: isCalibNeeded
-                              ? const Color(0xFFFFB347)
-                              : const Color(0xFF00A896),
+                              ? Color(0xFFFFB347)
+                              : CustomerColors.accentText,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Lần hiệu chuẩn gần nhất: ${_activePond.lastCalibPh != null ? DateTime.parse(_activePond.lastCalibPh!).toLocal().toString().split(' ')[0] : 'Chưa từng hiệu chuẩn'}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: CustomerColors.secondaryText,
                         ),
                       ),
                     ],
@@ -2206,25 +2532,27 @@ class _DashboardScreenState extends State<DashboardScreen>
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(
             'Lưu ý: Bạn có thể thực hiện hiệu chuẩn bất cứ lúc nào.',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white54,
+              color: CustomerColors.mutedText,
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Hướng dẫn
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F1A30),
+              color: CustomerColors.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(
+                color: CustomerColors.text.withValues(alpha: 0.05),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2234,10 +2562,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: CustomerColors.text,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _buildInstructionStep(
                   '1',
                   'Nhấn nút Bắt đầu hiệu chuẩn để thiết bị vào chế độ hiệu chuẩn.',
@@ -2265,12 +2593,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Các nút bấm
           _buildCalibButton(
             '1. Bắt đầu hiệu chuẩn',
-            const Color(0xFF3B82F6),
+            Color(0xFF3B82F6),
             () async {
               await SupabaseService.instance.sendDeviceCommand(
                 _activePondId,
@@ -2278,19 +2606,17 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
               if (mounted)
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn'),
-                  ),
+                  SnackBar(content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn')),
                 );
             },
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _buildCalibButton(
                   '2. Calib pH 7.0',
-                  const Color(0xFFC77DFF),
+                  Color(0xFFC77DFF),
                   () async {
                     await SupabaseService.instance.sendDeviceCommand(
                       _activePondId,
@@ -2298,19 +2624,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                     if (mounted)
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Đã gửi lệnh Calib pH 7.0'),
-                        ),
+                        SnackBar(content: Text('Đã gửi lệnh Calib pH 7.0')),
                       );
                   },
                   isOutlined: true,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _buildCalibButton(
                   '3. Calib pH 4.0',
-                  const Color(0xFFFF8C42),
+                  Color(0xFFFF8C42),
                   () async {
                     await SupabaseService.instance.sendDeviceCommand(
                       _activePondId,
@@ -2318,9 +2642,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                     if (mounted)
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Đã gửi lệnh Calib pH 4.0'),
-                        ),
+                        SnackBar(content: Text('Đã gửi lệnh Calib pH 4.0')),
                       );
                   },
                   isOutlined: true,
@@ -2328,43 +2650,39 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _buildCalibButton(
-            '4. Lưu & Hoàn tất',
-            const Color(0xFF00A896),
-            () async {
-              await SupabaseService.instance.sendDeviceCommand(
-                _activePondId,
-                'exitph',
-              );
-              final now = DateTime.now().toUtc().toIso8601String();
-              await SupabaseService.instance.updateLastCalibPh(
-                _activePondId,
-                now,
-              );
+          SizedBox(height: 12),
+          _buildCalibButton('4. Lưu & Hoàn tất', Color(0xFF00A896), () async {
+            await SupabaseService.instance.sendDeviceCommand(
+              _activePondId,
+              'exitph',
+            );
+            final now = DateTime.now().toUtc().toIso8601String();
+            await SupabaseService.instance.updateLastCalibPh(
+              _activePondId,
+              now,
+            );
 
-              // Cập nhật lại UI lập tức
-              final pIndex = _ponds.indexWhere((p) => p.id == _activePondId);
-              if (pIndex != -1) {
-                setState(() {
-                  _ponds[pIndex] = Pond(
-                    id: _ponds[pIndex].id,
-                    name: _ponds[pIndex].name,
-                    volume: _ponds[pIndex].volume,
-                    speciesId: _ponds[pIndex].speciesId,
-                    macAddress: _ponds[pIndex].macAddress,
-                    lastCalibPh: now,
-                  );
-                });
-              }
-              if (mounted)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!'),
-                  ),
+            // Cập nhật lại UI lập tức
+            final pIndex = _ponds.indexWhere((p) => p.id == _activePondId);
+            if (pIndex != -1) {
+              setState(() {
+                _ponds[pIndex] = Pond(
+                  id: _ponds[pIndex].id,
+                  name: _ponds[pIndex].name,
+                  volume: _ponds[pIndex].volume,
+                  speciesId: _ponds[pIndex].speciesId,
+                  macAddress: _ponds[pIndex].macAddress,
+                  lastCalibPh: now,
                 );
-            },
-          ),
+              });
+            }
+            if (mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!'),
+                ),
+              );
+          }),
         ],
       ),
     );
@@ -2381,16 +2699,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.white70,
+              color: CustomerColors.secondaryText,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: Colors.white70,
+                color: CustomerColors.secondaryText,
                 height: 1.4,
               ),
             ),
@@ -2410,7 +2728,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: isOutlined ? Colors.transparent : color,
-        foregroundColor: isOutlined ? color : Colors.white,
+        foregroundColor: isOutlined ? color : CustomerColors.text,
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(
@@ -2459,7 +2777,7 @@ class _PondMenuItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isActive
-            ? const Color(0xFF00A896).withValues(alpha: 0.10)
+            ? Color(0xFF00A896).withValues(alpha: 0.10)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
@@ -2469,12 +2787,8 @@ class _PondMenuItem extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 10),
             child: isActive
-                ? const Icon(
-                    Icons.check_rounded,
-                    size: 14,
-                    color: Color(0xFF00A896),
-                  )
-                : const SizedBox(width: 14),
+                ? _AquaSvg('check', size: 14, color: Color(0xFF00A896))
+                : SizedBox(width: 14),
           ),
           // Name (tap area = select)
           Expanded(
@@ -2492,8 +2806,8 @@ class _PondMenuItem extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                     color: isActive
-                        ? const Color(0xFF00A896)
-                        : Colors.white.withValues(alpha: 0.7),
+                        ? CustomerColors.accentText
+                        : CustomerColors.text.withValues(alpha: 0.7),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2503,31 +2817,31 @@ class _PondMenuItem extends StatelessWidget {
           // Action buttons
           IconButton(
             onPressed: onSettings,
-            icon: Icon(
-              Icons.edit,
+            icon: _AquaSvg(
+              'settings',
               size: 15,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: CustomerColors.mutedText,
             ),
             tooltip: 'Cấu hình',
             splashRadius: 16,
             padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             onPressed: onDelete,
-            icon: Icon(
-              Icons.delete_outline,
+            icon: _AquaSvg(
+              'trash',
               size: 15,
               color: onDelete != null
-                  ? Colors.white.withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.1),
+                  ? CustomerColors.mutedText
+                  : CustomerColors.text.withValues(alpha: 0.1),
             ),
             tooltip: onDelete != null ? 'Xóa' : 'Cần ít nhất 1 bể',
             splashRadius: 16,
             padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: BoxConstraints(minWidth: 32, minHeight: 32),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
         ],
       ),
     );
@@ -2543,17 +2857,20 @@ class SensorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = sensor.name == 'Nhiệt độ' || sensor.name == 'Mực nước'
+        ? CustomerColors.waterText
+        : CustomerColors.accentText;
+    final symbol = _sensorSvgName(sensor.name);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: sensor.color.withValues(alpha: 0.15),
-          width: 1,
-        ),
+        color: CustomerColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: CustomerColors.border, width: 1),
         boxShadow: [
           BoxShadow(
-            color: sensor.color.withValues(alpha: 0.05),
+            color: Colors.black.withValues(
+              alpha: CustomerColors.dark ? 0.08 : 0.03,
+            ),
             blurRadius: 16,
             spreadRadius: 0,
           ),
@@ -2571,12 +2888,13 @@ class SensorCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: sensor.color.withValues(alpha: 0.15),
+                    color: accent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(sensor.icon, color: sensor.color, size: 16),
+                  alignment: Alignment.center,
+                  child: _AquaSvg(symbol, size: 16, color: accent),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -2585,7 +2903,7 @@ class SensorCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: CustomerColors.secondaryText,
                         letterSpacing: 0.1,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -2598,64 +2916,80 @@ class SensorCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00A896).withValues(alpha: 0.1),
+                    color: sensorStatusColor(
+                      sensor.status,
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(5),
                     border: Border.all(
-                      color: const Color(0xFF00A896).withValues(alpha: 0.2),
+                      color: sensorStatusColor(
+                        sensor.status,
+                      ).withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
                   child: Text(
-                    sensor.status,
+                    sensor.hasData ? sensor.status : 'Chưa có',
                     style: GoogleFonts.inter(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF00A896),
+                      color: sensorStatusColor(sensor.status),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             RichText(
               text: TextSpan(
                 children: [
                   if (sensor.name == 'Mực nước')
                     TextSpan(
-                      text: sensor.value == 1.0 ? 'Ổn định' : 'Cạn nước',
+                      text: !sensor.hasData
+                          ? '--'
+                          : sensor.value == 1.0
+                          ? 'Ổn định'
+                          : 'Cạn nước',
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: sensor.value == 1.0
-                            ? const Color(0xFF00A896)
-                            : const Color(0xFFFF6B6B),
+                        color: sensor.hasData
+                            ? sensorStatusColor(sensor.status)
+                            : CustomerColors.mutedText,
                         height: 1.0,
                       ),
                     )
                   else
                     TextSpan(
-                      text: sensor.value.toStringAsFixed(2),
+                      text: sensor.hasData
+                          ? sensor.value.toStringAsFixed(2)
+                          : '--',
                       style: GoogleFonts.inter(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
-                        color: sensor.color,
+                        color: sensor.hasData
+                            ? sensorStatusColor(sensor.status)
+                            : CustomerColors.mutedText,
                         height: 1.0,
                       ),
                     ),
-                  if (sensor.unit.isNotEmpty && sensor.name != 'Mực nước')
+                  if (sensor.hasData &&
+                      sensor.unit.isNotEmpty &&
+                      sensor.name != 'Mực nước')
                     TextSpan(
                       text: ' ${sensor.unit}',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: sensor.color.withValues(alpha: 0.6),
+                        color: accent,
                       ),
                     ),
                 ],
               ),
             ),
-            const Spacer(),
-            if (sensor.name == 'Mực nước')
+            Spacer(),
+            if (!sensor.hasData)
+              const SizedBox(height: 42)
+            else if (sensor.name == 'Mực nước')
               Container(
                 height: 42,
                 alignment: Alignment.center,
@@ -2665,7 +2999,7 @@ class SensorCard extends StatelessWidget {
                       child: Container(
                         height: 8,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: CustomerColors.text.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: FractionallySizedBox(
@@ -2674,8 +3008,8 @@ class SensorCard extends StatelessWidget {
                           child: Container(
                             decoration: BoxDecoration(
                               color: sensor.value == 1.0
-                                  ? const Color(0xFF00A896)
-                                  : const Color(0xFFFF6B6B),
+                                  ? accent
+                                  : Color(0xFFFF6B6B),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -2688,10 +3022,7 @@ class SensorCard extends StatelessWidget {
             else
               SizedBox(
                 height: 42,
-                child: SparklineChart(
-                  data: sensor.history,
-                  color: sensor.color,
-                ),
+                child: SparklineChart(data: sensor.history, color: accent),
               ),
           ],
         ),
@@ -2711,6 +3042,7 @@ class SparklineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.isEmpty) return const SizedBox.shrink();
     final spots = data.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value);
     }).toList();
@@ -2721,14 +3053,14 @@ class SparklineChart extends StatelessWidget {
 
     return LineChart(
       LineChartData(
-        gridData: const FlGridData(show: false),
-        titlesData: const FlTitlesData(show: false),
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
         minX: 0,
         maxX: (data.length - 1).toDouble(),
         minY: minY - padding,
         maxY: maxY + padding,
-        lineTouchData: const LineTouchData(enabled: false),
+        lineTouchData: LineTouchData(enabled: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -2737,7 +3069,7 @@ class SparklineChart extends StatelessWidget {
             color: color,
             barWidth: 2,
             isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
+            dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
@@ -2767,7 +3099,7 @@ class SensorDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
+        color: CustomerColors.card.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: sensor.color.withValues(alpha: 0.15),
@@ -2794,9 +3126,14 @@ class SensorDetailCard extends StatelessWidget {
                   color: sensor.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(sensor.icon, color: sensor.color, size: 22),
+                alignment: Alignment.center,
+                child: _AquaSvg(
+                  _sensorSvgName(sensor.name),
+                  color: sensor.color,
+                  size: 22,
+                ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2806,15 +3143,15 @@ class SensorDetailCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: CustomerColors.text,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       'Thời gian thực',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: CustomerColors.mutedText,
                       ),
                     ),
                   ],
@@ -2824,30 +3161,32 @@ class SensorDetailCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    sensor.name == 'Mực nước'
+                    !sensor.hasData
+                        ? '--'
+                        : sensor.name == 'Mực nước'
                         ? (sensor.value == 1.0 ? 'Bình thường' : 'Cạn')
                         : '${sensor.value.toStringAsFixed(2)}${sensor.unit.isNotEmpty ? ' ${sensor.unit}' : ''}',
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: sensor.name == 'Mực nước'
-                          ? (sensor.value == 1.0
-                                ? const Color(0xFF00A896)
-                                : const Color(0xFFFF6B6B))
-                          : sensor.color,
+                      color: sensorStatusColor(sensor.status),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00A896).withValues(alpha: 0.1),
+                      color: sensorStatusColor(
+                        sensor.status,
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: const Color(0xFF00A896).withValues(alpha: 0.2),
+                        color: sensorStatusColor(
+                          sensor.status,
+                        ).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Text(
@@ -2855,7 +3194,7 @@ class SensorDetailCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF00A896),
+                        color: sensorStatusColor(sensor.status),
                       ),
                     ),
                   ),
@@ -2863,24 +3202,27 @@ class SensorDetailCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          if (sensor.name == 'Mực nước')
+          SizedBox(height: 18),
+          if (!sensor.hasData)
+            const SizedBox(
+              height: 120,
+              child: Center(child: Text('Chưa có dữ liệu cảm biến')),
+            )
+          else if (sensor.name == 'Mực nước')
             Container(
               height: 120,
               alignment: Alignment.center,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    sensor.value == 1.0
-                        ? Icons.check_circle_outline
-                        : Icons.warning_amber_rounded,
+                  _AquaSvg(
+                    sensor.value == 1.0 ? 'check' : 'alert',
                     size: 48,
                     color: sensor.value == 1.0
-                        ? const Color(0xFF00A896)
-                        : const Color(0xFFFF6B6B),
+                        ? Color(0xFF00A896)
+                        : Color(0xFFFF6B6B),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(
                     sensor.value == 1.0
                         ? 'Mực nước đang ở mức ổn định'
@@ -2889,8 +3231,8 @@ class SensorDetailCard extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: sensor.value == 1.0
-                          ? const Color(0xFF00A896)
-                          : const Color(0xFFFF6B6B),
+                          ? CustomerColors.accentText
+                          : Color(0xFFFF6B6B),
                     ),
                   ),
                 ],
@@ -2906,7 +3248,7 @@ class SensorDetailCard extends StatelessWidget {
                     color: sensor.color,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     _statChip(
@@ -2914,13 +3256,13 @@ class SensorDetailCard extends StatelessWidget {
                       sensor.history.reduce(min).toStringAsFixed(2),
                       sensor.color,
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     _statChip(
                       'Max',
                       sensor.history.reduce(max).toStringAsFixed(2),
                       sensor.color,
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     _statChip(
                       'Avg',
                       (sensor.history.reduce((a, b) => a + b) /
@@ -2953,17 +3295,17 @@ class SensorDetailCard extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.3),
+                color: CustomerColors.mutedText,
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               value,
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: color,
+                color: CustomerColors.readableForeground(color),
               ),
             ),
           ],
@@ -3245,19 +3587,19 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white70,
+            color: CustomerColors.secondaryText,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: type,
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+          style: GoogleFonts.inter(fontSize: 14, color: CustomerColors.text),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(color: Colors.white30),
+            hintStyle: GoogleFonts.inter(color: CustomerColors.mutedText),
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.04),
+            fillColor: CustomerColors.text.withValues(alpha: 0.04),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 12,
@@ -3265,22 +3607,22 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: CustomerColors.text.withValues(alpha: 0.1),
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: CustomerColors.text.withValues(alpha: 0.1),
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF00A896)),
+              borderSide: BorderSide(color: Color(0xFF00A896)),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
       ],
     );
   }
@@ -3299,16 +3641,18 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white70,
+            color: CustomerColors.secondaryText,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: CustomerColors.text.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(
+              color: CustomerColors.text.withValues(alpha: 0.1),
+            ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
@@ -3316,13 +3660,20 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
               items: items,
               onChanged: onChanged,
               isExpanded: true,
-              dropdownColor: const Color(0xFF152238),
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.white54),
+              dropdownColor: CustomerColors.subtle,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: CustomerColors.text,
+              ),
+              icon: _AquaSvg(
+                'chevronDown',
+                size: 18,
+                color: CustomerColors.mutedText,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
       ],
     );
   }
@@ -3333,12 +3684,12 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+          style: GoogleFonts.inter(fontSize: 14, color: CustomerColors.text),
         ),
         Switch(
           value: value,
           onChanged: onChanged,
-          activeThumbColor: const Color(0xFF00A896),
+          activeThumbColor: Color(0xFF00A896),
         ),
       ],
     );
@@ -3347,10 +3698,10 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF0F1A30),
+      backgroundColor: CustomerColors.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        side: BorderSide(color: CustomerColors.text.withValues(alpha: 0.08)),
       ),
       child: Container(
         width: 400,
@@ -3364,10 +3715,10 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: CustomerColors.text,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             // Tabs
             Row(
               children: [
@@ -3380,7 +3731,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                         border: Border(
                           bottom: BorderSide(
                             color: _tabIndex == 0
-                                ? const Color(0xFF4DA6FF)
+                                ? Color(0xFF4DA6FF)
                                 : Colors.transparent,
                             width: 2,
                           ),
@@ -3395,8 +3746,8 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                               ? FontWeight.w600
                               : FontWeight.w400,
                           color: _tabIndex == 0
-                              ? const Color(0xFF4DA6FF)
-                              : Colors.white54,
+                              ? Color(0xFF4DA6FF)
+                              : CustomerColors.mutedText,
                         ),
                       ),
                     ),
@@ -3411,7 +3762,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                         border: Border(
                           bottom: BorderSide(
                             color: _tabIndex == 1
-                                ? const Color(0xFF00A896)
+                                ? Color(0xFF00A896)
                                 : Colors.transparent,
                             width: 2,
                           ),
@@ -3426,8 +3777,8 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                               ? FontWeight.w600
                               : FontWeight.w400,
                           color: _tabIndex == 1
-                              ? const Color(0xFF00A896)
-                              : Colors.white54,
+                              ? CustomerColors.accentText
+                              : CustomerColors.mutedText,
                         ),
                       ),
                     ),
@@ -3435,7 +3786,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Tab Content
             if (_tabIndex == 0) ...[
@@ -3464,7 +3815,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                     'LOÀI CÁ',
                     safeSpeciesId,
                     [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
                         child: Text('Không xác định'),
                       ),
@@ -3490,10 +3841,10 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white70,
+                  color: CustomerColors.secondaryText,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _buildSwitch(
                 'Thông báo qua Email',
                 _email,
@@ -3509,11 +3860,11 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                 _app,
                 (v) => setState(() => _app = v),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildDropdown<int>(
                 'THỜI GIAN NHẮC LẠI (COOLDOWN)',
                 _cooldown,
-                const [
+                [
                   DropdownMenuItem(value: 0, child: Text('Không nhắc lại')),
                   DropdownMenuItem(
                     value: 1,
@@ -3534,7 +3885,7 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                 ],
                 (val) => setState(() => _cooldown = val!),
               ),
-              _buildDropdown<String>('BỘ LỌC MỨC ĐỘ', _severity, const [
+              _buildDropdown<String>('BỘ LỌC MỨC ĐỘ', _severity, [
                 DropdownMenuItem(
                   value: 'both',
                   child: Text('Nhận tất cả cảnh báo'),
@@ -3571,16 +3922,16 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                   child: Text(
                     'Hủy',
                     style: GoogleFonts.inter(
-                      color: Colors.white70,
+                      color: CustomerColors.secondaryText,
                       fontSize: 14,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _saveSettings,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A896),
+                    backgroundColor: Color(0xFF00A896),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,
@@ -3590,18 +3941,18 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: CustomerColors.text,
                           ),
                         )
                       : Text(
                           'Lưu thay đổi',
                           style: GoogleFonts.inter(
-                            color: Colors.white,
+                            color: CustomerColors.text,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),

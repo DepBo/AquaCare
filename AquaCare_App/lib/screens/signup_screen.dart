@@ -170,7 +170,7 @@ class _SignupScreenState extends State<SignupScreen>
       Widget destination;
       if (role == 'admin') {
         destination = const AdminScreen();
-      } else if (role == 'staff') {
+      } else if (role.toString().startsWith('staff')) {
         destination = const StaffScreen();
       } else {
         destination = const DashboardScreen();

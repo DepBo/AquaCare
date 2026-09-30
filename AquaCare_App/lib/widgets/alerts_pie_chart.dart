@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../customer_theme.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
@@ -27,7 +28,7 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
   void initState() {
     super.initState();
     _fetchDistribution();
-    
+
     // Listen to stream to auto-update chart when new alert arrives
     _subscription = widget.alertsStream.listen((_) {
       if (mounted) {
@@ -57,8 +58,10 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
 
   Future<void> _fetchDistribution() async {
     if (widget.tankId.isEmpty) return;
-    
-    final data = await SupabaseService.instance.getAlertDistribution(widget.tankId);
+
+    final data = await SupabaseService.instance.getAlertDistribution(
+      widget.tankId,
+    );
     if (mounted) {
       setState(() {
         _distribution = data;
@@ -67,17 +70,17 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
     }
   }
 
-  // Define colors for each alert type
+  // A restrained green and water-blue scale keeps the overview cohesive.
   Color _getColor(String type) {
     switch (type) {
       case 'pH':
-        return const Color(0xFF00A896); // Neon teal
+        return Color(0xFF118B74);
       case 'Nhiệt độ':
-        return const Color(0xFFFF8C42); // Neon orange
+        return Color(0xFF408FB5);
       case 'TDS':
-        return const Color(0xFFC77DFF); // Neon purple
+        return Color(0xFF1F6C76);
       case 'Mực nước':
-        return const Color(0xFF4DA6FF); // Neon blue
+        return Color(0xFF7AB5CC);
       default:
         return Colors.grey;
     }
@@ -93,9 +96,9 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1A30).withValues(alpha: 0.9),
+        color: CustomerColors.card.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: CustomerColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,13 +108,13 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.9),
+              color: CustomerColors.text.withValues(alpha: 0.9),
             ),
           ),
-          const SizedBox(height: 20),
-          
+          SizedBox(height: 20),
+
           if (_isLoading)
-            const SizedBox(
+            SizedBox(
               height: 160,
               child: Center(
                 child: CircularProgressIndicator(color: Color(0xFF00A896)),
@@ -124,7 +127,7 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
                 child: Text(
                   'Chưa có dữ liệu cảnh báo',
                   style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: CustomerColors.secondaryText,
                     fontSize: 13,
                   ),
                 ),
@@ -150,14 +153,14 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
                           titleStyle: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: CustomerColors.text,
                           ),
                         );
                       }).toList(),
                     ),
                   ),
                 ),
-                const SizedBox(width: 24),
+                SizedBox(width: 24),
                 // Legend
                 Expanded(
                   child: Column(
@@ -176,13 +179,15 @@ class _AlertsPieChartState extends State<AlertsPieChart> {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 entry.key,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: CustomerColors.text.withValues(
+                                    alpha: 0.7,
+                                  ),
                                 ),
                               ),
                             ),

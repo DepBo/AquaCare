@@ -4,26 +4,69 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
-  SupabaseService._privateConstructor();
+  SupabaseService._privateConstructor() : client = Supabase.instance.client;
+  @visibleForTesting
+  SupabaseService.forTesting(this.client);
   static final SupabaseService instance = SupabaseService._privateConstructor();
 
-  final SupabaseClient client = Supabase.instance.client;
+  final SupabaseClient client;
 
   Future<List<Map<String, dynamic>>> getTanks(String userId) async {
     debugPrint('📡 Requesting tanks for user: $userId');
     final response = await client
         .from('tanks')
-        .select('*, fish_species(*), devices(mac_address)')
+        .select('*, fish_species(*), devices(mac_address, last_calib_ph)')
         .eq('user_id', userId);
     debugPrint('📦 Response: $response');
     return response;
   }
 
+  Future<Map<String, dynamic>> createTank({
+    required String userId,
+    required String name,
+  }) async {
+    if (userId.isEmpty || name.trim().isEmpty) {
+      throw ArgumentError('Cần đăng nhập và nhập tên bể.');
+    }
+    return await client
+        .from('tanks')
+        .insert({'user_id': userId, 'tank_name': name.trim()})
+        .select('id, tank_name')
+        .single();
+  }
+
+  /// Returns false only when the tank was deleted but device cleanup failed.
+  Future<bool> deleteTank({
+    required String userId,
+    required String tankId,
+  }) async {
+    if (userId.isEmpty) throw StateError('Vui lòng đăng nhập lại.');
+    final id = int.parse(tankId);
+    final devices = await client.from('devices').select('id').eq('tank_id', id);
+    // FK ON DELETE SET NULL detaches devices; delete must succeed before cleanup.
+    await client
+        .from('tanks')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select('id')
+        .single();
+    if (devices.isEmpty) return true;
+    try {
+      await client
+          .from('devices')
+          .update({'is_active': false})
+          .inFilter('id', devices.map((device) => device['id']).toList())
+          .isFilter('tank_id', null);
+      return true;
+    } catch (e) {
+      debugPrint('Không thể cập nhật thiết bị sau khi xóa bể: $e');
+      return false;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getFishSpecies() async {
-    final response = await client
-        .from('fish_species')
-        .select('*')
-        .order('id');
+    final response = await client.from('fish_species').select('*').order('id');
     return response;
   }
 
@@ -36,7 +79,9 @@ class SupabaseService {
           .ilike('species_name', speciesName)
           .maybeSingle();
       if (existing != null) {
-        throw Exception('Tên loài cá "$speciesName" đã tồn tại trong hệ thống!');
+        throw Exception(
+          'Tên loài cá "$speciesName" đã tồn tại trong hệ thống!',
+        );
       }
     }
     await client.from('fish_species').insert(data);
@@ -52,7 +97,9 @@ class SupabaseService {
           .neq('id', id)
           .maybeSingle();
       if (existing != null) {
-        throw Exception('Tên loài cá "$speciesName" đã tồn tại trong hệ thống!');
+        throw Exception(
+          'Tên loài cá "$speciesName" đã tồn tại trong hệ thống!',
+        );
       }
     }
     await client.from('fish_species').update(data).eq('id', id);
@@ -134,18 +181,26 @@ class SupabaseService {
     final existingDevs = await client
         .from('devices')
         .select('mac_address')
-        .or('mac_address.in.(${uniqueMacs.join(",")}),mac_address.in.(${macsLower.join(",")})');
+        .or(
+          'mac_address.in.(${uniqueMacs.join(",")}),mac_address.in.(${macsLower.join(",")})',
+        );
 
     if ((existingDevs as List).isNotEmpty) {
-      final dupList = (existingDevs as List).map((d) => d['mac_address']).join(', ');
+      final dupList = (existingDevs as List)
+          .map((d) => d['mac_address'])
+          .join(', ');
       throw Exception('Mã MAC đã tồn tại trong hệ thống: $dupList');
     }
 
-    final devicesToInsert = uniqueMacs.map((mac) => {
-      'mac_address': mac,
-      'firmware_version': firmwareVersion,
-      'is_active': false,
-    }).toList();
+    final devicesToInsert = uniqueMacs
+        .map(
+          (mac) => {
+            'mac_address': mac,
+            'firmware_version': firmwareVersion,
+            'is_active': false,
+          },
+        )
+        .toList();
 
     await client.from('devices').insert(devicesToInsert);
   }
@@ -170,10 +225,10 @@ class SupabaseService {
       throw Exception('Mã MAC "$newMac" đã tồn tại trên một thiết bị khác!');
     }
 
-    await client.from('devices').update({
-      'mac_address': newMac,
-      'firmware_version': firmwareVersion,
-    }).eq('id', id);
+    await client
+        .from('devices')
+        .update({'mac_address': newMac, 'firmware_version': firmwareVersion})
+        .eq('id', id);
   }
 
   Future<void> deleteDevice(int id) async {
@@ -201,7 +256,10 @@ class SupabaseService {
     final cleanPhone = phone.trim();
     final cleanName = fullName.trim();
 
-    if (cleanName.isEmpty || cleanEmail.isEmpty || cleanPhone.isEmpty || password.isEmpty) {
+    if (cleanName.isEmpty ||
+        cleanEmail.isEmpty ||
+        cleanPhone.isEmpty ||
+        password.isEmpty) {
       throw Exception('Vui lòng điền đầy đủ các thông tin bắt buộc');
     }
 
@@ -227,11 +285,10 @@ class SupabaseService {
 
     // Update users table profile
     final userId = authRes.user!.id;
-    await client.from('users').update({
-      'full_name': cleanName,
-      'phone': cleanPhone,
-      'role': role,
-    }).eq('id', userId);
+    await client
+        .from('users')
+        .update({'full_name': cleanName, 'phone': cleanPhone, 'role': role})
+        .eq('id', userId);
   }
 
   Future<void> updateStaff({
@@ -258,11 +315,10 @@ class SupabaseService {
       throw Exception('Số điện thoại này đã được sử dụng bởi tài khoản khác!');
     }
 
-    await client.from('users').update({
-      'full_name': cleanName,
-      'phone': cleanPhone,
-      'role': role,
-    }).eq('id', id);
+    await client
+        .from('users')
+        .update({'full_name': cleanName, 'phone': cleanPhone, 'role': role})
+        .eq('id', id);
   }
 
   Future<void> deleteStaff(String id) async {
@@ -571,9 +627,12 @@ class SupabaseService {
         'customer_id': userId,
         'order_id': orderId,
         'title': 'Đóng gói đơn hàng #$orderId',
-        'description': 'Khách hàng: $customerName\nSĐT: $phone\nĐịa chỉ: $address',
+        'description':
+            'Khách hàng: $customerName\nSĐT: $phone\nĐịa chỉ: $address',
       });
-      debugPrint('✅ [DB UPDATE]: Đã duyệt đơn hàng #$orderId và tạo task đóng gói!');
+      debugPrint(
+        '✅ [DB UPDATE]: Đã duyệt đơn hàng #$orderId và tạo task đóng gói!',
+      );
     } catch (e) {
       debugPrint('❌ [DB ERROR]: Lỗi khi duyệt đơn hàng #$orderId: $e');
       rethrow;
@@ -606,7 +665,10 @@ class SupabaseService {
   }
 
   /// Cập nhật gói cước
-  Future<void> updateSubscriptionPlan(dynamic id, Map<String, dynamic> data) async {
+  Future<void> updateSubscriptionPlan(
+    dynamic id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       await client.from('subscription_plans').update(data).eq('id', id);
       debugPrint('✅ [DB UPDATE]: Cập nhật gói cước #$id thành công!');

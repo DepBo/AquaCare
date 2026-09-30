@@ -87,8 +87,8 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
     }
     if (sensorName == 'TDS') {
       return {
-        'good': [100, 300],
-        'warn': [50, 400],
+        'good': [150, 300],
+        'warn': [100, 400],
       };
     }
     if (sensorName == 'Mực nước') {
@@ -356,7 +356,11 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
       ),
       padding: EdgeInsets.all(16),
       child: Column(
@@ -378,17 +382,29 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Text(
                         _getDateFilterLabel(),
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                       SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.54),
+                      ),
                     ],
                   ),
                 ),
@@ -437,7 +453,12 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
               child: Center(
                 child: Text(
                   'Không có dữ liệu',
-                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), fontSize: 13),
+                  style: GoogleFonts.inter(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.54),
+                    fontSize: 13,
+                  ),
                 ),
               ),
             )
@@ -465,14 +486,39 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 4.0,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.keyboard_arrow_down_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), size: 24),
-                              Text('Tải thêm', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.54),
+                                size: 24,
+                              ),
+                              Text(
+                                'Tải thêm',
+                                style: GoogleFonts.inter(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
                               SizedBox(height: 2),
-                              Text('Còn ${filteredL1.length - _displayCount} mục', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), fontSize: 11)),
+                              Text(
+                                'Còn ${filteredL1.length - _displayCount} mục',
+                                style: GoogleFonts.inter(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.54),
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -512,7 +558,11 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
               _buildSheetOption('today', 'Hôm nay', Icons.today),
               _buildSheetOption('yesterday', 'Hôm qua', Icons.history),
               _buildSheetOption('7days', '7 ngày qua', Icons.date_range),
-              _buildSheetOption('custom', 'Tùy chỉnh khoảng thời gian', Icons.calendar_month),
+              _buildSheetOption(
+                'custom',
+                'Tùy chỉnh khoảng thời gian',
+                Icons.calendar_month,
+              ),
             ],
           ),
         );
@@ -523,8 +573,21 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
   Widget _buildSheetOption(String id, String label, IconData icon) {
     final isSel = _dateFilter == id;
     return ListTile(
-      leading: Icon(icon, color: isSel ? const Color(0xFF00A896) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
-      title: Text(label, style: GoogleFonts.inter(color: isSel ? const Color(0xFF00A896) : Theme.of(context).colorScheme.onSurface, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+      leading: Icon(
+        icon,
+        color: isSel
+            ? const Color(0xFF00A896)
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+      ),
+      title: Text(
+        label,
+        style: GoogleFonts.inter(
+          color: isSel
+              ? const Color(0xFF00A896)
+              : Theme.of(context).colorScheme.onSurface,
+          fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
       trailing: isSel ? Icon(Icons.check, color: Color(0xFF00A896)) : null,
       onTap: () async {
         Navigator.pop(context);
@@ -565,6 +628,7 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
       },
     );
   }
+
   Widget _buildStatusFilterChip(String id, String label, Color color) {
     final isSel = _statusFilter == id;
     return GestureDetector(
@@ -572,7 +636,9 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isSel ? color : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          color: isSel
+              ? color
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -580,7 +646,11 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: isSel ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+            color: isSel
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.54),
           ),
         ),
       ),
@@ -595,9 +665,15 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isExpanded ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03) : Colors.transparent,
+        color: isExpanded
+            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.05),
+        ),
       ),
       child: Column(
         children: [
@@ -612,7 +688,9 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                     isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.54),
                     size: 18,
                   ),
                   SizedBox(width: 8),
@@ -634,16 +712,15 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                         '${row['avg'].toStringAsFixed(widget.sensor.name == 'pH' ? 2 : 1)} ${widget.sensor.unit}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.54),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: (row['sc'] as Color).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
@@ -688,7 +765,12 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
         child: Center(
           child: Text(
             'Không có dữ liệu chi tiết.',
-            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54), fontSize: 12),
+            style: GoogleFonts.inter(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.54),
+              fontSize: 12,
+            ),
           ),
         ),
       );
@@ -703,21 +785,36 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
         children: [
           Text(
             'Dữ liệu chi tiết (${l2Data.length} phút)',
-            style: GoogleFonts.inter(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.54),
+            ),
           ),
           SizedBox(height: 12),
           Container(
             constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.02),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.05),
+              ),
             ),
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: l2Data.length,
-              separatorBuilder: (ctx, i) =>
-                  Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)),
+              separatorBuilder: (ctx, i) => Divider(
+                height: 1,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.05),
+              ),
               itemBuilder: (ctx, i) {
                 final d = l2Data[i];
                 final config = _getSensorConfig(widget.sensor.name);
@@ -737,10 +834,7 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                     : '${(d['value'] as num).toStringAsFixed(widget.sensor.name == 'pH' ? 2 : 1)} ${widget.sensor.unit}';
 
                 return Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -748,7 +842,9 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
                         d['time'],
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.54),
                         ),
                       ),
                       Text(

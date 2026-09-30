@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Fish, Box, LogOut, ArrowLeft,
   Plus, Edit, Trash2, X, Users, ShoppingCart,
-  FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle, RefreshCw, User, Search
+  FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle, RefreshCw, User, Search,
+  Phone, Mail, MapPin, CreditCard, Package
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
@@ -133,11 +134,15 @@ interface SubscriptionPlan {
 
 const getNormalizedVersion = (version: string) => {
   if (!version) return 'V1'
-  const v = version.toUpperCase()
-  if (v.includes('V1')) return 'V1'
-  if (v.includes('V2')) return 'V2'
-  if (v.includes('V3')) return 'V3'
-  return 'V1'
+  const v = version.toUpperCase().trim()
+  const m = v.match(/V(\d+)/i)
+  if (m) return `V${m[1]}`
+  if (/^\d+$/.test(v)) return `V${v}`
+  if (v.includes('PREMIUM')) return 'V4'
+  if (v.includes('ADVANCED')) return 'V3'
+  if (v.includes('BASIC')) return 'V2'
+  if (v.includes('STARTER')) return 'V1'
+  return v
 }
 
 // ─── Orders ──────────────────────────────────────────────────────────────────
@@ -149,6 +154,7 @@ interface Order {
   email: string
   address: string
   note: string
+  orderItems?: any[]
   productVersion: string
   deviceMacs?: string
   totalQuantity: number
@@ -160,7 +166,8 @@ interface Order {
 
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
-  confirmColor = 'var(--ap-primary)', onConfirm, onCancel, loading = false, children
+  confirmColor = 'var(--ap-primary)', onConfirm, onCancel, loading = false, children,
+  width = 440
 }: any) {
   return (
     <div style={{
@@ -171,8 +178,9 @@ function Dialog({
       <div style={{
         background: 'var(--ap-bg-modal)',
         border: '1px solid var(--ap-border)',
-        borderRadius: 12, padding: '24px 28px', width: 440, maxWidth: '92vw',
+        borderRadius: 12, padding: '24px 28px', width, maxWidth: '92vw',
         boxShadow: 'var(--ap-shadow)',
+        maxHeight: '90vh', overflowY: 'auto'
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--ap-border)' }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ap-text-primary)' }}>{title}</h3>
@@ -339,7 +347,7 @@ export default function AdminPage() {
     const { data: staffData } = await supabase.from('users').select('*').like('role', 'staff%').order('created_at', { ascending: false })
     if (staffData) setStaff(staffData)
 
-    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, device_macs)').order('created_at', { ascending: false })
+    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, product_price, device_macs)').order('created_at', { ascending: false })
     if (ordersData) {
       const macMap: Record<string, any> = {}
       ordersData.forEach((o: any) => {
@@ -374,6 +382,7 @@ export default function AdminPage() {
         email: o.shipping_email || 'N/A',
         address: o.shipping_address,
         note: o.note || '',
+        orderItems: o.order_items || [],
         productVersion: o.order_items && o.order_items.length > 0 ? o.order_items.map((i: any) => i.product_name).join(', ') : 'N/A',
         deviceMacs: o.order_items && o.order_items.length > 0 ? o.order_items.flatMap((i: any) => i.device_macs || []).join(', ') : '',
         totalQuantity: o.order_items && o.order_items.length > 0 ? o.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0) : 1,
@@ -936,11 +945,21 @@ export default function AdminPage() {
         {activeTab === 'devices' && (() => {
           const filteredDevices = devices.filter(d => {
             const mMatch = deviceSearch.trim() === '' || d.mac_address.toUpperCase().includes(deviceSearch.trim().toUpperCase());
-            const vMatch = deviceFilterVersion === 'all' || d.firmware_version === deviceFilterVersion;
+            const normVer = getNormalizedVersion(d.firmware_version);
+            const vMatch = deviceFilterVersion === 'all' || normVer === deviceFilterVersion || d.firmware_version === deviceFilterVersion;
+
+            const buyerInfo = macCustomerMap[d.mac_address.trim().toUpperCase()];
+            const isBought = d.is_active || Boolean(buyerInfo);
+            const isUsing = Boolean(d.tank_id);
+
             let sMatch = true;
-            if (deviceFilterStatus === 'active') sMatch = !!d.tank_id;
-            else if (deviceFilterStatus === 'bought') sMatch = !d.tank_id && !!d.is_active;
-            else if (deviceFilterStatus === 'inactive') sMatch = !d.tank_id && !d.is_active;
+            if (deviceFilterStatus === 'active') {
+              sMatch = isUsing;
+            } else if (deviceFilterStatus === 'bought') {
+              sMatch = !isUsing && isBought;
+            } else if (deviceFilterStatus === 'inactive') {
+              sMatch = !isUsing && !isBought;
+            }
             return mMatch && vMatch && sMatch;
           });
           const totalDevicePages = Math.max(1, Math.ceil(filteredDevices.length / 12));
@@ -1641,10 +1660,11 @@ export default function AdminPage() {
       {/* Approve Order Modal */}
       {approveModal.show && approveModal.order && (
         <Dialog
-          title="Duyệt đơn hàng"
+          title="Xác nhận duyệt đơn hàng"
           error=""
           loading={saving}
-          confirmText="Xác nhận & Giao việc"
+          width={560}
+          confirmText="Xác nhận duyệt & Giao cho Kho"
           cancelText="Hủy"
           confirmColor="#16a34a"
           onConfirm={async () => {
@@ -1677,38 +1697,149 @@ export default function AdminPage() {
           }}
           onCancel={() => setApproveModal({ show: false, order: null })}
         >
-          {/* Order summary */}
-          <div style={{ padding: '12px 14px', borderRadius: 6, background: 'var(--ap-table-header)', border: '1px solid var(--ap-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Mã đơn</span>
-              <span style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--ap-text-primary)' }}>#{approveModal.order.id}</span>
+          {/* Header Card: Order ID & Status */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 16px', borderRadius: 8, background: 'var(--ap-table-header)',
+            border: '1px solid var(--ap-border)'
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mã đơn hàng</div>
+              <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'monospace', color: 'var(--ap-primary)' }}>
+                #{approveModal.order.id}
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Khách hàng</span>
-              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{approveModal.order.customerName}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Sản phẩm</span>
-              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{approveModal.order.productVersion}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền</span>
-              <span style={{ fontWeight: 700, color: '#16a34a' }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(approveModal.order.totalPrice)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Địa chỉ</span>
-              <span style={{ fontWeight: 500, color: 'var(--ap-text-secondary)', maxWidth: 200, textAlign: 'right' }}>{approveModal.order.address}</span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{
+                display: 'inline-block', padding: '4px 10px', borderRadius: 20,
+                fontSize: 12, fontWeight: 700, background: '#fef3c7', color: '#d97706', border: '1px solid #fde68a'
+              }}>
+                Chờ duyệt
+              </span>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', marginTop: 3 }}>
+                {new Date(approveModal.order.createdAt).toLocaleDateString('vi-VN')}
+              </div>
             </div>
           </div>
 
+          {/* Customer & Shipping Card */}
           <div style={{
-            padding: '12px 14px', borderRadius: 6,
-            background: 'var(--ap-hover-bg)', border: '1px solid var(--ap-border)',
-            display: 'flex', alignItems: 'center', gap: 10, marginTop: 4
+            borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-bg-card)',
+            padding: 14, display: 'flex', flexDirection: 'column', gap: 10
           }}>
-            <Truck size={16} color="var(--ap-primary)" />
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ap-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <User size={13} color="var(--ap-primary)" /> Thông tin người nhận
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Họ và tên</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-text-primary)' }}>{approveModal.order.customerName}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Số điện thoại</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Phone size={12} /> {approveModal.order.phone}
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'var(--ap-hover-bg)', padding: '10px 12px', borderRadius: 6,
+              border: '1px solid var(--ap-border)', display: 'flex', gap: 8, alignItems: 'flex-start'
+            }}>
+              <MapPin size={15} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', fontWeight: 600 }}>Địa chỉ giao hàng</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ap-text-primary)', lineHeight: 1.4 }}>
+                  {approveModal.order.address}
+                </div>
+              </div>
+            </div>
+
+            {approveModal.order.note && (
+              <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', background: 'rgba(2,132,199,0.06)', border: '1px dashed var(--ap-primary)', padding: '8px 12px', borderRadius: 6 }}>
+                <strong>Ghi chú:</strong> "{approveModal.order.note}"
+              </div>
+            )}
+          </div>
+
+          {/* Product Items Breakdown */}
+          <div style={{
+            borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-bg-card)',
+            padding: 14, display: 'flex', flexDirection: 'column', gap: 8
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ap-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Package size={13} color="var(--ap-primary)" /> Sản phẩm đặt mua
+              </span>
+              <span style={{ color: 'var(--ap-primary)', fontWeight: 700, fontSize: 11.5 }}>
+                {approveModal.order.totalQuantity} sản phẩm
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {approveModal.order.orderItems && approveModal.order.orderItems.length > 0 ? (
+                approveModal.order.orderItems.map((item: any, idx: number) => (
+                  <div key={idx} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 10px', background: 'var(--ap-hover-bg)', borderRadius: 6, fontSize: 13
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        background: 'var(--ap-primary)', color: '#fff', fontSize: 11, fontWeight: 700,
+                        padding: '2px 6px', borderRadius: 4
+                      }}>
+                        x{item.quantity}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{item.product_name}</span>
+                    </div>
+                    {item.product_price && (
+                      <span style={{ fontWeight: 700, color: 'var(--ap-text-primary)' }}>
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.product_price * item.quantity)}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '8px 10px', background: 'var(--ap-hover-bg)', borderRadius: 6, fontSize: 13, fontWeight: 600, color: 'var(--ap-text-primary)' }}>
+                  {approveModal.order.productVersion}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Method & Total */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 16px', borderRadius: 8, background: 'var(--ap-table-header)',
+            border: '1px solid var(--ap-border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CreditCard size={16} color="var(--ap-primary)" />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Hình thức thanh toán</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: approveModal.order.paymentMethod === 'Chuyển khoản' ? '#0284c7' : '#16a34a' }}>
+                  {approveModal.order.paymentMethod}
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Tổng thanh toán</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(approveModal.order.totalPrice)}
+              </div>
+            </div>
+          </div>
+
+          {/* Next Step Callout */}
+          <div style={{
+            padding: '10px 14px', borderRadius: 8,
+            background: 'rgba(2,132,199,0.08)', border: '1px solid rgba(2,132,199,0.25)',
+            display: 'flex', alignItems: 'center', gap: 10
+          }}>
+            <Truck size={18} color="var(--ap-primary)" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', lineHeight: 1.4 }}>
-              Đơn hàng sẽ được Kho đóng gói và tạo việc giao hàng & lắp đặt tận nơi.
+              Sau khi bấm <strong>Xác nhận</strong>, đơn hàng sẽ được gửi tới bộ phận <strong>Kho</strong> để quét mã MAC thiết bị và chuẩn bị đóng gói.
             </div>
           </div>
         </Dialog>
@@ -1742,59 +1873,163 @@ export default function AdminPage() {
           title="Chi tiết đơn hàng"
           confirmText="Đóng"
           cancelText=""
+          width={560}
           confirmColor="var(--ap-primary)"
           onConfirm={() => setDetailsModal({ show: false, order: null })}
           onCancel={() => setDetailsModal({ show: false, order: null })}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Mã đơn hàng:</span>
-              <span style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--ap-text-primary)' }}>#{detailsModal.order.id}</span>
+          {/* Header Card: Order ID & Status */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 16px', borderRadius: 8, background: 'var(--ap-table-header)',
+            border: '1px solid var(--ap-border)'
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mã đơn hàng</div>
+              <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'monospace', color: 'var(--ap-primary)' }}>
+                #{detailsModal.order.id}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Khách hàng:</span>
-              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{detailsModal.order.customerName}</span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{
+                display: 'inline-block', padding: '4px 10px', borderRadius: 20,
+                fontSize: 12, fontWeight: 700,
+                background: detailsModal.order.status === 'pending' ? '#fef3c7' : '#dcfce7',
+                color: detailsModal.order.status === 'pending' ? '#d97706' : '#16a34a',
+                border: `1px solid ${detailsModal.order.status === 'pending' ? '#fde68a' : '#bbf7d0'}`
+              }}>
+                {detailsModal.order.status === 'pending' ? 'Chờ duyệt' : 'Đã duyệt'}
+              </span>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', marginTop: 3 }}>
+                {new Date(detailsModal.order.createdAt).toLocaleString('vi-VN')}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Email:</span>
-              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.email}</span>
+          </div>
+
+          {/* Customer & Shipping Card */}
+          <div style={{
+            borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-bg-card)',
+            padding: 14, display: 'flex', flexDirection: 'column', gap: 10
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ap-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <User size={13} color="var(--ap-primary)" /> Thông tin người nhận
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>SĐT:</span>
-              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.phone}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Họ và tên</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-text-primary)' }}>{detailsModal.order.customerName}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Số điện thoại</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Phone size={12} /> {detailsModal.order.phone}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Địa chỉ:</span>
-              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.address}</span>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Email</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ap-text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Mail size={12} /> {detailsModal.order.email}
+              </div>
             </div>
+
+            <div style={{
+              background: 'var(--ap-hover-bg)', padding: '10px 12px', borderRadius: 6,
+              border: '1px solid var(--ap-border)', display: 'flex', gap: 8, alignItems: 'flex-start'
+            }}>
+              <MapPin size={15} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', fontWeight: 600 }}>Địa chỉ giao hàng</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ap-text-primary)', lineHeight: 1.4 }}>
+                  {detailsModal.order.address}
+                </div>
+              </div>
+            </div>
+
             {detailsModal.order.note && (
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'var(--ap-text-muted)' }}>Ghi chú:</span>
-                <span style={{ color: 'var(--ap-text-primary)', fontStyle: 'italic', background: 'var(--ap-hover-bg)', padding: '4px 8px', borderRadius: 4 }}>"{detailsModal.order.note}"</span>
+              <div style={{ fontSize: 12, color: 'var(--ap-text-secondary)', background: 'rgba(2,132,199,0.06)', border: '1px dashed var(--ap-primary)', padding: '8px 12px', borderRadius: 6 }}>
+                <strong>Ghi chú:</strong> "{detailsModal.order.note}"
               </div>
             )}
-            <div style={{ height: 1, background: 'var(--ap-border)', margin: '4px 0' }}></div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Sản phẩm:</span>
-              <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{detailsModal.order.productVersion}</span>
+          </div>
+
+          {/* Products Breakdown & MACs */}
+          <div style={{
+            borderRadius: 8, border: '1px solid var(--ap-border)', background: 'var(--ap-bg-card)',
+            padding: 14, display: 'flex', flexDirection: 'column', gap: 8
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ap-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Package size={13} color="var(--ap-primary)" /> Sản phẩm đặt mua
+              </span>
+              <span style={{ color: 'var(--ap-primary)', fontWeight: 700, fontSize: 11.5 }}>
+                {detailsModal.order.totalQuantity} sản phẩm
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Số lượng:</span>
-              <span style={{ color: 'var(--ap-text-primary)' }}>{detailsModal.order.totalQuantity} sản phẩm</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {detailsModal.order.orderItems && detailsModal.order.orderItems.length > 0 ? (
+                detailsModal.order.orderItems.map((item: any, idx: number) => (
+                  <div key={idx} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 10px', background: 'var(--ap-hover-bg)', borderRadius: 6, fontSize: 13
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        background: 'var(--ap-primary)', color: '#fff', fontSize: 11, fontWeight: 700,
+                        padding: '2px 6px', borderRadius: 4
+                      }}>
+                        x{item.quantity}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--ap-text-primary)' }}>{item.product_name}</span>
+                    </div>
+                    {item.product_price && (
+                      <span style={{ fontWeight: 700, color: 'var(--ap-text-primary)' }}>
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.product_price * item.quantity)}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '8px 10px', background: 'var(--ap-hover-bg)', borderRadius: 6, fontSize: 13, fontWeight: 600, color: 'var(--ap-text-primary)' }}>
+                  {detailsModal.order.productVersion}
+                </div>
+              )}
             </div>
+
             {detailsModal.order.deviceMacs && (
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'var(--ap-text-muted)' }}>Mã MAC thiết bị:</span>
-                <span style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--ap-primary)' }}>{detailsModal.order.deviceMacs}</span>
+              <div style={{
+                marginTop: 6, padding: '10px 12px', background: 'var(--ap-hover-bg)',
+                borderRadius: 6, border: '1px solid var(--ap-border)'
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', fontWeight: 600, marginBottom: 4 }}>Mã MAC thiết bị đã cấp</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--ap-primary)', fontSize: 13 }}>
+                  {detailsModal.order.deviceMacs}
+                </div>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Tổng tiền:</span>
-              <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 15 }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(detailsModal.order.totalPrice)}</span>
+          </div>
+
+          {/* Payment Method & Total */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 16px', borderRadius: 8, background: 'var(--ap-table-header)',
+            border: '1px solid var(--ap-border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CreditCard size={16} color="var(--ap-primary)" />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Hình thức thanh toán</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: detailsModal.order.paymentMethod === 'Chuyển khoản' ? '#0284c7' : '#16a34a' }}>
+                  {detailsModal.order.paymentMethod}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-              <span style={{ color: 'var(--ap-text-muted)' }}>Ngày đặt:</span>
-              <span style={{ color: 'var(--ap-text-primary)' }}>{new Date(detailsModal.order.createdAt).toLocaleString('vi-VN')}</span>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: 'var(--ap-text-muted)' }}>Tổng thanh toán</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(detailsModal.order.totalPrice)}
+              </div>
             </div>
           </div>
         </Dialog>

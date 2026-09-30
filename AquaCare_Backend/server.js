@@ -129,14 +129,6 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Khởi chạy Bộ quét hẹn giờ ngầm cùng lúc với Server
-try {
-  require('./timer_worker.js');
-  console.log('✅ Đã tích hợp Timer Worker chạy nền thành công!');
-} catch (err) {
-  console.error('❌ Lỗi khi khởi chạy Timer Worker:', err);
-}
-
 // ==========================================
 // TÍCH HỢP MQTT SUBSCRIBER (HIVEMQ TLS)
 // ==========================================
@@ -160,6 +152,9 @@ const mqttClient = mqtt.connect(connectUrl, {
   connectTimeout: 4000,
   reconnectPeriod: 1000,
 });
+
+const { startTimerWorker } = require('./timer_worker');
+startTimerWorker({ supabase, mqttClient });
 
 // Hàm kiểm tra và lưu cảnh báo (Tích hợp bộ lọc chống spam & gộp trạng thái)
 async function checkAndInsertAlerts(device, state) {
@@ -375,4 +370,3 @@ mqttClient.on('message', async (topic, message) => {
     console.error('❌ Lỗi xử lý MQTT Message (Server an toàn không bị crash):', error.message);
   }
 });
-

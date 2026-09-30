@@ -37,13 +37,14 @@ export default function CartPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUserSession(session.user)
-        const { data: userData } = await supabase.from('users').select('full_name, email, phone').eq('id', session.user.id).single()
+        const { data: userData } = await supabase.from('users').select('full_name, email, phone, address').eq('id', session.user.id).single()
         if (userData) {
           setFormData(prev => ({
             ...prev,
             fullName: userData.full_name || '',
             email: userData.email || '',
-            phone: userData.phone || prev.phone
+            phone: userData.phone || prev.phone,
+            address: userData.address || prev.address
           }))
         }
       }
@@ -122,6 +123,20 @@ export default function CartPage() {
         alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message)
         setIsSubmitting(false)
         return
+      }
+
+      // Sync address to users profile if user is logged in
+      if (session?.user?.id && formData.address.trim()) {
+        try {
+          await supabase.from('users').update({ address: formData.address.trim() }).eq('id', session.user.id)
+          const userStr = localStorage.getItem('user_info')
+          if (userStr) {
+            const u = JSON.parse(userStr)
+            localStorage.setItem('user_info', JSON.stringify({ ...u, address: formData.address.trim() }))
+          }
+        } catch (syncErr) {
+          console.warn('Sync address to user notice:', syncErr)
+        }
       }
 
       setIsSuccess(true)

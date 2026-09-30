@@ -1,85 +1,97 @@
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
+const RELAYS = [
+  { name: 'Pump', key: 'pump', field: 'relay_pump_state', pin: 3 },
+  { name: 'Light', key: 'light', field: 'relay_light_state', pin: 1 },
+  { name: 'Aerator', key: 'aerator', field: 'relay_aerator_state', pin: 2 },
+];
 
-// 1. Kết nối Supabase
-const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:5000';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// 3. Hàm kiểm tra lịch hẹn giờ
-async function checkSchedules() {
-  try {
-    // 3.1: Lấy thời gian hiện tại định dạng HH:MM
-    const now = new Date();
-    const currentHours = String(now.getHours()).padStart(2, '0');
-    const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-    const currentTimeStr = `${currentHours}:${currentMinutes}`;
-
-    // 3.2: Lấy danh sách thiết bị
-    const { data: devices, error } = await supabase.from('devices').select('*');
-    if (error) {
-      console.error('Lỗi khi fetch thiết bị:', error.message);
-      return;
-    }
-
-    // 3.3: Duyệt qua các thiết bị
-    for (const dev of devices) {
-      // -- Xử lý Máy bơm --
-      if (dev.pump_on_time && dev.pump_on_time === currentTimeStr && !dev.relay_pump_state) {
-        await handleToggle(dev.id, 'Pump', 'ON', 'relay_pump_state', true, currentTimeStr);
-      } else if (dev.pump_off_time && dev.pump_off_time === currentTimeStr && dev.relay_pump_state) {
-        await handleToggle(dev.id, 'Pump', 'OFF', 'relay_pump_state', false, currentTimeStr);
-      }
-
-      // -- Xử lý Đèn thủy sinh --
-      if (dev.light_on_time && dev.light_on_time === currentTimeStr && !dev.relay_light_state) {
-        await handleToggle(dev.id, 'Light', 'ON', 'relay_light_state', true, currentTimeStr);
-      } else if (dev.light_off_time && dev.light_off_time === currentTimeStr && dev.relay_light_state) {
-        await handleToggle(dev.id, 'Light', 'OFF', 'relay_light_state', false, currentTimeStr);
-      }
-    }
-  } catch (err) {
-    console.error('Lỗi checkSchedules:', err);
-  }
+function vietnamMinute(date) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date).map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
-// Hàm hỗ trợ bật/tắt thiết bị và ghi log
-async function handleToggle(deviceId, relayName, action, columnToUpdate, newValue, timeStr) {
-  // Cập nhật trạng thái thiết bị
-  const updateData = {};
-  updateData[columnToUpdate] = newValue;
-
-  const { error: updateError } = await supabase.from('devices')
-    .update(updateData)
-    .eq('id', deviceId);
-
-  if (updateError) {
-    console.error(`[${timeStr}] ❌ Lỗi thay đổi trạng thái ${relayName} (Device ${deviceId}):`, updateError.message);
-    return;
-  }
-
-  // Ghi log vào relay_logs
-  const { error: logError } = await supabase.from('relay_logs').insert({
-    device_id: deviceId,
-    relay_name: relayName,
-    action: action,
-    triggered_by: 'AUTO'
+function publishCommand(mqttClient, topic, payload) {
+  return new Promise((resolve, reject) => {
+    mqttClient.publish(topic, JSON.stringify(payload), { qos: 1 }, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
   });
-
-  if (logError) {
-    console.error(`[${timeStr}] ❌ Lỗi ghi log ${relayName} (Device ${deviceId}):`, logError.message);
-  } else {
-    // 4. Console Log trực quan
-    const deviceName = relayName === 'Pump' ? 'Máy bơm' : 'Đèn thủy sinh';
-    const actionName = action === 'ON' ? 'BẬT' : 'TẮT';
-    console.log(`[${timeStr}] ⏰ [AUTO] Phát hiện lịch hẹn giờ: Đang ${actionName} ${deviceName} cho thiết bị ID ${deviceId}...`);
-  }
 }
 
-// 2. Vòng lặp tự động (10 giây)
-console.log('🚀 Đang khởi động Bộ quét hẹn giờ trung tâm AquaCare...');
-setInterval(checkSchedules, 10000);
+function createScheduleChecker({ supabase, mqttClient, now = () => new Date(), logger = console }) {
+  const processed = new Map();
+  let checking = false;
 
-// Chạy ngay lần đầu tiên khi khởi động
-checkSchedules();
+  return async function checkSchedules() {
+    if (checking || !mqttClient.connected) return;
+    checking = true;
+    try {
+      const minute = vietnamMinute(now());
+      const time = minute.slice(-5);
+      for (const key of processed.keys()) {
+        if (!key.startsWith(`${minute}:`)) processed.delete(key);
+      }
+
+      const { data: devices, error } = await supabase.from('devices').select('*');
+      if (error) throw error;
+
+      for (const device of devices || []) {
+        if (!device.is_active || !device.tank_id || !device.mac_address) continue;
+        for (const relay of RELAYS) {
+          const onDue = device[`${relay.key}_on_time`] === time;
+          const offDue = device[`${relay.key}_off_time`] === time;
+          if (!onDue && !offDue) continue;
+
+          // When both times are equal, switch off to avoid contradictory commands.
+          const desiredState = offDue ? false : true;
+          const key = `${minute}:${device.id}:${relay.key}`;
+          const progress = processed.get(key);
+          if (progress?.complete || (!progress && device[relay.field] === desiredState)) continue;
+
+          try {
+            if (!progress?.published) {
+              await publishCommand(mqttClient, `iras-rag/command/${device.mac_address}`, {
+                pin: relay.pin, cmd: desiredState ? 'ON' : 'OFF',
+              });
+              processed.set(key, { published: true });
+            }
+
+            const { error: updateError } = await supabase.from('devices')
+              .update({ [relay.field]: desiredState }).eq('id', device.id);
+            if (updateError) throw updateError;
+
+            processed.set(key, { published: true, complete: true });
+            const { error: logError } = await supabase.from('relay_logs').insert({
+              device_id: device.id,
+              relay_name: relay.name,
+              action: desiredState ? 'ON' : 'OFF',
+              triggered_by: 'AUTO',
+            });
+            if (logError) logger.error('Không thể ghi relay log:', logError);
+          } catch (relayError) {
+            logger.error(`Không thể chạy lịch ${relay.key} cho thiết bị ${device.id}:`, relayError);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Không thể kiểm tra lịch thiết bị:', error);
+    } finally {
+      checking = false;
+    }
+  };
+}
+
+function startTimerWorker(dependencies) {
+  const checkSchedules = createScheduleChecker(dependencies);
+  const interval = setInterval(checkSchedules, 10000);
+  void checkSchedules();
+  return interval;
+}
+
+module.exports = { createScheduleChecker, startTimerWorker, vietnamMinute };

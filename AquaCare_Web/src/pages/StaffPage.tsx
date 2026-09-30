@@ -117,6 +117,8 @@ interface SupportRequest {
   createdAt: string
   status: SupportStatus
   staffReply?: string
+  address?: string
+  assigned_to?: string
 }
 
 const INITIAL_SUPPORT_REQUESTS: SupportRequest[] = [
@@ -160,11 +162,35 @@ const ghostBtnBase: React.CSSProperties = {
 }
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
+function parseMaintenanceDesc(desc?: string) {
+  if (!desc) return { customerName: '', phone: '', email: '', address: '', customerRequest: '', cskhReply: '' }
+
+  const custMatch = desc.match(/Khách hàng:\s*([^\n\r]+?)(?=\s*(?:SĐT|SDT|Email|Địa chỉ|-------------------)|$)/i)
+  const phoneMatch = desc.match(/(?:SĐT|SDT):\s*([^\n\r]+?)(?=\s*(?:Email|Địa chỉ|-------------------)|$)/i)
+  const emailMatch = desc.match(/Email:\s*([^\n\r]+?)(?=\s*(?:Địa chỉ|-------------------)|$)/i)
+  const addrMatch = desc.match(/Địa chỉ:\s*([^\n\r]+?)(?=\s*(?:-------------------|NỘI DUNG|YÊU CẦU)|$)/i)
+
+  const reqMatch = desc.match(/(?:NỘI DUNG (?:YÊU CẦU|THẮC MẮC\s*\/\s*CÂU HỎI|THẮC MẮC)|YÊU CẦU HỖ TRỢ|CÂU HỎI):?\s*([\s\S]*?)(?:-------------------|PHẢN HỒI CSKH:|$)/i)
+  const replyMatch = desc.match(/PHẢN HỒI CSKH:?\s*([\s\S]*?)(?:-------------------|$)/i)
+
+  const clean = (s?: string) => (s ? s.replace(/-{3,}/g, '').trim() : '')
+
+  return {
+    customerName: clean(custMatch ? custMatch[1] : ''),
+    phone: clean(phoneMatch ? phoneMatch[1] : ''),
+    email: clean(emailMatch ? emailMatch[1] : ''),
+    address: clean(addrMatch ? addrMatch[1] : ''),
+    customerRequest: clean(reqMatch ? reqMatch[1] : ''),
+    cskhReply: clean(replyMatch ? replyMatch[1] : '')
+  }
+}
+
 function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => void }) {
   const typeEntry = TYPE_CONFIG[task.type || task.task_type] || { icon: Briefcase }
   const TypeIcon = typeEntry.icon
   const overdue = task.deadline ? isOverdue(task.deadline, task.status) : false
   const actionLabel = task.status === 'todo' ? 'Nhận việc' : task.status === 'in_progress' ? 'Hoàn thành' : null
+  const parsedMaint = task.task_type === 'maintenance' ? parseMaintenanceDesc(task.description) : null
 
   return (
     <div
@@ -210,29 +236,75 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <User size={13} color="var(--sp-text-muted)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sp-text-primary)' }}>{task.customerName}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sp-text-primary)' }}>
+            {parsedMaint?.customerName || task.customerName}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
           <MapPin size={13} color="var(--sp-text-muted)" style={{ flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', lineHeight: 1.4 }}>{task.address}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', lineHeight: 1.4 }}>
+            {parsedMaint?.address || task.address}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <Phone size={13} color="var(--sp-text-muted)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)' }}>{task.phone}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)' }}>
+            {parsedMaint?.phone || task.phone}
+          </span>
         </div>
       </div>
 
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 7,
-        padding: '8px 12px', borderRadius: 6,
-        background: task.note ? 'var(--sp-note-bg)' : 'var(--sp-hover-bg)',
-        border: task.note ? '1px solid var(--sp-note-border)' : '1px dashed var(--sp-border)',
-      }}>
-        <Pin size={12} color={task.note ? "#F59E0B" : "var(--sp-text-muted)"} style={{ flexShrink: 0, marginTop: 1 }} />
-        <span style={{ fontSize: 12, color: task.note ? '#d97706' : 'var(--sp-text-muted)', lineHeight: 1.4, fontWeight: task.note ? 600 : 400 }}>
-          {task.note || 'Không có ghi chú'}
-        </span>
-      </div>
+      {/* Maintenance Request Content & CSKH Reply */}
+      {task.task_type === 'maintenance' && (() => {
+        const { customerRequest, cskhReply } = parsedMaint || parseMaintenanceDesc(task.description)
+        if (!customerRequest && !cskhReply) return null
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {customerRequest && (
+              <div style={{
+                padding: '10px 12px', borderRadius: 6,
+                background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)',
+                display: 'flex', flexDirection: 'column', gap: 4
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--sp-primary)', display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase' }}>
+                  <MessageSquare size={12} /> Nội dung yêu cầu:
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--sp-text-primary)', lineHeight: 1.45, fontWeight: 500 }}>
+                  {customerRequest}
+                </div>
+              </div>
+            )}
+            {cskhReply && (
+              <div style={{
+                padding: '10px 12px', borderRadius: 6,
+                background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)',
+                display: 'flex', flexDirection: 'column', gap: 4
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase' }}>
+                  <CheckCircle2 size={12} /> Phản hồi CSKH:
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--sp-text-primary)', lineHeight: 1.45, fontWeight: 500 }}>
+                  {cskhReply}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {(task.note || (task.task_type !== 'maintenance' && !task.description)) && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 7,
+          padding: '8px 12px', borderRadius: 6,
+          background: task.note ? 'var(--sp-note-bg)' : 'var(--sp-hover-bg)',
+          border: task.note ? '1px solid var(--sp-note-border)' : '1px dashed var(--sp-border)',
+        }}>
+          <Pin size={12} color={task.note ? "#F59E0B" : "var(--sp-text-muted)"} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 12, color: task.note ? '#d97706' : 'var(--sp-text-muted)', lineHeight: 1.4, fontWeight: task.note ? 600 : 400 }}>
+            {task.note || 'Không có ghi chú'}
+          </span>
+        </div>
+      )}
 
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -428,6 +500,11 @@ function HistoryRow({ task, onViewDetails }: { task: Task; onViewDetails: (task:
 function TaskDetailsModal({ task, onClose }: { task: Task; onClose: () => void }) {
   if (!task) return null
   const items = task.orderItems || []
+  const isMaintenance = task.task_type === 'maintenance' || task.type === 'maintenance'
+  const parsed = isMaintenance ? parseMaintenanceDesc(task.description) : null
+  const customerName = (parsed?.customerName) || task.customerName
+  const phone = (parsed?.phone) || task.phone
+  const address = (parsed?.address) || task.address
 
   return (
     <div style={{
@@ -448,12 +525,18 @@ function TaskDetailsModal({ task, onClose }: { task: Task; onClose: () => void }
           background: 'var(--sp-bg-sidebar)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--sp-primary-bg)', border: '1px solid var(--sp-primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sp-primary)' }}>
-              <Package size={18} />
+            <div style={{
+              width: 36, height: 36, borderRadius: 8,
+              background: isMaintenance ? 'rgba(217, 119, 6, 0.12)' : 'var(--sp-primary-bg)',
+              border: `1px solid ${isMaintenance ? 'rgba(217, 119, 6, 0.3)' : 'var(--sp-primary-border)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isMaintenance ? '#d97706' : 'var(--sp-primary)'
+            }}>
+              {isMaintenance ? <Wrench size={18} /> : <Package size={18} />}
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--sp-text-primary)' }}>
-                Chi tiết đóng gói đơn hàng #{task.order_id || task.id}
+                {isMaintenance ? `Chi tiết nhiệm vụ bảo trì #${task.id}` : `Chi tiết đóng gói đơn hàng #${task.order_id || task.id}`}
               </h3>
               <span style={{ fontSize: 12, color: 'var(--sp-text-muted)' }}>
                 Ngày hoàn thành: {formatDate(task.created_at)}
@@ -482,23 +565,81 @@ function TaskDetailsModal({ task, onClose }: { task: Task; onClose: () => void }
           }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', marginBottom: 4 }}>KHÁCH HÀNG</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)' }}>{task.customerName}</div>
-              <div style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', marginTop: 2 }}>{task.phone}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)' }}>{customerName}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', marginTop: 2 }}>{phone}</div>
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', marginBottom: 4 }}>ĐỊA CHỈ GIAO HÀNG / BẢO TRÌ</div>
-              <div style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', lineHeight: 1.4 }}>{task.address}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', marginBottom: 4 }}>
+                {isMaintenance ? 'ĐỊA CHỈ BẢO TRÌ TẬN NHÀ' : 'ĐỊA CHỈ GIAO HÀNG / BẢO TRÌ'}
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--sp-text-secondary)', lineHeight: 1.4 }}>{address}</div>
             </div>
           </div>
 
-          {/* Description / Maintenance Details Box */}
-          {task.description && (
+          {/* Maintenance Description Section */}
+          {isMaintenance && parsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {parsed.customerRequest && (
+                <div style={{
+                  background: 'rgba(2, 132, 199, 0.08)', padding: '14px 18px', borderRadius: 8,
+                  border: '1px solid rgba(2, 132, 199, 0.25)', display: 'flex', flexDirection: 'column', gap: 6
+                }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--sp-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MessageSquare size={13} /> NỘI DUNG YÊU CẦU TỪ KHÁCH HÀNG
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--sp-text-primary)', lineHeight: 1.5, fontWeight: 500 }}>
+                    {parsed.customerRequest}
+                  </div>
+                </div>
+              )}
+
+              {parsed.cskhReply && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.08)', padding: '14px 18px', borderRadius: 8,
+                  border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', flexDirection: 'column', gap: 6
+                }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle2 size={13} /> PHẢN HỒI & CHỈ DẪN TỪ CSKH
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--sp-text-primary)', lineHeight: 1.5, fontWeight: 500 }}>
+                    {parsed.cskhReply}
+                  </div>
+                </div>
+              )}
+
+              {!parsed.customerRequest && !parsed.cskhReply && task.description && (
+                <div style={{
+                  background: 'rgba(2, 132, 199, 0.08)', padding: '14px 18px', borderRadius: 8,
+                  border: '1px solid rgba(2, 132, 199, 0.25)', display: 'flex', flexDirection: 'column', gap: 6
+                }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--sp-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MessageSquare size={13} /> GHI CHÚ / YÊU CẦU
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--sp-text-primary)', lineHeight: 1.5 }}>
+                    {task.description}
+                  </div>
+                </div>
+              )}
+
+              {task.staff_note && (
+                <div style={{
+                  background: 'var(--sp-hover-bg)', padding: '12px 16px', borderRadius: 8,
+                  border: '1px solid var(--sp-border)', fontSize: 13, color: 'var(--sp-text-secondary)'
+                }}>
+                  <strong>Ghi chú nội bộ:</strong> {task.staff_note}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Generic Description for other task types */}
+          {task.task_type !== 'maintenance' && task.description && (
             <div style={{
               background: 'var(--sp-hover-bg)', padding: '14px 18px', borderRadius: 8,
               border: '1px solid var(--sp-border)', display: 'flex', flexDirection: 'column', gap: 8
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Wrench size={13} /> NỘI DUNG YÊU CẦU & BẢO TRÌ
+                <Wrench size={13} /> THÔNG TIN NHIỆM VỤ
               </div>
               <div style={{ fontSize: 13, color: 'var(--sp-text-primary)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
                 {task.description}
@@ -506,88 +647,90 @@ function TaskDetailsModal({ task, onClose }: { task: Task; onClose: () => void }
             </div>
           )}
 
-          {/* Product Items List */}
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              SẢN PHẨM / THIẾT BỊ ({items.length})
-            </div>
-
-            {items.length === 0 ? (
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--sp-text-muted)', fontSize: 13, background: 'var(--sp-hover-bg)', borderRadius: 8 }}>
-                Không tìm thấy danh sách chi tiết sản phẩm.
+          {/* Product Items List - Only for Non-Maintenance Tasks */}
+          {task.task_type !== 'maintenance' && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+                SẢN PHẨM / THIẾT BỊ ({items.length})
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {items.map((item, idx) => {
-                  const macs = item.device_macs || []
-                  const itemPrice = item.product_price || 0
-                  const subtotal = itemPrice * item.quantity
 
-                  return (
-                    <div
-                      key={item.id || idx}
-                      style={{
-                        background: 'var(--sp-bg-card)', border: '1px solid var(--sp-border)',
-                        borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{item.product_name}</span>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-primary)', background: 'var(--sp-primary-bg)', padding: '2px 8px', borderRadius: 100 }}>
-                              x{item.quantity}
-                            </span>
+              {items.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--sp-text-muted)', fontSize: 13, background: 'var(--sp-hover-bg)', borderRadius: 8 }}>
+                  Không tìm thấy danh sách chi tiết sản phẩm.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {items.map((item, idx) => {
+                    const macs = item.device_macs || []
+                    const itemPrice = item.product_price || 0
+                    const subtotal = itemPrice * item.quantity
+
+                    return (
+                      <div
+                        key={item.id || idx}
+                        style={{
+                          background: 'var(--sp-bg-card)', border: '1px solid var(--sp-border)',
+                          borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span>{item.product_name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-primary)', background: 'var(--sp-primary-bg)', padding: '2px 8px', borderRadius: 100 }}>
+                                x{item.quantity}
+                              </span>
+                            </div>
+                            {itemPrice > 0 && (
+                              <div style={{ fontSize: 12.5, color: 'var(--sp-text-muted)', marginTop: 2 }}>
+                                Đơn giá: {itemPrice.toLocaleString('vi-VN')} ₫
+                              </div>
+                            )}
                           </div>
-                          {itemPrice > 0 && (
-                            <div style={{ fontSize: 12.5, color: 'var(--sp-text-muted)', marginTop: 2 }}>
-                              Đơn giá: {itemPrice.toLocaleString('vi-VN')} ₫
+
+                          {subtotal > 0 && (
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-primary)' }}>
+                              {subtotal.toLocaleString('vi-VN')} ₫
                             </div>
                           )}
                         </div>
 
-                        {subtotal > 0 && (
-                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-primary)' }}>
-                            {subtotal.toLocaleString('vi-VN')} ₫
+                        {/* MAC Addresses List */}
+                        <div style={{ paddingTop: 8, borderTop: '1px dashed var(--sp-border)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Scan size={12} color="var(--sp-primary)" /> MÃ MAC THIẾT BỊ ĐÃ GÓI:
                           </div>
-                        )}
-                      </div>
-
-                      {/* MAC Addresses List */}
-                      <div style={{ paddingTop: 8, borderTop: '1px dashed var(--sp-border)' }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Scan size={12} color="var(--sp-primary)" /> MÃ MAC THIẾT BỊ ĐÃ GÓI:
+                          {macs.length === 0 ? (
+                            <span style={{ fontSize: 12, color: 'var(--sp-text-muted)', fontStyle: 'italic' }}>Chưa ghi nhận mã MAC</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {macs.map((mac, mIdx) => (
+                                <div
+                                  key={mIdx}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: 'var(--sp-hover-bg-strong)', border: '1px solid var(--sp-border-hover)',
+                                    padding: '4px 10px', borderRadius: 6, fontFamily: 'monospace',
+                                    fontSize: 12, fontWeight: 600, color: 'var(--sp-text-primary)'
+                                  }}
+                                >
+                                  <Tag size={11} color="var(--sp-primary)" />
+                                  <span>{mac}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        {macs.length === 0 ? (
-                          <span style={{ fontSize: 12, color: 'var(--sp-text-muted)', fontStyle: 'italic' }}>Chưa ghi nhận mã MAC</span>
-                        ) : (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {macs.map((mac, mIdx) => (
-                              <div
-                                key={mIdx}
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                                  background: 'var(--sp-hover-bg-strong)', border: '1px solid var(--sp-border-hover)',
-                                  padding: '4px 10px', borderRadius: 6, fontFamily: 'monospace',
-                                  fontSize: 12, fontWeight: 600, color: 'var(--sp-text-primary)'
-                                }}
-                              >
-                                <Tag size={11} color="var(--sp-primary)" />
-                                <span>{mac}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Total Amount Summary if available */}
-          {task.totalAmount && task.totalAmount > 0 && (
+          {task.task_type !== 'maintenance' && task.totalAmount && task.totalAmount > 0 && (
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '14px 18px', background: 'var(--sp-primary-bg)', border: '1px solid var(--sp-primary-border)',
@@ -807,19 +950,50 @@ function PackingStationUI({ onTaskCompleted }: { onTaskCompleted?: () => void })
   const activeTask = packingTasks.find(t => t.id === selectedTaskId)
   const activeOrder = activeTask?.orders
 
-  const requiredMacs: { itemId: string, name: string, version?: string, index: number }[] = []
+  const normalizeVer = (ver?: string | null): string => {
+    if (!ver) return 'V1'
+    const str = String(ver).trim().toUpperCase()
+    if (!str) return 'V1'
+    const match = str.match(/V(\d+)/i)
+    if (match) return `V${match[1]}`
+    if (/^\d+$/.test(str)) return `V${str}`
+    if (str.includes('PREMIUM')) return 'V4'
+    if (str.includes('ADVANCED')) return 'V3'
+    if (str.includes('BASIC')) return 'V2'
+    if (str.includes('STARTER')) return 'V1'
+    return str.startsWith('V') ? str : `V${str}`
+  }
+
+  const resolveItemVersion = (item: any): string => {
+    if (!item) return 'V1'
+    const explicit = item.version || item.product_version || item.firmware_version || item.variant || item.product_variant
+    if (explicit) return normalizeVer(explicit)
+
+    const pid = String(item.product_id || '').trim()
+    const pidMatch = pid.match(/v?(\d+)/i)
+    if (pidMatch && pidMatch[1]) return `V${pidMatch[1]}`
+
+    const name = String(item.product_name || item.name || '').toUpperCase()
+    const nameMatch = name.match(/V(\d+)/i)
+    if (nameMatch && nameMatch[1]) return `V${nameMatch[1]}`
+    if (name.includes('PREMIUM')) return 'V4'
+    if (name.includes('ADVANCED')) return 'V3'
+    if (name.includes('BASIC')) return 'V2'
+    if (name.includes('STARTER')) return 'V1'
+
+    if (item.products?.version) return normalizeVer(item.products.version)
+    return 'V1'
+  }
+
+  const requiredMacs: { itemId: string, name: string, version: string, index: number }[] = []
   if (activeOrder && activeOrder.order_items) {
     activeOrder.order_items.forEach((item: any) => {
-      let verStr = item.version || item.product_version || item.firmware_version || item.variant || item.product_variant
-      if (!verStr && item.product_name) {
-        const match = item.product_name.match(/V\d+/i)
-        if (match) verStr = match[0].toUpperCase()
-      }
+      const verStr = resolveItemVersion(item)
       for (let i = 0; i < item.quantity; i++) {
         requiredMacs.push({
           itemId: item.id,
-          name: item.product_name,
-          version: verStr ? (String(verStr).toUpperCase().startsWith('V') ? String(verStr).toUpperCase() : `V${verStr}`) : 'V1',
+          name: item.product_name || 'Sản phẩm AquaCare',
+          version: verStr,
           index: i
         })
       }
@@ -831,15 +1005,6 @@ function PackingStationUI({ onTaskCompleted }: { onTaskCompleted?: () => void })
     if (macErrors[key]) {
       setMacErrors(prev => ({ ...prev, [key]: '' }))
     }
-  }
-
-  const normalizeVer = (ver?: string | null): string => {
-    if (!ver) return 'V1'
-    const str = String(ver).trim().toUpperCase()
-    const match = str.match(/V\d+/i)
-    if (match) return match[0].toUpperCase()
-    if (/^\d+$/.test(str)) return `V${str}`
-    return str
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1246,6 +1411,8 @@ export default function StaffPage() {
         customerName: item.full_name || 'Khách hàng',
         email: item.email || 'N/A',
         phone: item.phone || 'N/A',
+        address: item.address || undefined,
+        assigned_to: item.assigned_to || undefined,
         content: item.message || '',
         createdAt: item.created_at,
         status: item.status === 'replied' ? 'replied' : 'pending',
@@ -1282,6 +1449,7 @@ export default function StaffPage() {
       .from('tasks')
       .update({
         status: nextStatus,
+        ...(nextStatus === 'in_progress' && userInfo?.id ? { assigned_to: userInfo.id } : {}),
         ...(nextStatus === 'done' ? { completed_at: new Date().toISOString() } : {})
       })
       .eq('id', id)
@@ -1290,6 +1458,13 @@ export default function StaffPage() {
       console.error('Lỗi khi cập nhật trạng thái công việc:', error)
       fetchTasks()
     } else {
+      // Nếu hoàn thành task delivery_install → update orders thành 'delivered'
+      if (nextStatus === 'done' && task.task_type === 'delivery_install' && task.order_id) {
+        await supabase
+          .from('orders')
+          .update({ status: 'delivered' })
+          .eq('id', task.order_id)
+      }
       fetchTasks()
     }
   }
@@ -1298,23 +1473,25 @@ export default function StaffPage() {
 
   const handleCreateMaintenanceTask = async (req: SupportRequest) => {
     try {
-      let fetchedAddress = ''
-      try {
-        const { data: orderData } = await supabase
-          .from('orders')
-          .select('shipping_address')
-          .or(`shipping_phone.eq.${req.phone},shipping_email.eq.${req.email}`)
-          .order('created_at', { ascending: false })
-          .limit(1)
+      let fetchedAddress = (req.address || '').trim()
+      if (!fetchedAddress) {
+        try {
+          const { data: orderData } = await supabase
+            .from('orders')
+            .select('shipping_address')
+            .or(`shipping_phone.eq.${req.phone},shipping_email.eq.${req.email}`)
+            .order('created_at', { ascending: false })
+            .limit(1)
 
-        if (orderData && orderData.length > 0 && orderData[0].shipping_address) {
-          fetchedAddress = orderData[0].shipping_address
+          if (orderData && orderData.length > 0 && orderData[0].shipping_address) {
+            fetchedAddress = orderData[0].shipping_address.trim()
+          }
+        } catch (err) {
+          console.warn('Could not auto-fetch address from orders:', err)
         }
-      } catch (err) {
-        console.warn('Could not auto-fetch address from orders:', err)
       }
 
-      const finalAddress = fetchedAddress.trim() || 'Chưa cung cấp địa chỉ'
+      const finalAddress = fetchedAddress || 'Chưa cung cấp địa chỉ'
 
       const description = `Khách hàng: ${req.customerName}\nSĐT: ${req.phone}\nEmail: ${req.email}\nĐịa chỉ: ${finalAddress}\n-------------------\nNỘI DUNG THẮC MẮC / CÂU HỎI:\n${req.content}\n-------------------\nPHẢN HỒI CSKH:\n${req.staffReply || 'Cần kiểm tra & bảo trì thiết bị trực tiếp tại nhà'}`
 
@@ -1360,7 +1537,14 @@ export default function StaffPage() {
   const todoCount = filteredTasks.filter(t => t.status === 'todo').length
   const inProgressCount = filteredTasks.filter(t => t.status === 'in_progress').length
   const doneCount = historyTasks.length
-  const pendingSupportCount = supportRequests.filter(r => r.status === 'pending').length
+
+  const mySupportRequests = supportRequests.filter(r => {
+    if (userRole === 'admin' || userRole === 'staff') return true
+    return !r.assigned_to || String(r.assigned_to) === String(userInfo.id)
+  })
+  const pendingSupportRequests = mySupportRequests.filter(r => r.status === 'pending')
+  const repliedSupportRequests = mySupportRequests.filter(r => r.status === 'replied')
+  const pendingSupportCount = pendingSupportRequests.length
 
   const handleResolveSupport = async (id: string, reply: string) => {
     setSupportRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'replied', staffReply: reply } : r))
@@ -1554,42 +1738,165 @@ export default function StaffPage() {
         {activeTab === 'packing' && <PackingStationUI onTaskCompleted={fetchTasks} />}
 
         {activeTab === 'history' && (
-          <div style={{
-            background: 'var(--sp-bg-card)',
-            borderRadius: 8, border: '1px solid var(--sp-border)',
-            overflow: 'hidden', boxShadow: 'var(--sp-shadow)'
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Task History Section */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 160px 140px 120px 120px',
-              padding: '12px 20px', gap: 12,
-              background: 'var(--sp-bg-history-header)',
-              borderBottom: '1px solid var(--sp-border)',
+              background: 'var(--sp-bg-card)',
+              borderRadius: 8, border: '1px solid var(--sp-border)',
+              overflow: 'hidden', boxShadow: 'var(--sp-shadow)'
             }}>
-              {['Công việc', 'Loại', 'Ngày hạn', 'Trạng thái', 'Thao tác'].map((h, i) => (
-                <span key={h} style={{ fontSize: 12, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', textAlign: i === 4 ? 'right' : 'left' }}>{h}</span>
-              ))}
+              <div style={{
+                padding: '12px 20px',
+                background: 'var(--sp-bg-history-header)',
+                borderBottom: '1px solid var(--sp-border)',
+                display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                <History size={14} color="#16a34a" />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)' }}>Lịch sử công việc</span>
+                <span style={{ fontSize: 12, color: 'var(--sp-text-muted)' }}>({historyTasks.length} công việc hoàn thành)</span>
+              </div>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 160px 140px 120px 120px',
+                padding: '12px 20px', gap: 12,
+                background: 'var(--sp-bg-history-header)',
+                borderBottom: '1px solid var(--sp-border)',
+              }}>
+                {['Công việc', 'Loại', 'Ngày hạn', 'Trạng thái', 'Thao tác'].map((h, i) => (
+                  <span key={h} style={{ fontSize: 12, fontWeight: 700, color: 'var(--sp-text-primary)', textTransform: 'uppercase', textAlign: i === 4 ? 'right' : 'left' }}>{h}</span>
+                ))}
+              </div>
+
+              {historyTasks.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <History size={32} color="#16a34a" style={{ opacity: 0.2 }} />
+                  <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13.5 }}>Chưa có công việc nào hoàn thành</p>
+                </div>
+              ) : (
+                historyTasks.map(task => <HistoryRow key={task.id} task={task} onViewDetails={setSelectedDetailTask} />)
+              )}
             </div>
 
-            {historyTasks.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <History size={32} color="#16a34a" style={{ opacity: 0.2 }} />
-                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13.5 }}>Chưa có công việc nào hoàn thành</p>
+            {/* Replied Support Requests Section - only for support roles */}
+            {(userRole === 'staff_support' || userRole === 'staff') && repliedSupportRequests.length > 0 && (
+              <div style={{
+                background: 'var(--sp-bg-card)',
+                borderRadius: 8, border: '1px solid var(--sp-border)',
+                overflow: 'hidden', boxShadow: 'var(--sp-shadow)'
+              }}>
+                <div style={{
+                  padding: '14px 20px',
+                  background: 'var(--sp-bg-history-header)',
+                  borderBottom: '1px solid var(--sp-border)',
+                  display: 'flex', alignItems: 'center', gap: 8
+                }}>
+                  <CheckCircle size={14} color="#16a34a" />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sp-text-primary)' }}>Yêu cầu hỗ trợ đã trả lời</span>
+                  <span style={{ fontSize: 12, color: 'var(--sp-text-muted)' }}>({repliedSupportRequests.length} yêu cầu)</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {repliedSupportRequests.map(req => (
+                    <div key={req.id} style={{
+                      padding: '16px 20px',
+                      borderBottom: '1px solid var(--sp-border)',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                      transition: 'background 140ms'
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--sp-hover-bg)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)', marginBottom: 4 }}>{req.customerName}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'var(--sp-text-secondary)' }}>
+                            <span>{req.email}</span>
+                            <span>•</span>
+                            <span>{req.phone}</span>
+                            <span>•</span>
+                            <span>{new Date(req.createdAt).toLocaleString('vi-VN')}</span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 100,
+                          background: 'rgba(16,185,129,0.1)', color: '#16a34a', border: '1px solid rgba(16,185,129,0.25)',
+                          display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                          <CheckCircle size={11} /> Đã trả lời
+                        </span>
+                      </div>
+                      <div style={{
+                        padding: '10px 14px', borderRadius: 6,
+                        background: 'var(--sp-hover-bg)', border: '1px solid var(--sp-border)',
+                        fontSize: 13, color: 'var(--sp-text-secondary)', lineHeight: 1.5
+                      }}>
+                        <span style={{ fontWeight: 600, color: 'var(--sp-text-primary)', fontSize: 11, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Câu hỏi:</span>
+                        {req.content}
+                      </div>
+                      {req.staffReply && (
+                        <div style={{
+                          padding: '10px 14px', borderRadius: 6,
+                          background: 'var(--sp-primary-bg)', border: '1px solid var(--sp-primary-border)',
+                          fontSize: 13, color: 'var(--sp-text-primary)', lineHeight: 1.5
+                        }}>
+                          <span style={{ fontWeight: 600, color: 'var(--sp-primary)', fontSize: 11, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Phản hồi của staff:</span>
+                          {req.staffReply}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleCreateMaintenanceTask(req)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '6px 14px', borderRadius: 6,
+                            background: 'rgba(245,158,11,0.12)', color: '#d97706',
+                            border: '1px solid rgba(245,158,11,0.3)',
+                            fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: F,
+                            transition: 'filter 160ms'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)' }}
+                        >
+                          <Wrench size={13} /> Chuyển Bảo Trì Tại Nhà
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              historyTasks.map(task => <HistoryRow key={task.id} task={task} onViewDetails={setSelectedDetailTask} />)
             )}
           </div>
         )}
 
         {activeTab === 'support' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 860, margin: '0 auto' }}>
-            {supportRequests.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <MessageSquare size={16} color="var(--sp-primary)" />
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--sp-text-primary)' }}>
+                  Yêu cầu chưa được trả lời
+                </span>
+                {pendingSupportCount > 0 && (
+                  <span style={{
+                    padding: '2px 8px', borderRadius: 100,
+                    background: 'rgba(245,158,11,0.15)', color: '#d97706',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    fontSize: 11, fontWeight: 700
+                  }}>
+                    {pendingSupportCount} chờ xử lý
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {pendingSupportRequests.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                background: 'var(--sp-bg-card)', borderRadius: 8, border: '1px solid var(--sp-border)' }}>
                 <MessageSquare size={32} color="var(--sp-primary)" style={{ opacity: 0.2 }} />
-                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13.5 }}>Không có yêu cầu hỗ trợ nào</p>
+                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 13.5 }}>Không có yêu cầu hỗ trợ nào chưa xử lý</p>
+                <p style={{ margin: 0, color: 'var(--sp-text-muted)', fontSize: 12 }}>Các yêu cầu đã trả lời nằm trong tab Lịch Sử Làm Việc</p>
               </div>
             ) : (
-              supportRequests.map(req => (
+              pendingSupportRequests.map(req => (
                 <SupportCard
                   key={req.id}
                   request={req}

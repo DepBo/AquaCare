@@ -105,3 +105,10 @@ AquaCare_App/ios/coverage/
 AquaCare_App/android/app/google-services.json
 AquaCare_App/ios/Runner/GoogleService-Info.plist
 AquaCare_App/macos/Runner/GoogleService-Info.plist
+
+# ==============================================================================
+# Tài liệu nội bộ nhạy cảm (KHÔNG commit lên GitHub)
+# ==============================================================================
+about.md
+schema.sql
+database.txt

@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
         Widget destination;
         if (role == 'admin') {
           destination = const AdminScreen();
-        } else if (role == 'staff') {
+        } else if (role.toString().startsWith('staff')) {
           destination = const StaffScreen();
         } else {
           destination = const DashboardScreen();
@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen>
       Widget destination;
       if (role == 'admin') {
         destination = const AdminScreen();
-      } else if (role == 'staff') {
+      } else if (role.toString().startsWith('staff')) {
         destination = const StaffScreen();
       } else {
         destination = const DashboardScreen();

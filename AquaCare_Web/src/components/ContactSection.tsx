@@ -33,6 +33,7 @@ interface SupportItem {
   full_name: string
   email: string
   phone?: string
+  address?: string
   message: string
   status: 'pending' | 'replied'
   staff_reply?: string
@@ -50,6 +51,7 @@ export default function ContactSection() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
   const [message, setMessage] = useState('')
 
   const [loading, setLoading] = useState(false)
@@ -69,7 +71,7 @@ export default function ContactSection() {
     return () => o.disconnect()
   }, [])
 
-  // Auto fill logged in user info (Đầu vào 2)
+  // Auto fill logged in user info
   useEffect(() => {
     const infoStr = localStorage.getItem('user_info')
     if (infoStr) {
@@ -82,6 +84,17 @@ export default function ContactSection() {
           setSearchEmail(parsed.email)
         }
         if (parsed.phone) setPhone(parsed.phone)
+        if (parsed.address) setAddress(parsed.address)
+
+        // Query fresh address from DB if not stored in localStorage
+        if (parsed.id) {
+          supabase.from('users').select('address').eq('id', parsed.id).single().then(({ data }) => {
+            if (data?.address) {
+              setAddress(data.address)
+              localStorage.setItem('user_info', JSON.stringify({ ...parsed, address: data.address }))
+            }
+          })
+        }
       } catch (e) {
         console.error(e)
       }
@@ -152,12 +165,18 @@ export default function ContactSection() {
         full_name: fullName.trim(),
         email: email.trim(),
         phone: phone.trim() || null,
+        address: address.trim() || null,
         message: message.trim(),
         status: 'pending',
       }
 
       if (userInfo?.id) {
         payload.user_id = String(userInfo.id)
+        // Sync address into users table if filled
+        if (address.trim()) {
+          supabase.from('users').update({ address: address.trim() }).eq('id', userInfo.id).then(() => {})
+          localStorage.setItem('user_info', JSON.stringify({ ...userInfo, address: address.trim() }))
+        }
       }
 
       const { error } = await supabase.from('support_requests').insert(payload)
@@ -378,6 +397,17 @@ export default function ContactSection() {
                     </div>
 
                     <div>
+                      <label style={{ display: 'block', fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Địa chỉ (hỗ trợ bảo trì tận nơi nếu cần)</label>
+                      <input
+                        type="text"
+                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
+                        style={inputStyle}
+                        value={address}
+                        onChange={e => setAddress(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
                       <label style={{ display: 'block', fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Nội dung cần hỗ trợ</label>
                       <textarea
                         rows={4}
@@ -462,12 +492,33 @@ export default function ContactSection() {
                       <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Đang kiểm tra câu trả lời...
                     </div>
                   ) : historyItems.length === 0 ? (
-                    <div style={{ padding: '40px 20px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px dashed rgba(255,255,255,0.1)' }}>
-                      <MessageSquare size={32} color="#00A896" style={{ opacity: 0.3, marginBottom: 12 }} />
-                      <p style={{ margin: '0 0 6px', color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                    <div style={{
+                      padding: '44px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: 12,
+                      border: '1px dashed rgba(255,255,255,0.1)'
+                    }}>
+                      <div style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: '50%',
+                        background: 'rgba(0, 168, 150, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12
+                      }}>
+                        <MessageSquare size={24} color="#00A896" style={{ opacity: 0.85 }} />
+                      </div>
+                      <p style={{ margin: '0 0 6px', color: '#fff', fontSize: 14.5, fontWeight: 600 }}>
                         {searched ? 'Chưa có câu hỏi nào' : 'Vui lòng nhập Email để tra cứu'}
                       </p>
-                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: 12.5 }}>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.45)', fontSize: 12.5, maxWidth: 360, lineHeight: 1.5 }}>
                         Khi nhân viên CS trả lời, câu trả lời sẽ xuất hiện tại đây.
                       </p>
                     </div>

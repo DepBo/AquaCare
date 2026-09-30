@@ -56,7 +56,8 @@ async function fetchActiveDevices() {
       .from('devices')
       .select('id, mac_address, tank_id')
       .eq('is_active', true)
-      .eq('is_simulator', true);
+      .eq('is_simulator', true)
+      .not('tank_id', 'is', null);
 
     if (error) {
       console.error('Lỗi khi lấy danh sách thiết bị:', error.message);

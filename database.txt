@@ -6,12 +6,13 @@ CREATE TABLE public.users (
   full_name character varying NOT NULL,
   email character varying NOT NULL UNIQUE,
   phone character varying UNIQUE,
-  role character varying NOT NULL DEFAULT 'user'::character varying CHECK (role::text = ANY (ARRAY['user'::character varying, 'staff'::character varying, 'admin'::character varying]::text[])),
+  role character varying NOT NULL DEFAULT 'user'::character varying CHECK (role::text = ANY (ARRAY['customer'::character varying, 'user'::character varying, 'admin'::character varying, 'staff'::character varying, 'staff_support'::character varying, 'staff_warehouse'::character varying, 'staff_shipper'::character varying, 'staff_maintenance'::character varying]::text[])),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   web_fcm_token text,
   app_fcm_token text,
   avatar_url text,
+  address text,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -105,15 +106,6 @@ CREATE TABLE public.relay_logs (
   CONSTRAINT relay_logs_pkey PRIMARY KEY (id),
   CONSTRAINT relay_logs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
 );
-CREATE TABLE public.mqtt_messages (
-  id bigint NOT NULL DEFAULT nextval('mqtt_messages_id_seq'::regclass),
-  device_id integer,
-  raw_payload jsonb NOT NULL,
-  processed boolean DEFAULT false,
-  received_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT mqtt_messages_pkey PRIMARY KEY (id),
-  CONSTRAINT mqtt_messages_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
-);
 CREATE TABLE public.notifications (
   id bigint NOT NULL DEFAULT nextval('notifications_id_seq'::regclass),
   user_id uuid NOT NULL,
@@ -172,7 +164,7 @@ CREATE TABLE public.order_items (
   product_name character varying NOT NULL,
   product_price integer NOT NULL,
   quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
-  device_mac character varying,
+  device_macs jsonb,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
@@ -215,4 +207,40 @@ CREATE TABLE public.user_subscriptions (
   CONSTRAINT user_subscriptions_pkey PRIMARY KEY (id),
   CONSTRAINT user_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT user_subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id)
+);
+CREATE TABLE public.tasks (
+  id bigint NOT NULL DEFAULT nextval('tasks_id_seq'::regclass),
+  task_type character varying NOT NULL,
+  status character varying NOT NULL DEFAULT 'todo'::character varying CHECK (status::text = ANY (ARRAY['todo'::character varying, 'in_progress'::character varying, 'done'::character varying, 'cancelled'::character varying]::text[])),
+  assigned_to uuid,
+  customer_id uuid,
+  order_id bigint,
+  tank_id integer,
+  title character varying NOT NULL,
+  description text,
+  staff_note text,
+  deadline timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  CONSTRAINT tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
+  CONSTRAINT tasks_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
+  CONSTRAINT tasks_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT tasks_tank_id_fkey FOREIGN KEY (tank_id) REFERENCES public.tanks(id)
+);
+CREATE TABLE public.support_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  full_name text NOT NULL,
+  email text NOT NULL,
+  phone text,
+  message text NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  staff_reply text,
+  user_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  address text,
+  assigned_to uuid,
+  CONSTRAINT support_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT support_requests_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
+  CONSTRAINT support_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

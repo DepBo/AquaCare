@@ -555,7 +555,9 @@ BEGIN
         target_role := 'staff_warehouse';
     ELSIF NEW.task_type = 'delivery_install' THEN
         target_role := 'staff_shipper';
-    ELSIF NEW.task_type IN ('maintenance', 'support') THEN
+    ELSIF NEW.task_type = 'maintenance' THEN
+        target_role := 'staff_maintenance';
+    ELSIF NEW.task_type = 'support' THEN
         target_role := 'staff_support';
     ELSE
         RETURN NEW; -- Không xác định được loại việc, bỏ qua
@@ -862,3 +864,121 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
+
+-- ============================================================================
+-- 1. BỔ SUNG CỘT ĐỊA CHỈ CHO BẢNG USERS VÀ BẢNG SUPPORT_REQUESTS
+-- ============================================================================
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.support_requests ADD COLUMN IF NOT EXISTS address TEXT;
+
+-- ============================================================================
+-- 2. BỔ SUNG CỘT ASSIGNED_TO VÀO SUPPORT_REQUESTS ĐỂ CÂN BẰNG TẢI CHO STAFF SUPPORT
+-- ============================================================================
+ALTER TABLE public.support_requests 
+ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES public.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_assigned_to 
+ON public.support_requests(assigned_to);
+
+-- ============================================================================
+-- 3. TRIGGER TỰ ĐỘNG CHIA ĐỀU YÊU CẦU HỖ TRỢ (LOAD BALANCING CHO STAFF_SUPPORT)
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.assign_support_request_automatically()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    selected_staff_id UUID;
+BEGIN
+    -- Nếu đã được gán thủ công thì giữ nguyên
+    IF NEW.assigned_to IS NOT NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Tìm 1 nhân viên role staff_support đang có ít yêu cầu pending nhất
+    SELECT u.id INTO selected_staff_id
+    FROM public.users u
+    LEFT JOIN public.support_requests sr ON sr.assigned_to = u.id AND sr.status = 'pending'
+    WHERE u.role = 'staff_support'
+    GROUP BY u.id
+    ORDER BY COUNT(sr.id) ASC, RANDOM()
+    LIMIT 1;
+
+    -- Gán nhân viên được chọn vào yêu cầu hỗ trợ mới
+    IF selected_staff_id IS NOT NULL THEN
+        NEW.assigned_to := selected_staff_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_support_request_created ON public.support_requests;
+CREATE TRIGGER on_support_request_created
+    BEFORE INSERT ON public.support_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION public.assign_support_request_automatically();
+
+-- Tự động chia lại các support_requests cũ chưa có ai phụ trách
+DO $$
+DECLARE
+    r RECORD;
+    selected_staff_id UUID;
+BEGIN
+    FOR r IN SELECT * FROM public.support_requests WHERE assigned_to IS NULL AND status = 'pending' LOOP
+        SELECT u.id INTO selected_staff_id
+        FROM public.users u
+        LEFT JOIN public.support_requests sr ON sr.assigned_to = u.id AND sr.status = 'pending'
+        WHERE u.role = 'staff_support'
+        GROUP BY u.id
+        ORDER BY COUNT(sr.id) ASC, RANDOM()
+        LIMIT 1;
+
+        IF selected_staff_id IS NOT NULL THEN
+            UPDATE public.support_requests SET assigned_to = selected_staff_id WHERE id = r.id;
+        END IF;
+    END LOOP;
+END $$;
+
+-- ============================================================================
+-- 4. CẬP NHẬT RPC HÀM TRA CỨU THEO EMAIL (BỔ SUNG CỘT ADDRESS)
+-- ============================================================================
+DROP FUNCTION IF EXISTS public.get_support_history_by_email(TEXT);
+CREATE OR REPLACE FUNCTION public.get_support_history_by_email(p_email TEXT)
+RETURNS TABLE (
+  id UUID,
+  full_name TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  message TEXT,
+  status TEXT,
+  staff_reply TEXT,
+  created_at TIMESTAMP WITH TIME ZONE
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF p_email IS NULL OR TRIM(p_email) = '' THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+  SELECT 
+    sr.id,
+    sr.full_name,
+    sr.email,
+    sr.phone,
+    sr.address,
+    sr.message,
+    sr.status,
+    sr.staff_reply,
+    sr.created_at
+  FROM public.support_requests sr
+  WHERE LOWER(sr.email) = LOWER(TRIM(p_email))
+  ORDER BY sr.created_at DESC;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_support_history_by_email(TEXT) TO anon, authenticated;

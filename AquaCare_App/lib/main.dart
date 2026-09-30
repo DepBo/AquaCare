@@ -10,13 +10,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/fcm_service.dart';
+import 'customer_theme.dart';
 
 // Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp();
@@ -40,6 +42,7 @@ void main() async {
   );
 
   final prefs = await SharedPreferences.getInstance();
+  await CustomerTheme.load();
   final refreshToken = prefs.getString('refresh_token');
   final role = prefs.getString('role');
   Widget initialScreen = const LoginScreen();
@@ -50,13 +53,13 @@ void main() async {
       debugPrint(
         '✅ [SUCCESS]: Khôi phục Supabase session từ main.dart thành công.',
       );
-      
+
       // Đồng bộ FCM Token lên database sau khi đã đăng nhập
       await FCMService.instance.syncTokenToSupabase();
 
       if (role == 'admin') {
         initialScreen = const AdminScreen();
-      } else if (role == 'staff') {
+      } else if (role != null && role.startsWith('staff')) {
         initialScreen = const StaffScreen();
       } else {
         initialScreen = const DashboardScreen();

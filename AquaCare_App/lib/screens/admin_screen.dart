@@ -8,7 +8,9 @@ import '../models/staff_model.dart';
 import '../models/order_model.dart';
 import '../models/subscription_plan_model.dart';
 import '../services/supabase_service.dart';
+import '../widgets/floating_role_nav.dart';
 import 'login_screen.dart';
+export 'staff_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -20,7 +22,8 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   bool _isDark = true;
   bool _isLoading = true;
-  int _activeTab = 0; // 0: Species, 1: Devices, 2: Staff, 3: Orders, 4: Subscriptions
+  int _activeTab =
+      0; // 0: Species, 1: Devices, 2: Staff, 3: Orders, 4: Subscriptions
 
   // User Profile State
   String _adminName = 'Admin AquaCare';
@@ -45,13 +48,15 @@ class _AdminScreenState extends State<AdminScreen> {
   List<StaffModel> _staffList = [];
   List<StaffModel> _filteredStaffList = [];
   final TextEditingController _staffSearchCtrl = TextEditingController();
-  String _staffFilterRole = 'all'; // all, staff_warehouse, staff_shipper, staff_support, staff_maintenance, staff
+  String _staffFilterRole =
+      'all'; // all, staff_warehouse, staff_shipper, staff_support, staff_maintenance, staff
 
   // Orders Management State
   List<OrderModel> _ordersList = [];
   List<OrderModel> _filteredOrdersList = [];
   final TextEditingController _orderSearchCtrl = TextEditingController();
-  String _orderFilterStatus = 'all'; // all, pending, confirmed, shipping, delivered, cancelled
+  String _orderFilterStatus =
+      'all'; // all, pending, confirmed, shipping, delivered, cancelled
 
   // Subscriptions Management State
   List<SubscriptionPlanModel> _subscriptionsList = [];
@@ -107,7 +112,9 @@ class _AdminScreenState extends State<AdminScreen> {
             .eq('id', user.id)
             .maybeSingle();
 
-        if (res != null && res['full_name'] != null && (res['full_name'] as String).isNotEmpty) {
+        if (res != null &&
+            res['full_name'] != null &&
+            (res['full_name'] as String).isNotEmpty) {
           final fullName = res['full_name'] as String;
           setState(() {
             _adminName = fullName;
@@ -144,7 +151,9 @@ class _AdminScreenState extends State<AdminScreen> {
     try {
       if (_activeTab == 0) {
         final spData = await SupabaseService.instance.getFishSpecies();
-        final species = spData.map((json) => FishSpecies.fromJson(json)).toList();
+        final species = spData
+            .map((json) => FishSpecies.fromJson(json))
+            .toList();
         setState(() {
           _speciesList = species;
           _filterSpecies();
@@ -152,7 +161,9 @@ class _AdminScreenState extends State<AdminScreen> {
         });
       } else if (_activeTab == 1) {
         final devData = await SupabaseService.instance.getDevices();
-        final devices = devData.map((json) => DeviceModel.fromJson(json)).toList();
+        final devices = devData
+            .map((json) => DeviceModel.fromJson(json))
+            .toList();
 
         final mapData = await SupabaseService.instance.getMacCustomerMap();
         final Map<String, BuyerInfo> parsedMap = {};
@@ -168,7 +179,9 @@ class _AdminScreenState extends State<AdminScreen> {
         });
       } else if (_activeTab == 2) {
         final staffData = await SupabaseService.instance.getStaff();
-        final staffList = staffData.map((json) => StaffModel.fromJson(json)).toList();
+        final staffList = staffData
+            .map((json) => StaffModel.fromJson(json))
+            .toList();
         setState(() {
           _staffList = staffList;
           _filterStaff();
@@ -176,7 +189,9 @@ class _AdminScreenState extends State<AdminScreen> {
         });
       } else if (_activeTab == 3) {
         final ordersData = await SupabaseService.instance.getOrders();
-        final ordersList = ordersData.map((json) => OrderModel.fromJson(json)).toList();
+        final ordersList = ordersData
+            .map((json) => OrderModel.fromJson(json))
+            .toList();
         setState(() {
           _ordersList = ordersList;
           _filterOrders();
@@ -184,7 +199,9 @@ class _AdminScreenState extends State<AdminScreen> {
         });
       } else if (_activeTab == 4) {
         final subData = await SupabaseService.instance.getSubscriptionPlans();
-        final subsList = subData.map((json) => SubscriptionPlanModel.fromJson(json)).toList();
+        final subsList = subData
+            .map((json) => SubscriptionPlanModel.fromJson(json))
+            .toList();
         setState(() {
           _subscriptionsList = subsList;
           _filterSubscriptions();
@@ -229,7 +246,8 @@ class _AdminScreenState extends State<AdminScreen> {
     final query = _deviceSearchCtrl.text.trim().toUpperCase();
     _filteredDevicesList = _devicesList.where((d) {
       // 1. Search Query
-      final matchSearch = query.isEmpty || d.macAddress.toUpperCase().contains(query);
+      final matchSearch =
+          query.isEmpty || d.macAddress.toUpperCase().contains(query);
 
       // 2. Version Filter
       bool matchVersion = true;
@@ -271,7 +289,8 @@ class _AdminScreenState extends State<AdminScreen> {
   void _filterStaff() {
     final query = _staffSearchCtrl.text.trim().toLowerCase();
     _filteredStaffList = _staffList.where((s) {
-      final matchSearch = query.isEmpty ||
+      final matchSearch =
+          query.isEmpty ||
           s.fullName.toLowerCase().contains(query) ||
           s.email.toLowerCase().contains(query) ||
           s.phone.contains(query);
@@ -292,14 +311,16 @@ class _AdminScreenState extends State<AdminScreen> {
   void _filterOrders() {
     final query = _orderSearchCtrl.text.trim().toLowerCase();
     _filteredOrdersList = _ordersList.where((o) {
-      final matchSearch = query.isEmpty ||
+      final matchSearch =
+          query.isEmpty ||
           o.customerName.toLowerCase().contains(query) ||
           o.phone.contains(query) ||
           o.id.toLowerCase().contains(query) ||
           o.productSummary.toLowerCase().contains(query) ||
           o.macsSummary.toLowerCase().contains(query);
 
-      final matchStatus = _orderFilterStatus == 'all' || o.status == _orderFilterStatus;
+      final matchStatus =
+          _orderFilterStatus == 'all' || o.status == _orderFilterStatus;
 
       return matchSearch && matchStatus;
     }).toList();
@@ -337,12 +358,17 @@ class _AdminScreenState extends State<AdminScreen> {
             Expanded(
               child: Text(
                 message,
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF0284C7),
+        backgroundColor: isError
+            ? const Color(0xFFEF4444)
+            : const Color(0xFF0284C7),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -353,8 +379,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _handleLogout() {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -380,7 +410,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -396,7 +428,13 @@ class _AdminScreenState extends State<AdminScreen> {
                 );
               }
             },
-            child: Text('Đăng xuất', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Đăng xuất',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -418,16 +456,25 @@ class _AdminScreenState extends State<AdminScreen> {
               await SupabaseService.instance.addFishSpecies(data);
               _showSnackBar('Thêm loài cá thành công!');
             } else {
-              await SupabaseService.instance.updateFishSpecies(species.id, data);
+              await SupabaseService.instance.updateFishSpecies(
+                species.id,
+                data,
+              );
               _showSnackBar('Cập nhật loài cá thành công!');
             }
             await _fetchData();
           } catch (e) {
             final errStr = e.toString();
             if (errStr.contains('23505') || errStr.contains('unique')) {
-              _showSnackBar('Tên loài cá này đã tồn tại trong hệ thống!', isError: true);
+              _showSnackBar(
+                'Tên loài cá này đã tồn tại trong hệ thống!',
+                isError: true,
+              );
             } else {
-              _showSnackBar(errStr.replaceAll('Exception: ', ''), isError: true);
+              _showSnackBar(
+                errStr.replaceAll('Exception: ', ''),
+                isError: true,
+              );
             }
           }
         },
@@ -437,8 +484,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _confirmDeleteSpecies(FishSpecies species) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -464,7 +515,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -477,7 +530,13 @@ class _AdminScreenState extends State<AdminScreen> {
                 _showSnackBar('Lỗi khi xóa loài cá: $e', isError: true);
               }
             },
-            child: Text('Xóa', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Xóa',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -513,9 +572,15 @@ class _AdminScreenState extends State<AdminScreen> {
           } catch (e) {
             final errStr = e.toString();
             if (errStr.contains('23505') || errStr.contains('unique')) {
-              _showSnackBar('Địa chỉ MAC này đã tồn tại trong hệ thống!', isError: true);
+              _showSnackBar(
+                'Địa chỉ MAC này đã tồn tại trong hệ thống!',
+                isError: true,
+              );
             } else {
-              _showSnackBar(errStr.replaceAll('Exception: ', ''), isError: true);
+              _showSnackBar(
+                errStr.replaceAll('Exception: ', ''),
+                isError: true,
+              );
             }
           }
         },
@@ -525,8 +590,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _confirmDeleteDevice(DeviceModel device) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -552,7 +621,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -565,7 +636,13 @@ class _AdminScreenState extends State<AdminScreen> {
                 _showSnackBar('Lỗi khi xóa thiết bị: $e', isError: true);
               }
             },
-            child: Text('Xóa', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Xóa',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -574,8 +651,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _showBuyerDetails(BuyerInfo buyer) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
     final border = _isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
 
     showDialog(
@@ -588,7 +669,11 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             Text(
               'Thông tin người mua',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 16),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+                fontSize: 16,
+              ),
             ),
             IconButton(
               onPressed: () => Navigator.pop(ctx),
@@ -602,17 +687,42 @@ class _AdminScreenState extends State<AdminScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Họ & Tên', buyer.customerName, textPrimary, textSecondary),
+            _buildDetailRow(
+              'Họ & Tên',
+              buyer.customerName,
+              textPrimary,
+              textSecondary,
+            ),
             Divider(color: border, height: 16),
-            _buildDetailRow('Số điện thoại', buyer.phone, textPrimary, textSecondary),
+            _buildDetailRow(
+              'Số điện thoại',
+              buyer.phone,
+              textPrimary,
+              textSecondary,
+            ),
             Divider(color: border, height: 16),
             _buildDetailRow('Email', buyer.email, textPrimary, textSecondary),
             Divider(color: border, height: 16),
-            _buildDetailRow('Địa chỉ giao hàng', buyer.address, textPrimary, textSecondary),
+            _buildDetailRow(
+              'Địa chỉ giao hàng',
+              buyer.address,
+              textPrimary,
+              textSecondary,
+            ),
             Divider(color: border, height: 16),
-            _buildDetailRow('Sản phẩm mua', buyer.productName, textPrimary, textSecondary),
+            _buildDetailRow(
+              'Sản phẩm mua',
+              buyer.productName,
+              textPrimary,
+              textSecondary,
+            ),
             Divider(color: border, height: 16),
-            _buildDetailRow('Mã đơn hàng', buyer.orderId, textPrimary, textSecondary),
+            _buildDetailRow(
+              'Mã đơn hàng',
+              buyer.orderId,
+              textPrimary,
+              textSecondary,
+            ),
           ],
         ),
         actions: [
@@ -621,11 +731,19 @@ class _AdminScreenState extends State<AdminScreen> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0284C7),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 elevation: 0,
               ),
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Đóng', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+              child: Text(
+                'Đóng',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
@@ -665,10 +783,18 @@ class _AdminScreenState extends State<AdminScreen> {
             await _fetchData();
           } catch (e) {
             final errStr = e.toString();
-            if (errStr.contains('23505') || errStr.contains('unique') || errStr.contains('already registered')) {
-              _showSnackBar('Email hoặc Số điện thoại này đã được sử dụng!', isError: true);
+            if (errStr.contains('23505') ||
+                errStr.contains('unique') ||
+                errStr.contains('already registered')) {
+              _showSnackBar(
+                'Email hoặc Số điện thoại này đã được sử dụng!',
+                isError: true,
+              );
             } else {
-              _showSnackBar(errStr.replaceAll('Exception: ', ''), isError: true);
+              _showSnackBar(
+                errStr.replaceAll('Exception: ', ''),
+                isError: true,
+              );
             }
           }
         },
@@ -678,8 +804,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _confirmDeleteStaff(StaffModel staff) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -705,7 +835,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -718,22 +850,47 @@ class _AdminScreenState extends State<AdminScreen> {
                 _showSnackBar('Lỗi khi xóa nhân viên: $e', isError: true);
               }
             },
-            child: Text('Xóa', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Xóa',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, Color textPrimary, Color textSecondary) {
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textSecondary)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: textSecondary,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary)),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -743,175 +900,214 @@ class _AdminScreenState extends State<AdminScreen> {
   Widget build(BuildContext context) {
     final bgColor = _isDark ? const Color(0xFF141414) : const Color(0xFFF8FAFC);
     final topbarBg = _isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = _isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
+    final cardBorder = _isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
     final inputBg = _isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: Column(
+        bottom: false,
+        child: Stack(
           children: [
-            // ── Top Header ──
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: topbarBg,
-                border: Border(bottom: BorderSide(color: cardBorder)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _adminInitials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
+            Column(
+              children: [
+                // ── Top Header ──
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: topbarBg,
+                    border: Border(bottom: BorderSide(color: cardBorder)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _adminInitials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _adminName,
-                          style: GoogleFonts.inter(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _adminName,
+                              style: GoogleFonts.inter(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                              ),
+                            ),
+                            Text(
+                              'Quản trị AquaCare System',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          'Quản trị AquaCare System',
-                          style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            color: textSecondary,
-                          ),
+                      ),
+                      IconButton(
+                        onPressed: _toggleTheme,
+                        icon: Icon(
+                          _isDark
+                              ? Icons.wb_sunny_outlined
+                              : Icons.nightlight_round_outlined,
+                          color: textSecondary,
+                          size: 22,
                         ),
-                      ],
-                    ),
+                        tooltip: _isDark
+                            ? 'Chuyển sang Chế độ Sáng'
+                            : 'Chuyển sang Chế độ Tối',
+                      ),
+                      IconButton(
+                        onPressed: _handleLogout,
+                        icon: Icon(
+                          Icons.logout_rounded,
+                          color: textSecondary,
+                          size: 22,
+                        ),
+                        tooltip: 'Đăng xuất',
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    onPressed: _toggleTheme,
-                    icon: Icon(
-                      _isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
-                      color: textSecondary,
-                      size: 22,
-                    ),
-                    tooltip: _isDark ? 'Chuyển sang Chế độ Sáng' : 'Chuyển sang Chế độ Tối',
+                ),
+
+                // ── Main Content Area ──
+                Expanded(
+                  child: _activeTab == 0
+                      ? _buildSpeciesTab(
+                          primary,
+                          textPrimary,
+                          textSecondary,
+                          inputBg,
+                          cardBorder,
+                        )
+                      : _activeTab == 1
+                      ? _buildDevicesTab(
+                          primary,
+                          textPrimary,
+                          textSecondary,
+                          inputBg,
+                          cardBorder,
+                        )
+                      : _activeTab == 2
+                      ? _buildStaffTab(
+                          primary,
+                          textPrimary,
+                          textSecondary,
+                          inputBg,
+                          cardBorder,
+                        )
+                      : _activeTab == 3
+                      ? _buildOrdersTab(
+                          primary,
+                          textPrimary,
+                          textSecondary,
+                          inputBg,
+                          cardBorder,
+                        )
+                      : _buildSubscriptionsTab(
+                          primary,
+                          textPrimary,
+                          textSecondary,
+                          inputBg,
+                          cardBorder,
+                        ),
+                ),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FloatingRoleNav(
+                isDark: _isDark,
+                selectedIndex: _activeTab,
+                items: [
+                  FloatingRoleNavItem(
+                    label: 'Loài cá',
+                    symbol: 'fish',
+                    onTap: () {
+                      setState(() => _activeTab = 0);
+                      _fetchData();
+                    },
                   ),
-                  IconButton(
-                    onPressed: _handleLogout,
-                    icon: Icon(Icons.logout_rounded, color: textSecondary, size: 22),
-                    tooltip: 'Đăng xuất',
+                  FloatingRoleNavItem(
+                    label: 'Thiết bị',
+                    symbol: 'device',
+                    onTap: () {
+                      setState(() => _activeTab = 1);
+                      _fetchData();
+                    },
+                  ),
+                  FloatingRoleNavItem(
+                    label: 'Nhân viên',
+                    symbol: 'staff',
+                    onTap: () {
+                      setState(() => _activeTab = 2);
+                      _fetchData();
+                    },
+                  ),
+                  FloatingRoleNavItem(
+                    label: 'Đơn hàng',
+                    symbol: 'cart',
+                    onTap: () {
+                      setState(() => _activeTab = 3);
+                      _fetchData();
+                    },
+                  ),
+                  FloatingRoleNavItem(
+                    label: 'Gói cước',
+                    symbol: 'layers',
+                    onTap: () {
+                      setState(() => _activeTab = 4);
+                      _fetchData();
+                    },
                   ),
                 ],
               ),
             ),
-
-            // ── Main Content Area ──
-            Expanded(
-              child: _activeTab == 0
-                  ? _buildSpeciesTab(primary, textPrimary, textSecondary, inputBg, cardBorder)
-                  : _activeTab == 1
-                      ? _buildDevicesTab(primary, textPrimary, textSecondary, inputBg, cardBorder)
-                      : _activeTab == 2
-                          ? _buildStaffTab(primary, textPrimary, textSecondary, inputBg, cardBorder)
-                          : _activeTab == 3
-                              ? _buildOrdersTab(primary, textPrimary, textSecondary, inputBg, cardBorder)
-                              : _buildSubscriptionsTab(primary, textPrimary, textSecondary, inputBg, cardBorder),
-            ),
           ],
-        ),
-      ),
-
-      // ── Floating Bottom Navigation Bar ──
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: topbarBg,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: cardBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(_isDark ? 0.4 : 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomNavItem(
-                icon: Icons.set_meal_rounded,
-                isSelected: _activeTab == 0,
-                isDark: _isDark,
-                onTap: () {
-                  setState(() => _activeTab = 0);
-                  _fetchData();
-                },
-              ),
-              _BottomNavItem(
-                icon: Icons.inventory_2_outlined,
-                isSelected: _activeTab == 1,
-                isDark: _isDark,
-                onTap: () {
-                  setState(() => _activeTab = 1);
-                  _fetchData();
-                },
-              ),
-              _BottomNavItem(
-                icon: Icons.badge_outlined,
-                isSelected: _activeTab == 2,
-                isDark: _isDark,
-                onTap: () {
-                  setState(() => _activeTab = 2);
-                  _fetchData();
-                },
-              ),
-              _BottomNavItem(
-                icon: Icons.shopping_cart_outlined,
-                isSelected: _activeTab == 3,
-                isDark: _isDark,
-                onTap: () {
-                  setState(() => _activeTab = 3);
-                  _fetchData();
-                },
-              ),
-              _BottomNavItem(
-                icon: Icons.layers_outlined,
-                isSelected: _activeTab == 4,
-                isDark: _isDark,
-                onTap: () {
-                  setState(() => _activeTab = 4);
-                  _fetchData();
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
   // ─── TAB 0: FISH SPECIES UI ───
-  Widget _buildSpeciesTab(Color primary, Color textPrimary, Color textSecondary, Color inputBg, Color cardBorder) {
+  Widget _buildSpeciesTab(
+    Color primary,
+    Color textPrimary,
+    Color textSecondary,
+    Color inputBg,
+    Color cardBorder,
+  ) {
     return RefreshIndicator(
       onRefresh: _fetchData,
       color: primary,
@@ -924,14 +1120,27 @@ class _AdminScreenState extends State<AdminScreen> {
                 Expanded(
                   child: TextField(
                     controller: _speciesSearchCtrl,
-                    style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
+                    style: GoogleFonts.inter(
+                      color: textPrimary,
+                      fontSize: 13.5,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm loài cá...',
-                      hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 13),
-                      prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18),
+                      hintStyle: GoogleFonts.inter(
+                        color: textSecondary,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: textSecondary,
+                        size: 18,
+                      ),
                       filled: true,
                       fillColor: inputBg,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: cardBorder),
@@ -952,11 +1161,20 @@ class _AdminScreenState extends State<AdminScreen> {
                   onPressed: () => _openSpeciesModal(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
-                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                  icon: const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                   label: Text(
                     'Thêm cá',
                     style: GoogleFonts.inter(
@@ -973,32 +1191,42 @@ class _AdminScreenState extends State<AdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primary))
                 : _filteredSpeciesList.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.set_meal_outlined, size: 48, color: textSecondary.withOpacity(0.5)),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Không tìm thấy loài cá nào',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textSecondary),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.set_meal_outlined,
+                          size: 48,
+                          color: textSecondary.withOpacity(0.5),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: _filteredSpeciesList.length,
-                        itemBuilder: (ctx, index) {
-                          final item = _filteredSpeciesList[index];
-                          return _SpeciesCard(
-                            species: item,
-                            isDark: _isDark,
-                            onEdit: () => _openSpeciesModal(species: item),
-                            onDelete: () => _confirmDeleteSpecies(item),
-                          );
-                        },
-                      ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không tìm thấy loài cá nào',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    itemCount: _filteredSpeciesList.length,
+                    itemBuilder: (ctx, index) {
+                      final item = _filteredSpeciesList[index];
+                      return _SpeciesCard(
+                        species: item,
+                        isDark: _isDark,
+                        onEdit: () => _openSpeciesModal(species: item),
+                        onDelete: () => _confirmDeleteSpecies(item),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -1006,7 +1234,13 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // ─── TAB 1: DEVICES & WAREHOUSE UI ───
-  Widget _buildDevicesTab(Color primary, Color textPrimary, Color textSecondary, Color inputBg, Color cardBorder) {
+  Widget _buildDevicesTab(
+    Color primary,
+    Color textPrimary,
+    Color textSecondary,
+    Color inputBg,
+    Color cardBorder,
+  ) {
     final totalPages = (_filteredDevicesList.length / _pageSize).ceil();
     final safeTotalPages = totalPages == 0 ? 1 : totalPages;
     final startIndex = _devicePage * _pageSize;
@@ -1032,14 +1266,27 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: TextField(
                         controller: _deviceSearchCtrl,
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Tìm theo MAC (ví dụ: 83:BC...)...',
-                          hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 12.5),
-                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18),
+                          hintStyle: GoogleFonts.inter(
+                            color: textSecondary,
+                            fontSize: 12.5,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: textSecondary,
+                            size: 18,
+                          ),
                           filled: true,
                           fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: cardBorder),
@@ -1060,11 +1307,20 @@ class _AdminScreenState extends State<AdminScreen> {
                       onPressed: () => _openDeviceModal(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       label: Text(
                         'Thêm TB',
                         style: GoogleFonts.inter(
@@ -1091,8 +1347,14 @@ class _AdminScreenState extends State<AdminScreen> {
                           child: DropdownButton<String>(
                             value: _deviceFilterVersion,
                             isExpanded: true,
-                            dropdownColor: _isDark ? const Color(0xFF222225) : Colors.white,
-                            style: GoogleFonts.inter(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                            dropdownColor: _isDark
+                                ? const Color(0xFF222225)
+                                : Colors.white,
+                            style: GoogleFonts.inter(
+                              color: textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() {
@@ -1103,11 +1365,26 @@ class _AdminScreenState extends State<AdminScreen> {
                               }
                             },
                             items: const [
-                              DropdownMenuItem(value: 'all', child: Text('Tất cả phiên bản')),
-                              DropdownMenuItem(value: 'V1', child: Text('Phiên bản V1')),
-                              DropdownMenuItem(value: 'V2', child: Text('Phiên bản V2')),
-                              DropdownMenuItem(value: 'V3', child: Text('Phiên bản V3')),
-                              DropdownMenuItem(value: 'V4', child: Text('Phiên bản V4')),
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('Tất cả phiên bản'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'V1',
+                                child: Text('Phiên bản V1'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'V2',
+                                child: Text('Phiên bản V2'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'V3',
+                                child: Text('Phiên bản V3'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'V4',
+                                child: Text('Phiên bản V4'),
+                              ),
                             ],
                           ),
                         ),
@@ -1126,8 +1403,14 @@ class _AdminScreenState extends State<AdminScreen> {
                           child: DropdownButton<String>(
                             value: _deviceFilterStatus,
                             isExpanded: true,
-                            dropdownColor: _isDark ? const Color(0xFF222225) : Colors.white,
-                            style: GoogleFonts.inter(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                            dropdownColor: _isDark
+                                ? const Color(0xFF222225)
+                                : Colors.white,
+                            style: GoogleFonts.inter(
+                              color: textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() {
@@ -1138,10 +1421,22 @@ class _AdminScreenState extends State<AdminScreen> {
                               }
                             },
                             items: const [
-                              DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
-                              DropdownMenuItem(value: 'active', child: Text('Đang dùng')),
-                              DropdownMenuItem(value: 'bought', child: Text('Đã được mua')),
-                              DropdownMenuItem(value: 'inactive', child: Text('Trong kho')),
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('Tất cả trạng thái'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'active',
+                                child: Text('Đang dùng'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'bought',
+                                child: Text('Đã được mua'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'inactive',
+                                child: Text('Trong kho'),
+                              ),
                             ],
                           ),
                         ),
@@ -1159,7 +1454,11 @@ class _AdminScreenState extends State<AdminScreen> {
               children: [
                 Text(
                   'Tổng: ${_filteredDevicesList.length} thiết bị',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textSecondary,
+                  ),
                 ),
                 Row(
                   children: [
@@ -1175,7 +1474,11 @@ class _AdminScreenState extends State<AdminScreen> {
                     const SizedBox(width: 4),
                     Text(
                       '${_devicePage + 1} / $safeTotalPages',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     IconButton(
@@ -1196,37 +1499,48 @@ class _AdminScreenState extends State<AdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primary))
                 : currentPageDevices.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.inventory_2_outlined, size: 48, color: textSecondary.withOpacity(0.5)),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Không tìm thấy thiết bị nào trong kho',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textSecondary),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 48,
+                          color: textSecondary.withOpacity(0.5),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: currentPageDevices.length,
-                        itemBuilder: (ctx, index) {
-                          final dev = currentPageDevices[index];
-                          final buyerInfo = _macCustomerMap[dev.macAddress.toUpperCase()];
-                          return _DeviceCard(
-                            device: dev,
-                            buyerInfo: buyerInfo,
-                            isDark: _isDark,
-                            onEdit: () => _openDeviceModal(device: dev),
-                            onDelete: () => _confirmDeleteDevice(dev),
-                            onViewBuyer: buyerInfo != null
-                                ? () => _showBuyerDetails(buyerInfo)
-                                : null,
-                          );
-                        },
-                      ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không tìm thấy thiết bị nào trong kho',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    itemCount: currentPageDevices.length,
+                    itemBuilder: (ctx, index) {
+                      final dev = currentPageDevices[index];
+                      final buyerInfo =
+                          _macCustomerMap[dev.macAddress.toUpperCase()];
+                      return _DeviceCard(
+                        device: dev,
+                        buyerInfo: buyerInfo,
+                        isDark: _isDark,
+                        onEdit: () => _openDeviceModal(device: dev),
+                        onDelete: () => _confirmDeleteDevice(dev),
+                        onViewBuyer: buyerInfo != null
+                            ? () => _showBuyerDetails(buyerInfo)
+                            : null,
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -1234,7 +1548,13 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   // ─── TAB 2: STAFF MANAGEMENT UI ───
-  Widget _buildStaffTab(Color primary, Color textPrimary, Color textSecondary, Color inputBg, Color cardBorder) {
+  Widget _buildStaffTab(
+    Color primary,
+    Color textPrimary,
+    Color textSecondary,
+    Color inputBg,
+    Color cardBorder,
+  ) {
     return RefreshIndicator(
       onRefresh: _fetchData,
       color: primary,
@@ -1249,14 +1569,27 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: TextField(
                         controller: _staffSearchCtrl,
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Tìm theo tên, email, sđt...',
-                          hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 12.5),
-                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18),
+                          hintStyle: GoogleFonts.inter(
+                            color: textSecondary,
+                            fontSize: 12.5,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: textSecondary,
+                            size: 18,
+                          ),
                           filled: true,
                           fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: cardBorder),
@@ -1277,11 +1610,20 @@ class _AdminScreenState extends State<AdminScreen> {
                       onPressed: () => _openStaffModal(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       label: Text(
                         'Thêm NV',
                         style: GoogleFonts.inter(
@@ -1307,8 +1649,14 @@ class _AdminScreenState extends State<AdminScreen> {
                     child: DropdownButton<String>(
                       value: _staffFilterRole,
                       isExpanded: true,
-                      dropdownColor: _isDark ? const Color(0xFF222225) : Colors.white,
-                      style: GoogleFonts.inter(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                      dropdownColor: _isDark
+                          ? const Color(0xFF222225)
+                          : Colors.white,
+                      style: GoogleFonts.inter(
+                        color: textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() {
@@ -1318,11 +1666,26 @@ class _AdminScreenState extends State<AdminScreen> {
                         }
                       },
                       items: const [
-                        DropdownMenuItem(value: 'all', child: Text('Tất cả vai trò')),
-                        DropdownMenuItem(value: 'staff_warehouse', child: Text('Nhân viên kho')),
-                        DropdownMenuItem(value: 'staff_shipper', child: Text('Nhân viên giao hàng')),
-                        DropdownMenuItem(value: 'staff_support', child: Text('Nhân viên hỗ trợ')),
-                        DropdownMenuItem(value: 'staff_maintenance', child: Text('Nhân viên bảo trì')),
+                        DropdownMenuItem(
+                          value: 'all',
+                          child: Text('Tất cả vai trò'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_warehouse',
+                          child: Text('Nhân viên kho'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_shipper',
+                          child: Text('Nhân viên giao hàng'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_support',
+                          child: Text('Nhân viên hỗ trợ'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_maintenance',
+                          child: Text('Nhân viên bảo trì'),
+                        ),
                         DropdownMenuItem(value: 'staff', child: Text('Staff')),
                       ],
                     ),
@@ -1339,7 +1702,11 @@ class _AdminScreenState extends State<AdminScreen> {
               children: [
                 Text(
                   'Tổng: ${_filteredStaffList.length} nhân viên',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -1349,39 +1716,55 @@ class _AdminScreenState extends State<AdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primary))
                 : _filteredStaffList.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.badge_outlined, size: 48, color: textSecondary.withOpacity(0.5)),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Không tìm thấy nhân viên nào',
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textSecondary),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.badge_outlined,
+                          size: 48,
+                          color: textSecondary.withOpacity(0.5),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: _filteredStaffList.length,
-                        itemBuilder: (ctx, index) {
-                          final st = _filteredStaffList[index];
-                          return _StaffCard(
-                            staff: st,
-                            isDark: _isDark,
-                            onEdit: () => _openStaffModal(staff: st),
-                            onDelete: () => _confirmDeleteStaff(st),
-                          );
-                        },
-                      ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không tìm thấy nhân viên nào',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    itemCount: _filteredStaffList.length,
+                    itemBuilder: (ctx, index) {
+                      final st = _filteredStaffList[index];
+                      return _StaffCard(
+                        staff: st,
+                        isDark: _isDark,
+                        onEdit: () => _openStaffModal(staff: st),
+                        onDelete: () => _confirmDeleteStaff(st),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOrdersTab(Color primary, Color textPrimary, Color textSecondary, Color inputBg, Color cardBorder) {
+  Widget _buildOrdersTab(
+    Color primary,
+    Color textPrimary,
+    Color textSecondary,
+    Color inputBg,
+    Color cardBorder,
+  ) {
     final pendingCount = _ordersList.where((o) => o.status == 'pending').length;
 
     return RefreshIndicator(
@@ -1407,7 +1790,10 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                     if (pendingCount > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(12),
@@ -1430,14 +1816,27 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: TextField(
                         controller: _orderSearchCtrl,
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Tìm theo tên, SĐT, mã đơn...',
-                          hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 12.5),
-                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18),
+                          hintStyle: GoogleFonts.inter(
+                            color: textSecondary,
+                            fontSize: 12.5,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: textSecondary,
+                            size: 18,
+                          ),
                           filled: true,
                           fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: cardBorder),
@@ -1465,18 +1864,35 @@ class _AdminScreenState extends State<AdminScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _orderFilterStatus,
-                          dropdownColor: _isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                          dropdownColor: _isDark
+                              ? const Color(0xFF1F1F1F)
+                              : Colors.white,
                           style: GoogleFonts.inter(
                             color: textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'all', child: Text('Tất cả')),
-                            DropdownMenuItem(value: 'pending', child: Text('Chờ duyệt')),
-                            DropdownMenuItem(value: 'confirmed', child: Text('Đã duyệt')),
-                            DropdownMenuItem(value: 'shipping', child: Text('Đang giao')),
-                            DropdownMenuItem(value: 'delivered', child: Text('Đã giao')),
+                            DropdownMenuItem(
+                              value: 'all',
+                              child: Text('Tất cả'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'pending',
+                              child: Text('Chờ duyệt'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'confirmed',
+                              child: Text('Đã duyệt'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'shipping',
+                              child: Text('Đang giao'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'delivered',
+                              child: Text('Đã giao'),
+                            ),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -1499,25 +1915,31 @@ class _AdminScreenState extends State<AdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primary))
                 : _filteredOrdersList.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Không tìm thấy đơn hàng nào',
-                          style: GoogleFonts.inter(color: textSecondary, fontSize: 14),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        itemCount: _filteredOrdersList.length,
-                        itemBuilder: (ctx, idx) {
-                          final order = _filteredOrdersList[idx];
-                          return _OrderCard(
-                            order: order,
-                            isDark: _isDark,
-                            onApprove: () => _confirmApproveOrder(order),
-                            onViewDetails: () => _showOrderDetailsBottomSheet(order),
-                          );
-                        },
+                ? Center(
+                    child: Text(
+                      'Không tìm thấy đơn hàng nào',
+                      style: GoogleFonts.inter(
+                        color: textSecondary,
+                        fontSize: 14,
                       ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 6, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    itemCount: _filteredOrdersList.length,
+                    itemBuilder: (ctx, idx) {
+                      final order = _filteredOrdersList[idx];
+                      return _OrderCard(
+                        order: order,
+                        isDark: _isDark,
+                        onApprove: () => _confirmApproveOrder(order),
+                        onViewDetails: () =>
+                            _showOrderDetailsBottomSheet(order),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -1526,8 +1948,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _confirmApproveOrder(OrderModel order) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -1553,30 +1979,63 @@ class _AdminScreenState extends State<AdminScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _isDark ? const Color(0xFF181818) : const Color(0xFFF8FAFC),
+                color: _isDark
+                    ? const Color(0xFF181818)
+                    : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1)),
+                border: Border.all(
+                  color: _isDark
+                      ? const Color(0xFF333333)
+                      : const Color(0xFFCBD5E1),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Sản phẩm: ${order.productSummary}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary)),
+                  Text(
+                    'Sản phẩm: ${order.productSummary}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Tổng tiền: ${order.totalPrice.toStringAsFixed(0)} ₫', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A))),
+                  Text(
+                    'Tổng tiền: ${order.totalPrice.toStringAsFixed(0)} ₫',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF16A34A),
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Địa chỉ: ${order.address}', style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+                  Text(
+                    'Địa chỉ: ${order.address}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.local_shipping_outlined, size: 16, color: Color(0xFF0284C7)),
+                const Icon(
+                  Icons.local_shipping_outlined,
+                  size: 16,
+                  color: Color(0xFF0284C7),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Hệ thống sẽ tự động tạo việc đóng gói cho nhân viên kho.',
-                    style: GoogleFonts.inter(fontSize: 11.5, color: textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      color: textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -1591,7 +2050,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0284C7),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -1610,7 +2071,13 @@ class _AdminScreenState extends State<AdminScreen> {
                 _showSnackBar('Lỗi khi duyệt đơn: $e', isError: true);
               }
             },
-            child: Text('Duyệt đơn', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Duyệt đơn',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -1619,9 +2086,15 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _showOrderDetailsBottomSheet(OrderModel order) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
-    final cardBorder = _isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
+    final cardBorder = _isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
 
     showModalBottomSheet(
       context: context,
@@ -1651,68 +2124,146 @@ class _AdminScreenState extends State<AdminScreen> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(ctx),
-                    icon: Icon(Icons.close_rounded, color: textSecondary, size: 20),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: textSecondary,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
 
-              _buildDetailItem('Khách hàng', order.customerName, textPrimary, textSecondary),
-              _buildDetailItem('Số điện thoại', order.phone, textPrimary, textSecondary),
-              _buildDetailItem('Email', order.email, textPrimary, textSecondary),
-              _buildDetailItem('Địa chỉ giao hàng', order.address, textPrimary, textSecondary),
-              _buildDetailItem('Hình thức thanh toán', order.paymentMethod, textPrimary, textSecondary),
-              _buildDetailItem('Trạng thái', order.statusLabel, textPrimary, textSecondary),
+              _buildDetailItem(
+                'Khách hàng',
+                order.customerName,
+                textPrimary,
+                textSecondary,
+              ),
+              _buildDetailItem(
+                'Số điện thoại',
+                order.phone,
+                textPrimary,
+                textSecondary,
+              ),
+              _buildDetailItem(
+                'Email',
+                order.email,
+                textPrimary,
+                textSecondary,
+              ),
+              _buildDetailItem(
+                'Địa chỉ giao hàng',
+                order.address,
+                textPrimary,
+                textSecondary,
+              ),
+              _buildDetailItem(
+                'Hình thức thanh toán',
+                order.paymentMethod,
+                textPrimary,
+                textSecondary,
+              ),
+              _buildDetailItem(
+                'Trạng thái',
+                order.statusLabel,
+                textPrimary,
+                textSecondary,
+              ),
               if (order.note.isNotEmpty)
-                _buildDetailItem('Ghi chú của khách', order.note, textPrimary, textSecondary),
+                _buildDetailItem(
+                  'Ghi chú của khách',
+                  order.note,
+                  textPrimary,
+                  textSecondary,
+                ),
 
               const SizedBox(height: 14),
               Text(
                 'Danh sách sản phẩm:',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                ),
               ),
               const SizedBox(height: 6),
 
               if (order.items.isEmpty)
-                Text('Sản phẩm: ${order.productSummary}', style: GoogleFonts.inter(fontSize: 12, color: textSecondary))
+                Text(
+                  'Sản phẩm: ${order.productSummary}',
+                  style: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+                )
               else
-                ...order.items.map((item) => Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: _isDark ? const Color(0xFF181818) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: cardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(item.productName, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: textPrimary)),
-                              Text('x${item.quantity}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0284C7))),
-                            ],
-                          ),
-                          if (item.deviceMacs.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                ...order.items.map(
+                  (item) => Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _isDark
+                          ? const Color(0xFF181818)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Text(
-                              'Mã MAC: ${item.deviceMacs.join(', ')}',
-                              style: GoogleFonts.firaCode(fontSize: 11, color: textSecondary),
+                              item.productName,
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                              ),
+                            ),
+                            Text(
+                              'x${item.quantity}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0284C7),
+                              ),
                             ),
                           ],
+                        ),
+                        if (item.deviceMacs.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Mã MAC: ${item.deviceMacs.join(', ')}',
+                            style: GoogleFonts.firaCode(
+                              fontSize: 11,
+                              color: textSecondary,
+                            ),
+                          ),
                         ],
-                      ),
-                    )),
+                      ],
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Tổng cộng:', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary)),
+                  Text(
+                    'Tổng cộng:',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                  ),
                   Text(
                     '${order.totalPrice.toStringAsFixed(0)} ₫',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF16A34A)),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF16A34A),
+                    ),
                   ),
                 ],
               ),
@@ -1723,7 +2274,12 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Widget _buildDetailItem(String title, String val, Color textPrimary, Color textSecondary) {
+  Widget _buildDetailItem(
+    String title,
+    String val,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1731,17 +2287,33 @@ class _AdminScreenState extends State<AdminScreen> {
         children: [
           SizedBox(
             width: 140,
-            child: Text(title, style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+            child: Text(
+              title,
+              style: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+            ),
           ),
           Expanded(
-            child: Text(val, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary)),
+            child: Text(
+              val,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSubscriptionsTab(Color primary, Color textPrimary, Color textSecondary, Color inputBg, Color cardBorder) {
+  Widget _buildSubscriptionsTab(
+    Color primary,
+    Color textPrimary,
+    Color textSecondary,
+    Color inputBg,
+    Color cardBorder,
+  ) {
     return RefreshIndicator(
       onRefresh: _fetchData,
       color: primary,
@@ -1756,14 +2328,27 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: TextField(
                         controller: _subSearchCtrl,
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Tìm kiếm gói cước...',
-                          hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 13),
-                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 18),
+                          hintStyle: GoogleFonts.inter(
+                            color: textSecondary,
+                            fontSize: 13,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: textSecondary,
+                            size: 18,
+                          ),
                           filled: true,
                           fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: cardBorder),
@@ -1784,11 +2369,20 @@ class _AdminScreenState extends State<AdminScreen> {
                       onPressed: () => _openSubscriptionModal(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       label: Text(
                         'Thêm gói',
                         style: GoogleFonts.inter(
@@ -1807,7 +2401,11 @@ class _AdminScreenState extends State<AdminScreen> {
                   children: [
                     Text(
                       'Tổng: ${_filteredSubscriptionsList.length} gói cước',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textSecondary,
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1819,17 +2417,31 @@ class _AdminScreenState extends State<AdminScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _subFilterType,
-                          dropdownColor: _isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                          dropdownColor: _isDark
+                              ? const Color(0xFF1F1F1F)
+                              : Colors.white,
                           style: GoogleFonts.inter(
                             color: textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'all', child: Text('Tất cả loại gói')),
-                            DropdownMenuItem(value: 'free', child: Text('Miễn phí')),
-                            DropdownMenuItem(value: 'premium', child: Text('Cao cấp')),
-                            DropdownMenuItem(value: 'enterprise', child: Text('Doanh nghiệp')),
+                            DropdownMenuItem(
+                              value: 'all',
+                              child: Text('Tất cả loại gói'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'free',
+                              child: Text('Miễn phí'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'premium',
+                              child: Text('Cao cấp'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'enterprise',
+                              child: Text('Doanh nghiệp'),
+                            ),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -1852,25 +2464,30 @@ class _AdminScreenState extends State<AdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primary))
                 : _filteredSubscriptionsList.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Không tìm thấy gói cước nào',
-                          style: GoogleFonts.inter(color: textSecondary, fontSize: 14),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: _filteredSubscriptionsList.length,
-                        itemBuilder: (ctx, idx) {
-                          final plan = _filteredSubscriptionsList[idx];
-                          return _SubscriptionCard(
-                            plan: plan,
-                            isDark: _isDark,
-                            onEdit: () => _openSubscriptionModal(plan: plan),
-                            onDelete: () => _confirmDeleteSubscription(plan),
-                          );
-                        },
+                ? Center(
+                    child: Text(
+                      'Không tìm thấy gói cước nào',
+                      style: GoogleFonts.inter(
+                        color: textSecondary,
+                        fontSize: 14,
                       ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(
+                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    itemCount: _filteredSubscriptionsList.length,
+                    itemBuilder: (ctx, idx) {
+                      final plan = _filteredSubscriptionsList[idx];
+                      return _SubscriptionCard(
+                        plan: plan,
+                        isDark: _isDark,
+                        onEdit: () => _openSubscriptionModal(plan: plan),
+                        onDelete: () => _confirmDeleteSubscription(plan),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -1891,7 +2508,10 @@ class _AdminScreenState extends State<AdminScreen> {
               await SupabaseService.instance.addSubscriptionPlan(data);
               _showSnackBar('Thêm gói cước thành công!');
             } else {
-              await SupabaseService.instance.updateSubscriptionPlan(plan.id, data);
+              await SupabaseService.instance.updateSubscriptionPlan(
+                plan.id,
+                data,
+              );
               _showSnackBar('Cập nhật gói cước thành công!');
             }
             await _fetchData();
@@ -1905,8 +2525,12 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _confirmDeleteSubscription(SubscriptionPlanModel plan) {
     final modalBg = _isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = _isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = _isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = _isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = _isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     showDialog(
       context: context,
@@ -1932,7 +2556,9 @@ class _AdminScreenState extends State<AdminScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               elevation: 0,
             ),
             onPressed: () async {
@@ -1945,49 +2571,15 @@ class _AdminScreenState extends State<AdminScreen> {
                 _showSnackBar('Lỗi khi xóa gói cước: $e', isError: true);
               }
             },
-            child: Text('Xóa', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              'Xóa',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Floating Bottom Nav Item Widget ─────────────────────────────────────────
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final bool isSelected;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.isSelected,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final activeBg = isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE);
-    final activeIcon = const Color(0xFF0284C7);
-    final inactiveIcon = isDark ? const Color(0xFF71717A) : const Color(0xFF64748B);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Icon(
-          icon,
-          size: 22,
-          color: isSelected ? activeIcon : inactiveIcon,
-        ),
       ),
     );
   }
@@ -2010,9 +2602,15 @@ class _SpeciesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final cardBorder = isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     return Container(
@@ -2031,7 +2629,9 @@ class _SpeciesCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE),
+                  color: isDark
+                      ? const Color(0x330284C7)
+                      : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(Icons.set_meal_rounded, color: primary, size: 18),
@@ -2057,7 +2657,11 @@ class _SpeciesCard extends StatelessWidget {
               const SizedBox(width: 4),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 18,
+                ),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
                 tooltip: 'Xóa',
@@ -2089,7 +2693,8 @@ class _SpeciesCard extends StatelessWidget {
               Expanded(
                 child: _ParamBadge(
                   label: 'TDS',
-                  value: '${species.tdsMin.toInt()} - ${species.tdsMax.toInt()} ppm',
+                  value:
+                      '${species.tdsMin.toInt()} - ${species.tdsMax.toInt()} ppm',
                   icon: Icons.water_drop_outlined,
                   isDark: isDark,
                 ),
@@ -2123,9 +2728,15 @@ class _DeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final cardBorder = isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     String statusText = 'Trong kho';
@@ -2165,11 +2776,17 @@ class _DeviceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF28282B) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF28282B)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: cardBorder),
                 ),
-                child: const Icon(Icons.qr_code_2_rounded, size: 18, color: Color(0xFF0284C7)),
+                child: const Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 18,
+                  color: Color(0xFF0284C7),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -2192,7 +2809,11 @@ class _DeviceCard extends StatelessWidget {
               const SizedBox(width: 4),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 18,
+                ),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
                 tooltip: 'Xóa',
@@ -2206,13 +2827,19 @@ class _DeviceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF28282B) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF28282B)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: cardBorder),
                 ),
                 child: Text(
                   device.firmwareVersion,
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: textPrimary),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -2224,7 +2851,11 @@ class _DeviceCard extends StatelessWidget {
                 ),
                 child: Text(
                   statusText,
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: statusColor),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
                 ),
               ),
             ],
@@ -2233,7 +2864,11 @@ class _DeviceCard extends StatelessWidget {
 
           Row(
             children: [
-              Icon(Icons.person_outline_rounded, size: 14, color: textSecondary),
+              Icon(
+                Icons.person_outline_rounded,
+                size: 14,
+                color: textSecondary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -2249,20 +2884,33 @@ class _DeviceCard extends StatelessWidget {
                   onTap: onViewBuyer,
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE),
+                      color: isDark
+                          ? const Color(0x330284C7)
+                          : const Color(0xFFE0F2FE),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: primary.withOpacity(0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.visibility_outlined, size: 12, color: primary),
+                        Icon(
+                          Icons.visibility_outlined,
+                          size: 12,
+                          color: primary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Xem KH',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: primary),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: primary,
+                          ),
                         ),
                       ],
                     ),
@@ -2294,9 +2942,15 @@ class _StaffCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final cardBorder = isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     return Container(
@@ -2316,13 +2970,21 @@ class _StaffCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE),
+                  color: isDark
+                      ? const Color(0x330284C7)
+                      : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: Text(
-                    staff.fullName.isNotEmpty ? staff.fullName[0].toUpperCase() : 'N',
-                    style: TextStyle(color: primary, fontWeight: FontWeight.w700, fontSize: 16),
+                    staff.fullName.isNotEmpty
+                        ? staff.fullName[0].toUpperCase()
+                        : 'N',
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -2341,14 +3003,23 @@ class _StaffCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE),
+                        color: isDark
+                            ? const Color(0x330284C7)
+                            : const Color(0xFFE0F2FE),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         staff.roleLabel,
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: primary),
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: primary,
+                        ),
                       ),
                     ),
                   ],
@@ -2364,7 +3035,11 @@ class _StaffCard extends StatelessWidget {
               const SizedBox(width: 4),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 18,
+                ),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(6),
                 tooltip: 'Xóa',
@@ -2424,13 +3099,21 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final cardBorder = isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     final isPending = order.status == 'pending';
-    final statusColor = isPending ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+    final statusColor = isPending
+        ? const Color(0xFFD97706)
+        : const Color(0xFF16A34A);
     final statusBg = isPending
         ? (isDark ? const Color(0x33D97706) : const Color(0xFFFEF3C7))
         : (isDark ? const Color(0x3316A34A) : const Color(0xFFDCFCE7));
@@ -2485,12 +3168,20 @@ class _OrderCard extends StatelessWidget {
 
           Row(
             children: [
-              Icon(Icons.person_outline_rounded, size: 14, color: textSecondary),
+              Icon(
+                Icons.person_outline_rounded,
+                size: 14,
+                color: textSecondary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   '${order.customerName} (${order.phone})',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: textPrimary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2506,7 +3197,10 @@ class _OrderCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   order.productSummary,
-                  style: GoogleFonts.inter(fontSize: 12.5, color: textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    color: textSecondary,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2521,7 +3215,9 @@ class _OrderCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF28282B) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF28282B)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: cardBorder),
                 ),
@@ -2535,7 +3231,9 @@ class _OrderCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
+                  color: isDark
+                      ? const Color(0xFF4ADE80)
+                      : const Color(0xFF16A34A),
                 ),
               ),
             ],
@@ -2549,14 +3247,23 @@ class _OrderCard extends StatelessWidget {
                 onPressed: onViewDetails,
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: cardBorder),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                 ),
                 child: Text(
                   'Chi tiết',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: primary),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: primary,
+                  ),
                 ),
               ),
               if (isPending) ...[
@@ -2565,15 +3272,24 @@ class _OrderCard extends StatelessWidget {
                   onPressed: onApprove,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0284C7),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
                     'Duyệt đơn',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -2603,8 +3319,12 @@ class _ParamBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? const Color(0xFF28282B) : const Color(0xFFF1F5F9);
     final border = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -2622,7 +3342,11 @@ class _ParamBadge extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: textSecondary),
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: textSecondary,
+                ),
               ),
             ],
           ),
@@ -2675,8 +3399,12 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
     super.initState();
     final sp = widget.species;
     _nameCtrl = TextEditingController(text: sp?.speciesName ?? '');
-    _tempMinCtrl = TextEditingController(text: (sp?.tempMin ?? 24.0).toString());
-    _tempMaxCtrl = TextEditingController(text: (sp?.tempMax ?? 30.0).toString());
+    _tempMinCtrl = TextEditingController(
+      text: (sp?.tempMin ?? 24.0).toString(),
+    );
+    _tempMaxCtrl = TextEditingController(
+      text: (sp?.tempMax ?? 30.0).toString(),
+    );
     _phMinCtrl = TextEditingController(text: (sp?.phMin ?? 6.5).toString());
     _phMaxCtrl = TextEditingController(text: (sp?.phMax ?? 7.5).toString());
     _tdsMinCtrl = TextEditingController(text: (sp?.tdsMin ?? 100.0).toString());
@@ -2702,7 +3430,9 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
     final tempMax = double.parse(_tempMaxCtrl.text);
     if (tempMin > tempMax) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nhiệt độ tối thiểu phải nhỏ hơn tối đa!')),
+        const SnackBar(
+          content: Text('Nhiệt độ tối thiểu phải nhỏ hơn tối đa!'),
+        ),
       );
       return;
     }
@@ -2745,8 +3475,12 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
     final isDark = widget.isDark;
     final modalBg = isDark ? const Color(0xFF222225) : Colors.white;
     final inputBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
     final border = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
 
     return Padding(
@@ -2770,7 +3504,9 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.species == null ? 'Thêm loài cá mới' : 'Chỉnh sửa loài cá',
+                      widget.species == null
+                          ? 'Thêm loài cá mới'
+                          : 'Chỉnh sửa loài cá',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -2779,7 +3515,11 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: textSecondary, size: 20),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: textSecondary,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -2789,8 +3529,15 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                 TextFormField(
                   controller: _nameCtrl,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên loài cá' : null,
-                  decoration: _buildInputDeco('Ví dụ: Cá Koi, Cá Betta...', inputBg, border, textSecondary),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập tên loài cá'
+                      : null,
+                  decoration: _buildInputDeco(
+                    'Ví dụ: Cá Koi, Cá Betta...',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -2800,20 +3547,42 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                     Expanded(
                       child: TextFormField(
                         controller: _tempMinCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu min' : null,
-                        decoration: _buildInputDeco('Min (24.0)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu min' : null,
+                        decoration: _buildInputDeco(
+                          'Min (24.0)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextFormField(
                         controller: _tempMaxCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu max' : null,
-                        decoration: _buildInputDeco('Max (30.0)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu max' : null,
+                        decoration: _buildInputDeco(
+                          'Max (30.0)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -2826,20 +3595,42 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                     Expanded(
                       child: TextFormField(
                         controller: _phMinCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu min' : null,
-                        decoration: _buildInputDeco('Min (6.5)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu min' : null,
+                        decoration: _buildInputDeco(
+                          'Min (6.5)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextFormField(
                         controller: _phMaxCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu max' : null,
-                        decoration: _buildInputDeco('Max (7.5)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu max' : null,
+                        decoration: _buildInputDeco(
+                          'Max (7.5)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -2852,20 +3643,42 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                     Expanded(
                       child: TextFormField(
                         controller: _tdsMinCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu min' : null,
-                        decoration: _buildInputDeco('Min (100)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu min' : null,
+                        decoration: _buildInputDeco(
+                          'Min (100)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextFormField(
                         controller: _tdsMaxCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Thiếu max' : null,
-                        decoration: _buildInputDeco('Max (300)', inputBg, border, textSecondary),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Thiếu max' : null,
+                        decoration: _buildInputDeco(
+                          'Max (300)',
+                          inputBg,
+                          border,
+                          textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -2879,11 +3692,16 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                     onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          )
                         : Text(
                             widget.species == null ? 'Thêm mới' : 'Cập nhật',
                             style: GoogleFonts.inter(
@@ -2907,21 +3725,39 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
 
-  InputDecoration _buildInputDeco(String hint, Color bg, Color border, Color hintColor) {
+  InputDecoration _buildInputDeco(
+    String hint,
+    Color bg,
+    Color border,
+    Color hintColor,
+  ) {
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.inter(color: hintColor, fontSize: 13),
       filled: true,
       fillColor: bg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+      ),
     );
   }
 }
@@ -2954,7 +3790,9 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
     super.initState();
     final dev = widget.device;
     _macCtrl = TextEditingController(text: dev?.macAddress ?? '');
-    _selectedVersion = dev != null ? _normalizeVersion(dev.firmwareVersion) : 'V1';
+    _selectedVersion = dev != null
+        ? _normalizeVersion(dev.firmwareVersion)
+        : 'V1';
   }
 
   String _normalizeVersion(String v) {
@@ -2984,8 +3822,12 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
     final isDark = widget.isDark;
     final modalBg = isDark ? const Color(0xFF222225) : Colors.white;
     final inputBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
     final border = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
 
     return Padding(
@@ -3009,7 +3851,9 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.device == null ? 'Thêm thiết bị vào kho' : 'Chỉnh sửa thiết bị',
+                      widget.device == null
+                          ? 'Thêm thiết bị vào kho'
+                          : 'Chỉnh sửa thiết bị',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -3018,34 +3862,64 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: textSecondary, size: 20),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: textSecondary,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
 
-                _buildLabel('MAC Address (Nhập 1 hoặc nhiều mã cách nhau bằng dòng mới/dấu phẩy)', textPrimary),
+                _buildLabel(
+                  'MAC Address (Nhập 1 hoặc nhiều mã cách nhau bằng dòng mới/dấu phẩy)',
+                  textPrimary,
+                ),
                 TextFormField(
                   controller: _macCtrl,
                   maxLines: widget.device == null ? 3 : 1,
                   style: GoogleFonts.firaCode(color: textPrimary, fontSize: 13),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập MAC Address' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập MAC Address'
+                      : null,
                   decoration: InputDecoration(
                     hintText: widget.device == null
                         ? 'Ví dụ:\n83:BC:5C:AD:72:AA\n83:BC:5C:AD:72:AB'
                         : 'Ví dụ: 83:BC:5C:AD:72:AA',
-                    hintStyle: GoogleFonts.firaCode(color: textSecondary, fontSize: 12),
+                    hintStyle: GoogleFonts.firaCode(
+                      color: textSecondary,
+                      fontSize: 12,
+                    ),
                     filled: true,
                     fillColor: inputBg,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0284C7),
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                _buildLabel('Phiên bản thiết bị (Firmware Version)', textPrimary),
+                _buildLabel(
+                  'Phiên bản thiết bị (Firmware Version)',
+                  textPrimary,
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
@@ -3057,18 +3931,36 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
                     child: DropdownButton<String>(
                       value: _selectedVersion,
                       isExpanded: true,
-                      dropdownColor: isDark ? const Color(0xFF222225) : Colors.white,
-                      style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
+                      dropdownColor: isDark
+                          ? const Color(0xFF222225)
+                          : Colors.white,
+                      style: GoogleFonts.inter(
+                        color: textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() => _selectedVersion = val);
                         }
                       },
                       items: const [
-                        DropdownMenuItem(value: 'V1', child: Text('Phiên bản V1 (Cơ bản)')),
-                        DropdownMenuItem(value: 'V2', child: Text('Phiên bản V2 (Bổ sung pH)')),
-                        DropdownMenuItem(value: 'V3', child: Text('Phiên bản V3 (Bổ sung TDS)')),
-                        DropdownMenuItem(value: 'V4', child: Text('Phiên bản V4 (Cao cấp)')),
+                        DropdownMenuItem(
+                          value: 'V1',
+                          child: Text('Phiên bản V1 (Cơ bản)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'V2',
+                          child: Text('Phiên bản V2 (Bổ sung pH)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'V3',
+                          child: Text('Phiên bản V3 (Bổ sung TDS)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'V4',
+                          child: Text('Phiên bản V4 (Cao cấp)'),
+                        ),
                       ],
                     ),
                   ),
@@ -3082,13 +3974,20 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
                     onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          )
                         : Text(
-                            widget.device == null ? 'Thêm thiết bị' : 'Cập nhật',
+                            widget.device == null
+                                ? 'Thêm thiết bị'
+                                : 'Cập nhật',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -3110,7 +4009,11 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
@@ -3120,7 +4023,14 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
 class _StaffFormSheet extends StatefulWidget {
   final StaffModel? staff;
   final bool isDark;
-  final Function(String fullName, String email, String phone, String password, String role) onSave;
+  final Function(
+    String fullName,
+    String email,
+    String phone,
+    String password,
+    String role,
+  )
+  onSave;
 
   const _StaffFormSheet({
     this.staff,
@@ -3180,8 +4090,12 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
     final isDark = widget.isDark;
     final modalBg = isDark ? const Color(0xFF222225) : Colors.white;
     final inputBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
     final border = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
 
     final isEdit = widget.staff != null;
@@ -3216,7 +4130,11 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: textSecondary, size: 20),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: textSecondary,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -3226,8 +4144,15 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                 TextFormField(
                   controller: _nameCtrl,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ tên' : null,
-                  decoration: _buildInputDeco('Ví dụ: Nguyễn Văn A', inputBg, border, textSecondary),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập họ tên'
+                      : null,
+                  decoration: _buildInputDeco(
+                    'Ví dụ: Nguyễn Văn A',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -3237,10 +4162,17 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                   enabled: !isEdit,
                   keyboardType: TextInputType.emailAddress,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (!isEdit && (v == null || v.trim().isEmpty || !v.contains('@')))
+                  validator: (v) =>
+                      (!isEdit &&
+                          (v == null || v.trim().isEmpty || !v.contains('@')))
                       ? 'Vui lòng nhập Email hợp lệ'
                       : null,
-                  decoration: _buildInputDeco('Ví dụ: nhanvien@aquacare.com', inputBg, border, textSecondary),
+                  decoration: _buildInputDeco(
+                    'Ví dụ: nhanvien@aquacare.com',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -3249,8 +4181,15 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập số điện thoại' : null,
-                  decoration: _buildInputDeco('Ví dụ: 0987654321', inputBg, border, textSecondary),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập số điện thoại'
+                      : null,
+                  decoration: _buildInputDeco(
+                    'Ví dụ: 0987654321',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -3259,9 +4198,19 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                   TextFormField(
                     controller: _passCtrl,
                     obscureText: true,
-                    style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                    validator: (v) => (!isEdit && (v == null || v.length < 6)) ? 'Mật khẩu ít nhất 6 ký tự' : null,
-                    decoration: _buildInputDeco('Mật khẩu đăng nhập', inputBg, border, textSecondary),
+                    style: GoogleFonts.inter(
+                      color: textPrimary,
+                      fontSize: 13.5,
+                    ),
+                    validator: (v) => (!isEdit && (v == null || v.length < 6))
+                        ? 'Mật khẩu ít nhất 6 ký tự'
+                        : null,
+                    decoration: _buildInputDeco(
+                      'Mật khẩu đăng nhập',
+                      inputBg,
+                      border,
+                      textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -3278,18 +4227,36 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                     child: DropdownButton<String>(
                       value: _selectedRole,
                       isExpanded: true,
-                      dropdownColor: isDark ? const Color(0xFF222225) : Colors.white,
-                      style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5, fontWeight: FontWeight.w600),
+                      dropdownColor: isDark
+                          ? const Color(0xFF222225)
+                          : Colors.white,
+                      style: GoogleFonts.inter(
+                        color: textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() => _selectedRole = val);
                         }
                       },
                       items: const [
-                        DropdownMenuItem(value: 'staff_warehouse', child: Text('Nhân viên kho')),
-                        DropdownMenuItem(value: 'staff_shipper', child: Text('Nhân viên giao hàng')),
-                        DropdownMenuItem(value: 'staff_support', child: Text('Nhân viên hỗ trợ')),
-                        DropdownMenuItem(value: 'staff_maintenance', child: Text('Nhân viên bảo trì')),
+                        DropdownMenuItem(
+                          value: 'staff_warehouse',
+                          child: Text('Nhân viên kho'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_shipper',
+                          child: Text('Nhân viên giao hàng'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_support',
+                          child: Text('Nhân viên hỗ trợ'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'staff_maintenance',
+                          child: Text('Nhân viên bảo trì'),
+                        ),
                         DropdownMenuItem(value: 'staff', child: Text('Staff')),
                       ],
                     ),
@@ -3304,11 +4271,16 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                     onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          )
                         : Text(
                             isEdit ? 'Cập nhật nhân viên' : 'Tạo nhân viên',
                             style: GoogleFonts.inter(
@@ -3332,21 +4304,39 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
 
-  InputDecoration _buildInputDeco(String hint, Color bg, Color border, Color hintColor) {
+  InputDecoration _buildInputDeco(
+    String hint,
+    Color bg,
+    Color border,
+    Color hintColor,
+  ) {
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.inter(color: hintColor, fontSize: 13),
       filled: true,
       fillColor: bg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+      ),
     );
   }
 }
@@ -3368,9 +4358,15 @@ class _SubscriptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? const Color(0xFF1F1F1F) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF334155);
+    final cardBorder = isDark
+        ? const Color(0xFF333333)
+        : const Color(0xFFCBD5E1);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF334155);
     final primary = const Color(0xFF0284C7);
 
     return Container(
@@ -3389,7 +4385,9 @@ class _SubscriptionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0x330284C7) : const Color(0xFFE0F2FE),
+                  color: isDark
+                      ? const Color(0x330284C7)
+                      : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(Icons.layers_outlined, color: primary, size: 18),
@@ -3408,13 +4406,19 @@ class _SubscriptionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF28282B) : const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF28282B)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: cardBorder),
                 ),
                 child: Text(
                   plan.planTypeLabel,
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: primary),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: primary,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -3428,7 +4432,11 @@ class _SubscriptionCard extends StatelessWidget {
               const SizedBox(width: 2),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 18,
+                ),
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(4),
                 tooltip: 'Xóa',
@@ -3441,7 +4449,13 @@ class _SubscriptionCard extends StatelessWidget {
             children: [
               Text(
                 '${plan.price.toStringAsFixed(0)} ₫',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A)),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: isDark
+                      ? const Color(0xFF4ADE80)
+                      : const Color(0xFF16A34A),
+                ),
               ),
               Text(
                 ' / ${plan.durationMonths} tháng',
@@ -3523,10 +4537,16 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
     super.initState();
     final p = widget.plan;
     _nameCtrl = TextEditingController(text: p?.name ?? '');
-    _priceCtrl = TextEditingController(text: (p?.price.toInt() ?? 80000).toString());
-    _durationCtrl = TextEditingController(text: (p?.durationMonths ?? 1).toString());
+    _priceCtrl = TextEditingController(
+      text: (p?.price.toInt() ?? 80000).toString(),
+    );
+    _durationCtrl = TextEditingController(
+      text: (p?.durationMonths ?? 1).toString(),
+    );
     _maxTanksCtrl = TextEditingController(text: (p?.maxTanks ?? 5).toString());
-    _historyDaysCtrl = TextEditingController(text: (p?.historyDays ?? 365).toString());
+    _historyDaysCtrl = TextEditingController(
+      text: (p?.historyDays ?? 365).toString(),
+    );
     _selectedPlanType = p?.planType ?? 'premium';
     _smartDeviceSetup = p?.smartDeviceSetup ?? true;
   }
@@ -3564,8 +4584,12 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
     final isDark = widget.isDark;
     final modalBg = isDark ? const Color(0xFF222225) : Colors.white;
     final inputBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF475569);
+    final textPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF0F172A);
+    final textSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF475569);
     final border = isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1);
 
     return Padding(
@@ -3589,7 +4613,9 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.plan == null ? 'Thêm gói cước mới' : 'Sửa gói cước',
+                      widget.plan == null
+                          ? 'Thêm gói cước mới'
+                          : 'Sửa gói cước',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -3598,7 +4624,11 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: textSecondary, size: 20),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: textSecondary,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -3608,8 +4638,15 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                 TextFormField(
                   controller: _nameCtrl,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên gói cước' : null,
-                  decoration: _buildInputDeco('Ví dụ: Gói Siêu Cấp', inputBg, border, textSecondary),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập tên gói cước'
+                      : null,
+                  decoration: _buildInputDeco(
+                    'Ví dụ: Gói Siêu Cấp',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -3631,15 +4668,30 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                               child: DropdownButton<String>(
                                 value: _selectedPlanType,
                                 isExpanded: true,
-                                dropdownColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-                                style: GoogleFonts.inter(color: textPrimary, fontSize: 13),
+                                dropdownColor: isDark
+                                    ? const Color(0xFF1F1F1F)
+                                    : Colors.white,
+                                style: GoogleFonts.inter(
+                                  color: textPrimary,
+                                  fontSize: 13,
+                                ),
                                 items: const [
-                                  DropdownMenuItem(value: 'free', child: Text('Miễn phí')),
-                                  DropdownMenuItem(value: 'premium', child: Text('Cao cấp (Premium)')),
-                                  DropdownMenuItem(value: 'enterprise', child: Text('Doanh nghiệp')),
+                                  DropdownMenuItem(
+                                    value: 'free',
+                                    child: Text('Miễn phí'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'premium',
+                                    child: Text('Cao cấp (Premium)'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'enterprise',
+                                    child: Text('Doanh nghiệp'),
+                                  ),
                                 ],
                                 onChanged: (v) {
-                                  if (v != null) setState(() => _selectedPlanType = v);
+                                  if (v != null)
+                                    setState(() => _selectedPlanType = v);
                                 },
                               ),
                             ),
@@ -3656,9 +4708,18 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                           TextFormField(
                             controller: _priceCtrl,
                             keyboardType: TextInputType.number,
-                            style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Nhập giá' : null,
-                            decoration: _buildInputDeco('80000', inputBg, border, textSecondary),
+                            style: GoogleFonts.inter(
+                              color: textPrimary,
+                              fontSize: 13.5,
+                            ),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Nhập giá' : null,
+                            decoration: _buildInputDeco(
+                              '80000',
+                              inputBg,
+                              border,
+                              textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3677,9 +4738,18 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                           TextFormField(
                             controller: _durationCtrl,
                             keyboardType: TextInputType.number,
-                            style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Nhập tháng' : null,
-                            decoration: _buildInputDeco('1', inputBg, border, textSecondary),
+                            style: GoogleFonts.inter(
+                              color: textPrimary,
+                              fontSize: 13.5,
+                            ),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Nhập tháng' : null,
+                            decoration: _buildInputDeco(
+                              '1',
+                              inputBg,
+                              border,
+                              textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3693,9 +4763,18 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                           TextFormField(
                             controller: _maxTanksCtrl,
                             keyboardType: TextInputType.number,
-                            style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Nhập số bể' : null,
-                            decoration: _buildInputDeco('5', inputBg, border, textSecondary),
+                            style: GoogleFonts.inter(
+                              color: textPrimary,
+                              fontSize: 13.5,
+                            ),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Nhập số bể' : null,
+                            decoration: _buildInputDeco(
+                              '5',
+                              inputBg,
+                              border,
+                              textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -3709,8 +4788,14 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                   controller: _historyDaysCtrl,
                   keyboardType: TextInputType.number,
                   style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Nhập số ngày' : null,
-                  decoration: _buildInputDeco('365', inputBg, border, textSecondary),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Nhập số ngày' : null,
+                  decoration: _buildInputDeco(
+                    '365',
+                    inputBg,
+                    border,
+                    textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -3723,7 +4808,8 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                   activeColor: const Color(0xFF0284C7),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (v) => setState(() => _smartDeviceSetup = v ?? false),
+                  onChanged: (v) =>
+                      setState(() => _smartDeviceSetup = v ?? false),
                 ),
                 const SizedBox(height: 20),
 
@@ -3734,13 +4820,20 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                     onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          )
                         : Text(
-                            widget.plan == null ? 'Tạo gói cước' : 'Cập nhật gói cước',
+                            widget.plan == null
+                                ? 'Tạo gói cước'
+                                : 'Cập nhật gói cước',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -3762,40 +4855,38 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
 
-  InputDecoration _buildInputDeco(String hint, Color bg, Color border, Color hintColor) {
+  InputDecoration _buildInputDeco(
+    String hint,
+    Color bg,
+    Color border,
+    Color hintColor,
+  ) {
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.inter(color: hintColor, fontSize: 13),
       filled: true,
       fillColor: bg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-//                     STAFF SCREEN
-// ════════════════════════════════════════════════════════════
-class StaffScreen extends StatelessWidget {
-  const StaffScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF141414),
-      body: Center(
-        child: Text(
-          'Trang Nhân Viên - Đang Phát Triển',
-          style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
-        ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide(color: border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
       ),
     );
   }
