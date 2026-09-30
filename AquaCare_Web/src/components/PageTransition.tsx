@@ -11,12 +11,20 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const [isAnimating, setIsAnimating] = useState(true)
 
   useEffect(() => {
-    // Trigger enter animation on every route change
-    setIsAnimating(true)
-    window.scrollTo(0, 0)
-    const t = setTimeout(() => setIsAnimating(false), 700)
-    return () => clearTimeout(t)
-  }, [location.pathname])
+    const hasHash = !!(location.hash || (location.state as any)?.scrollTo)
+
+    if (hasHash) {
+      // Khi có hash mục tiêu (ví dụ #contact), không reset cuộn về đầu trang (0,0)
+      // và tạm tắt animation 3D transform để không làm lệch tọa độ cuộn
+      setIsAnimating(false)
+    } else {
+      // Chuyển trang bình thường không có hash: cuộn về đầu trang và kích hoạt hiệu ứng
+      setIsAnimating(true)
+      window.scrollTo(0, 0)
+      const t = setTimeout(() => setIsAnimating(false), 700)
+      return () => clearTimeout(t)
+    }
+  }, [location.pathname, location.hash, location.state])
 
   return (
     <div

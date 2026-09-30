@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import HeroSection from './components/HeroSection'
 import AboutSection from './components/AboutSection'
@@ -21,6 +21,50 @@ import { CartProvider } from './contexts/CartContext'
 import AdminPage from './pages/AdminPage'
 import StaffPage from './pages/StaffPage'
 
+function ScrollToHash() {
+  const location = useLocation()
+
+  useEffect(() => {
+    const hash = location.hash || ((location.state as any)?.scrollTo ? `#${(location.state as any).scrollTo}` : '')
+    if (!hash) return
+
+    const targetId = hash.replace('#', '')
+
+    const scrollToTarget = () => {
+      const el = document.getElementById(targetId)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return true
+      }
+      return false
+    }
+
+    // Cố gắng cuộn ngay lập tức
+    if (scrollToTarget()) {
+      // Cuộn lại lần nữa sau một chút để đảm bảo vị trí chuẩn xác sau khi DOM ổn định
+      const timeout = setTimeout(scrollToTarget, 300)
+      return () => clearTimeout(timeout)
+    }
+
+    // Nếu DOM chưa sẵn sàng, thử lại định kỳ trong 2 giây
+    const timer = setInterval(() => {
+      if (scrollToTarget()) {
+        clearInterval(timer)
+      }
+    }, 60)
+
+    const maxWait = setTimeout(() => {
+      clearInterval(timer)
+    }, 2000)
+
+    return () => {
+      clearInterval(timer)
+      clearTimeout(maxWait)
+    }
+  }, [location.pathname, location.hash, location.state])
+
+  return null
+}
 
 function MainPage() {
   const [scrollY, setScrollY] = useState(0)
@@ -69,6 +113,7 @@ function App() {
   return (
     <CartProvider>
       <BrowserRouter>
+        <ScrollToHash />
         <AppRoutes />
       </BrowserRouter>
     </CartProvider>
@@ -76,3 +121,4 @@ function App() {
 }
 
 export default App
+

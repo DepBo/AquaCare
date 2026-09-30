@@ -174,7 +174,7 @@ export default function ContactSection() {
         payload.user_id = String(userInfo.id)
         // Sync address into users table if filled
         if (address.trim()) {
-          supabase.from('users').update({ address: address.trim() }).eq('id', userInfo.id).then(() => {})
+          supabase.from('users').update({ address: address.trim() }).eq('id', userInfo.id).then(() => { })
           localStorage.setItem('user_info', JSON.stringify({ ...userInfo, address: address.trim() }))
         }
       }
@@ -213,7 +213,7 @@ export default function ContactSection() {
     <section
       id="contact"
       ref={ref}
-      style={{ position: 'relative', padding: '96px 0', overflow: 'hidden', backgroundColor: '#0d1d33', fontFamily: F }}
+      style={{ position: 'relative', padding: '96px 0', overflow: 'hidden', backgroundColor: '#0d1d33', fontFamily: F, scrollMarginTop: -500 }}
     >
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(11,110,110,0.15), transparent)' }} />
 
@@ -280,7 +280,7 @@ export default function ContactSection() {
             opacity: vis ? 1 : 0, transform: vis ? 'translateX(0)' : 'translateX(30px)', transition: 'all 800ms ease 400ms',
           }}>
             <div className="glass-card" style={{ padding: 28 }}>
-              
+
               {/* Tab Navigation Switcher */}
               <div style={{
                 display: 'flex', gap: 8, background: 'rgba(255,255,255,0.04)',

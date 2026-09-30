@@ -1456,7 +1456,7 @@ export default function DashboardPage() {
             <button key={item.id}
               onClick={() => {
                 if (item.id === 'support') {
-                  window.location.href = '/#contact'
+                  navigate('/#contact', { state: { scrollTo: 'contact' } })
                 } else {
                   setActiveTab(item.id as typeof activeTab)
                 }
