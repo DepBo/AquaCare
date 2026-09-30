@@ -1437,9 +1437,33 @@ export default function DashboardPage() {
         position: 'sticky', top: 0, height: '100vh', zIndex: showFullOverlay ? 1001 : 10,
       }}>
         {/* Logo */}
-        <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
-          onClick={() => setSidebarOpen(o => !o)}>
-          <img src="/logo.png" alt="AquaCare" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,229,160,0.25)' }} />
+        <div
+          title={sidebarOpen ? 'Thu gọn thanh menu' : 'Mở rộng thanh menu'}
+          style={{
+            padding: sidebarOpen ? '16px 14px' : '16px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: sidebarOpen ? 'flex-start' : 'center',
+            gap: 10,
+            borderBottom: '1px solid var(--border-color)',
+            cursor: 'pointer',
+            overflow: 'hidden'
+          }}
+          onClick={() => setSidebarOpen(o => !o)}
+        >
+          <img
+            src="/logo.png"
+            alt="AquaCare"
+            style={{
+              height: sidebarOpen ? 36 : 26,
+              width: 'auto',
+              maxWidth: sidebarOpen ? 48 : 40,
+              objectFit: 'contain',
+              flexShrink: 0,
+              filter: 'drop-shadow(0 2px 8px rgba(0,229,160,0.3))',
+              transition: 'all 200ms ease'
+            }}
+          />
           {sidebarOpen && <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
         </div>
 
@@ -1461,6 +1485,7 @@ export default function DashboardPage() {
                   setActiveTab(item.id as typeof activeTab)
                 }
               }}
+              title={!sidebarOpen ? item.label : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
                 border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 500,
@@ -1478,82 +1503,102 @@ export default function DashboardPage() {
         </nav>
 
         {/* User + Logout */}
-        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {sidebarOpen && (
-            <div style={{ padding: '8px 12px', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ position: 'relative' }}>
-                {currentUserInfo?.avatar_url ? (
-                  <img src={currentUserInfo.avatar_url} alt="Avatar" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,229,160,0.5)' }} />
-                ) : (
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #1B4F72, #00A896)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, fontWeight: 700, color: '#fff',
-                    border: '2px solid rgba(0,229,160,0.5)'
-                  }}>
-                    {getInitialsAvatar(currentUserInfo?.full_name || currentUserInfo?.name || '')}
-                  </div>
-                )}
-                <label style={{
+        <div style={{ padding: sidebarOpen ? '12px 8px' : '12px 6px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div
+            title={!sidebarOpen ? (currentUserInfo?.full_name || 'Tài khoản') : undefined}
+            style={{
+              padding: sidebarOpen ? '8px 10px' : '8px 0',
+              marginBottom: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarOpen ? 'flex-start' : 'center',
+              gap: sidebarOpen ? 12 : 0,
+              borderRadius: 10
+            }}
+          >
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {currentUserInfo?.avatar_url ? (
+                <img
+                  src={currentUserInfo.avatar_url}
+                  alt="Avatar"
+                  style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,229,160,0.5)', display: 'block' }}
+                />
+              ) : (
+                <div style={{
+                  width: 38, height: 38, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #1B4F72, #00A896)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 15, fontWeight: 700, color: '#fff',
+                  border: '2px solid rgba(0,229,160,0.5)',
+                  flexShrink: 0
+                }}>
+                  {getInitialsAvatar(currentUserInfo?.full_name || currentUserInfo?.name || '')}
+                </div>
+              )}
+              <label
+                title="Đổi ảnh đại diện"
+                style={{
                   position: 'absolute', bottom: -2, right: -2,
-                  width: 18, height: 18, borderRadius: '50%', background: '#00A896',
+                  width: 16, height: 16, borderRadius: '50%', background: '#00A896',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: uploadingAvatar ? 'wait' : 'pointer', border: '2px solid var(--bg-sidebar)',
-                  color: '#fff'
-                }}>
-                  <Pencil size={10} />
-                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingAvatar} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      setUploadingAvatar(true);
-                      const fileExt = file.name.split('.').pop();
-                      const fileName = `${currentUserInfo.id}_${Date.now()}.${fileExt}`;
+                  color: '#fff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }}
+              >
+                <Pencil size={9} />
+                <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingAvatar} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    setUploadingAvatar(true);
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${currentUserInfo.id}_${Date.now()}.${fileExt}`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                      .from('avatars')
+                      .upload(fileName, file, { upsert: true });
                       
-                      const { error: uploadError } = await supabase.storage
-                        .from('avatars')
-                        .upload(fileName, file, { upsert: true });
-                        
-                      if (uploadError) throw uploadError;
-                      
-                      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-                      
-                      const { error: updateError } = await supabase.auth.updateUser({
-                        data: { avatar_url: data.publicUrl }
-                      });
-                      
-                      if (updateError && !updateError.message.includes('Auth session missing')) {
-                        throw updateError;
-                      }
-                      
-                      const updatedInfo = { ...currentUserInfo, avatar_url: data.publicUrl };
-                      setCurrentUserInfo(updatedInfo);
-                      localStorage.setItem('user_info', JSON.stringify(updatedInfo));
-                      
-                      // Update public.users as a fallback just in case RLS allows it
-                      const { error: dbError } = await supabase.from('users').update({ avatar_url: data.publicUrl }).eq('id', currentUserInfo.id);
-                      if (dbError) {
-                        console.warn('Could not update public.users directly (expected if RLS blocks it without session):', dbError);
-                      }
-                      
-                    } catch (err: any) {
-                      console.error('Error uploading avatar:', err);
-                      alert('Lỗi: ' + (err.message || JSON.stringify(err)));
-                    } finally {
-                      setUploadingAvatar(false);
-                      if (e.target) e.target.value = '';
+                    if (uploadError) throw uploadError;
+                    
+                    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+                    
+                    const { error: updateError } = await supabase.auth.updateUser({
+                      data: { avatar_url: data.publicUrl }
+                    });
+                    
+                    if (updateError && !updateError.message.includes('Auth session missing')) {
+                      throw updateError;
                     }
-                  }} />
-                </label>
-              </div>
+                    
+                    const updatedInfo = { ...currentUserInfo, avatar_url: data.publicUrl };
+                    setCurrentUserInfo(updatedInfo);
+                    localStorage.setItem('user_info', JSON.stringify(updatedInfo));
+                    
+                    // Update public.users as a fallback just in case RLS allows it
+                    const { error: dbError } = await supabase.from('users').update({ avatar_url: data.publicUrl }).eq('id', currentUserInfo.id);
+                    if (dbError) {
+                      console.warn('Could not update public.users directly (expected if RLS blocks it without session):', dbError);
+                    }
+                    
+                  } catch (err: any) {
+                    console.error('Error uploading avatar:', err);
+                    alert('Lỗi: ' + (err.message || JSON.stringify(err)));
+                  } finally {
+                    setUploadingAvatar(false);
+                    if (e.target) e.target.value = '';
+                  }
+                }} />
+              </label>
+            </div>
+            {sidebarOpen && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
               </div>
-            </div>
-          )}
-          <Link to="/" style={{
+            )}
+          </div>
+          <Link to="/" title="Về trang chủ" style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
             textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
             transition: 'all 180ms', whiteSpace: 'nowrap'
@@ -1565,6 +1610,7 @@ export default function DashboardPage() {
             {sidebarOpen && 'Về trang chủ'}
           </Link>
           <button onClick={handleLogout}
+            title="Đăng xuất"
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 600, background: 'transparent', color: '#FF6B6B', transition: 'all 180ms', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.15)'; e.currentTarget.style.color = '#ff8282' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF6B6B' }}

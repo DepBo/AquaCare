@@ -140,9 +140,9 @@ export default function SignupPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
           <img src="/logo.png" alt="AquaCare" style={{
-            width: 48, height: 48, borderRadius: 14,
-            objectFit: 'cover',
-            boxShadow: '0 8px 32px rgba(0, 229, 160, 0.25)',
+            height: 52, width: 'auto',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 4px 16px rgba(0, 229, 160, 0.35))',
           }} />
           <div>
             <span style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', display: 'block' }}>AQUACARE</span>

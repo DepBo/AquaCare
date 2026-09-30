@@ -499,14 +499,10 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildBrandHeader() {
     return Row(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Image.asset(
-            'assets/images/logo.png',
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-          ),
+        Image.asset(
+          'assets/images/logo.png',
+          height: 48,
+          fit: BoxFit.contain,
         ),
         const SizedBox(width: 14),
         Column(

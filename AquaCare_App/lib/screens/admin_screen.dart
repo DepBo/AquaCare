@@ -54,6 +54,7 @@ class _AdminScreenState extends State<AdminScreen> {
   // Orders Management State
   List<OrderModel> _ordersList = [];
   List<OrderModel> _filteredOrdersList = [];
+  int _pendingOrdersCount = 0;
   final TextEditingController _orderSearchCtrl = TextEditingController();
   String _orderFilterStatus =
       'all'; // all, pending, confirmed, shipping, delivered, cancelled
@@ -70,6 +71,7 @@ class _AdminScreenState extends State<AdminScreen> {
     _loadThemePreference();
     _loadUserProfile();
     _fetchData();
+    _fetchPendingOrdersCount();
     _speciesSearchCtrl.addListener(_onSpeciesSearchChanged);
     _deviceSearchCtrl.addListener(_onDeviceSearchChanged);
     _staffSearchCtrl.addListener(_onStaffSearchChanged);
@@ -146,8 +148,26 @@ class _AdminScreenState extends State<AdminScreen> {
     return parts[0][0].toUpperCase();
   }
 
+  Future<void> _fetchPendingOrdersCount() async {
+    try {
+      final res = await Supabase.instance.client
+          .from('orders')
+          .select('id')
+          .eq('status', 'pending');
+      if (mounted) {
+        setState(() {
+          _pendingOrdersCount = (res as List).length;
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error fetching pending orders count: $e');
+    }
+  }
+
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
+    // Luôn cập nhật số lượng đơn cần duyệt để hiển thị badge trên thanh điều hướng
+    _fetchPendingOrdersCount();
     try {
       if (_activeTab == 0) {
         final spData = await SupabaseService.instance.getFishSpecies();
@@ -194,6 +214,8 @@ class _AdminScreenState extends State<AdminScreen> {
             .toList();
         setState(() {
           _ordersList = ordersList;
+          _pendingOrdersCount =
+              ordersList.where((o) => o.status == 'pending').length;
           _filterOrders();
           _isLoading = false;
         });
@@ -1078,6 +1100,8 @@ class _AdminScreenState extends State<AdminScreen> {
                   FloatingRoleNavItem(
                     label: 'Đơn hàng',
                     symbol: 'cart',
+                    badgeCount: _pendingOrdersCount,
+                    badgeColor: const Color(0xFFEF4444),
                     onTap: () {
                       setState(() => _activeTab = 3);
                       _fetchData();

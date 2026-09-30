@@ -72,11 +72,12 @@ export default function Navbar({ scrollY }: NavbarProps) {
           }}
         >
           {/* Logo */}
-          <a href="#hero" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+          <a href="#hero" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <img src="/logo.png" alt="AquaCare" style={{
-              width: 38, height: 38, borderRadius: 10,
-              objectFit: 'cover',
-              boxShadow: '0 4px 15px rgba(0, 229, 160, 0.3)',
+              height: 42,
+              width: 'auto',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 2px 10px rgba(0, 168, 150, 0.35))',
             }} />
             <div>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', display: 'block', lineHeight: 1.2 }}>

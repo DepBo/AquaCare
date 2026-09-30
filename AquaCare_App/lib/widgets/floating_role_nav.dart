@@ -5,6 +5,7 @@ class FloatingRoleNavItem {
   final String label;
   final String symbol;
   final int badgeCount;
+  final Color? badgeColor;
   final VoidCallback onTap;
 
   const FloatingRoleNavItem({
@@ -12,6 +13,7 @@ class FloatingRoleNavItem {
     required this.symbol,
     required this.onTap,
     this.badgeCount = 0,
+    this.badgeColor,
   });
 }
 
@@ -117,8 +119,16 @@ class FloatingRoleNav extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: activeColor,
+                                  color: item.badgeColor ?? activeColor,
                                   borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (item.badgeColor ?? activeColor)
+                                          .withValues(alpha: 0.35),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
                                 ),
                                 child: Text(
                                   item.badgeCount > 99

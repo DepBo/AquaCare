@@ -1170,6 +1170,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     builder: (context, snapshot) {
                                       if (snapshot.connectionState ==
                                           ConnectionState.waiting) {
+                                        if (_isLoading) {
+                                          return const SizedBox.shrink();
+                                        }
                                         return Center(
                                           child: CircularProgressIndicator(
                                             color: Color(0xFF00A896),
@@ -1563,74 +1566,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar
-              GestureDetector(
-                onTap: _pickAndUploadAvatar,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: CustomerColors.accentText.withValues(
-                            alpha: 0.5,
-                          ),
-                          width: 1.5,
-                        ),
-                        gradient: _userInfo?['avatar_url'] != null
-                            ? null
-                            : LinearGradient(
-                                colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                        image: _userInfo?['avatar_url'] != null
-                            ? DecorationImage(
-                                image: NetworkImage(_userInfo!['avatar_url']),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: _userInfo?['avatar_url'] == null
-                          ? Center(
-                              child: Text(
-                                getInitialsAvatar(
-                                  _userInfo?['full_name'] ?? _userInfo?['name'],
-                                ),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: CustomerColors.text,
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
-                    if (_isUploadingAvatar)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                color: CustomerColors.text,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+              // Logo AquaCare (thế chỗ avatar cũ)
+              Image.asset(
+                'assets/images/logo.png',
+                height: 34,
+                fit: BoxFit.contain,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 10),
 
               Expanded(
                 child: Column(
@@ -1639,7 +1581,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     Text(
                       _tabTitles[_selectedTab],
                       style: GoogleFonts.inter(
-                        fontSize: _selectedTab == 0 ? 23 : 17,
+                        fontSize: _selectedTab == 0 ? 20 : 18,
                         fontWeight: FontWeight.w800,
                         color: CustomerColors.text,
                         letterSpacing: -0.4,
@@ -1658,8 +1600,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
 
-              // Live + Logout
+              // Live + Theme + Logout + Avatar
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   AnimatedBuilder(
                     animation: _pulseAnimation,
@@ -1689,7 +1632,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 4),
                   Text(
                     _isLoading
                         ? 'Sync'
@@ -1705,7 +1648,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       letterSpacing: 0.4,
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
                     onPressed: () => CustomerTheme.toggle(),
                     icon: _AquaSvg(
@@ -1717,7 +1660,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ? 'Chuyển sang giao diện sáng'
                         : 'Chuyển sang giao diện tối',
                     padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(minWidth: 30, minHeight: 30),
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                   ),
                   IconButton(
                     onPressed: _handleLogout,
@@ -1727,9 +1670,77 @@ class _DashboardScreenState extends State<DashboardScreen>
                       color: CustomerColors.secondaryText,
                     ),
                     padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(minWidth: 30, minHeight: 30),
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                     tooltip: 'Đăng xuất',
                     splashRadius: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  // Avatar người dùng (nằm bên phải nút logout)
+                  GestureDetector(
+                    onTap: _pickAndUploadAvatar,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: CustomerColors.accentText.withValues(
+                                alpha: 0.5,
+                              ),
+                              width: 1.5,
+                            ),
+                            gradient: _userInfo?['avatar_url'] != null
+                                ? null
+                                : const LinearGradient(
+                                    colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                            image: _userInfo?['avatar_url'] != null
+                                ? DecorationImage(
+                                    image: NetworkImage(_userInfo!['avatar_url']),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: _userInfo?['avatar_url'] == null
+                              ? Center(
+                                  child: Text(
+                                    getInitialsAvatar(
+                                      _userInfo?['full_name'] ?? _userInfo?['name'],
+                                    ),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: CustomerColors.text,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        if (_isUploadingAvatar)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    color: CustomerColors.text,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -2604,10 +2615,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                 _activePondId,
                 'enterph',
               );
-              if (mounted)
+              if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Đã gửi lệnh Bắt đầu hiệu chuẩn')),
                 );
+              }
             },
           ),
           SizedBox(height: 12),
@@ -2622,10 +2634,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _activePondId,
                       '7.0',
                     );
-                    if (mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Đã gửi lệnh Calib pH 7.0')),
                       );
+                    }
                   },
                   isOutlined: true,
                 ),
@@ -2640,10 +2653,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _activePondId,
                       '4.0',
                     );
-                    if (mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Đã gửi lệnh Calib pH 4.0')),
                       );
+                    }
                   },
                   isOutlined: true,
                 ),
@@ -2676,12 +2690,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 );
               });
             }
-            if (mounted)
+            if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Lưu & Hoàn tất hiệu chuẩn thành công!'),
                 ),
               );
+            }
           }),
         ],
       ),
