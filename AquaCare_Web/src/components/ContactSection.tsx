@@ -201,7 +201,7 @@ export default function ContactSection() {
       }
     } catch (err: any) {
       console.error(err)
-      setErrorMsg(err.message || 'Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.')
+      setErrorMsg(err.message || 'Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau')
     } finally {
       setLoading(false)
     }
