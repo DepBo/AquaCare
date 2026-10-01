@@ -1,0 +1,62 @@
+.inner-moon-toggle {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: #f0a43c;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 200ms ease, color 300ms ease, box-shadow 200ms ease;
+}
+
+.inner-moon-toggle:hover {
+  background: var(--inner-moon-hover-bg, var(--bg-nav-hover)) !important;
+  box-shadow: 0 4px 14px rgba(43, 126, 178, 0.12);
+}
+
+.inner-moon-toggle:focus-visible {
+  outline: 2px solid #4da6ff;
+  outline-offset: 2px;
+}
+
+.inner-moon-toggle svg {
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+}
+
+.inner-moon-rays,
+.inner-moon-core {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.inner-moon-rays {
+  transition: transform 500ms cubic-bezier(0, 0, 0.15, 1.25);
+}
+
+.inner-moon-core {
+  transition: transform 333ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inner-moon-toggle.is-dark {
+  color: #62a9ff;
+}
+
+.inner-moon-toggle.is-dark .inner-moon-rays {
+  transform: rotate(180deg);
+}
+
+.inner-moon-toggle.is-dark .inner-moon-core {
+  transform: translateX(4.8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner-moon-rays,
+  .inner-moon-core {
+    transition: none;
+  }
+}

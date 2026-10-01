@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const readline = require('readline');
 const { sendAlertEmail } = require('./config/mailer');
 const { sendWebPush } = require('./config/fcm');
+const { getSpeciesThresholds } = require('./config/species_thresholds');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -73,6 +74,7 @@ async function fetchActiveDevices() {
 
 async function checkAndInsertAlerts(device, state) {
   if (!device.tank_id) return;
+  const thresholds = await getSpeciesThresholds(supabase, device.tank_id);
 
   const alerts = [];
   const rawAlerts = [];
@@ -83,21 +85,21 @@ async function checkAndInsertAlerts(device, state) {
     return 'Good';
   };
 
-  const phSev = checkSeverity(state.ph, [6.5, 7.5], [6.0, 8.0]);
+  const phSev = checkSeverity(state.ph, thresholds.ph.good, thresholds.ph.warn);
   if (phSev !== 'Good') {
     const msg = `pH ở mức ${state.ph.toFixed(2)}`;
     alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'pH', actual_value: Number(state.ph.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
     rawAlerts.push({ label: 'pH', severity: phSev, msg });
   }
 
-  const tempSev = checkSeverity(state.temp, [24, 28], [22, 30]);
+  const tempSev = checkSeverity(state.temp, thresholds.temp.good, thresholds.temp.warn);
   if (tempSev !== 'Good') {
     const msg = `Nhiệt độ ở mức ${state.temp.toFixed(2)}°C`;
     alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Nhiệt độ', actual_value: Number(state.temp.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
     rawAlerts.push({ label: 'Nhiệt độ', severity: tempSev, msg });
   }
 
-  const tdsSev = checkSeverity(state.tds, [150, 300], [100, 400]);
+  const tdsSev = checkSeverity(state.tds, thresholds.tds.good, thresholds.tds.warn);
   if (tdsSev !== 'Good') {
     const msg = `TDS ở mức ${state.tds.toFixed(0)} ppm`;
     alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'TDS', actual_value: Number(state.tds.toFixed(0)), alert_message: `Cảnh báo: ${msg}` });

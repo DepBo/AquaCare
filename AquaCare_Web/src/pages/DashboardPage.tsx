@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
+import CustomerOverview from '../components/CustomerOverview'
+import DeviceControlPanel from '../components/DeviceControlPanel'
+import InnerMoonToggle from '../components/InnerMoonToggle'
+import { getSpeciesThresholds } from '../components/speciesThresholds'
+import type { SpeciesRanges } from '../components/speciesThresholds'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle, HelpCircle,
-  LogOut, Home, Activity, AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, Lightbulb, Power, ArrowLeft, ArrowRight,
-  Sun, Moon, Wind
+  LogOut, Home, Activity, AlertTriangle, CheckCircle,
+  Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, ArrowLeft, ArrowRight,
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { requestNotificationPermission, messaging } from '../config/firebase'
 import { onMessage } from 'firebase/messaging'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector, BarChart, Bar } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
@@ -40,9 +44,44 @@ interface Pond {
   last_calib_ph?: string
   calib_ph_status?: string
 }
-interface FishSpecies {
+interface FishSpecies extends SpeciesRanges {
   id: number
   species_name: string
+}
+
+type RelayKind = 'pump' | 'light' | 'aerator'
+type ScheduleRow = {
+  id: number
+  relay_name: 'Pump' | 'Light' | 'Aerator'
+  on_time: string | null
+  off_time: string | null
+  is_daily: boolean
+  run_date: string | null
+}
+const scheduleNames: Record<RelayKind, ScheduleRow['relay_name']> = {
+  pump: 'Pump', light: 'Light', aerator: 'Aerator'
+}
+const localDate = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+const scheduleErrorMessage = (error: { code?: string; message?: string } | null) => {
+  if (!error) return 'Không nhận được xác nhận lưu lịch. Vui lòng thử lại.'
+  if (error.code === '42P01' || error.code === 'PGRST205')
+    return 'Chưa có bảng device_schedules. Hãy chạy file SQL migration.'
+  if (error.code === '42501')
+    return 'Không có quyền lưu lịch cho hồ này. Kiểm tra đăng nhập và chủ sở hữu hồ.'
+  if (error.code === '23505')
+    return 'Relay này đã có lịch hoạt động. Đã tải lại lịch; hãy thử lưu lần nữa.'
+  if (error.code === '23503')
+    return 'Thiết bị không còn thuộc hồ hiện tại. Vui lòng tải lại trang.'
+  return `Không lưu được lịch${error.code ? ` (${error.code})` : ''}: ${error.message || 'Lỗi không xác định'}`
+}
+type RelayRequest = {
+  tankId: number
+  desired: boolean
+  phase: 'pending' | 'settled'
+  settleTimer?: ReturnType<typeof setTimeout>
 }
 
 // ── Sinh dữ liệu giả ─────────────────────────────────────────
@@ -794,28 +833,228 @@ export default function DashboardPage() {
   const [pumpState, setPumpState] = useState(false)
   const [lightState, setLightState] = useState(false)
   const [oxyState, setOxyState] = useState(false)
+  const [relayVisual, setRelayVisual] = useState<Partial<Record<RelayKind, { tankId: number; desired: boolean; pending: boolean }>>>({})
+  const relayRequestsRef = useRef<Partial<Record<RelayKind, RelayRequest>>>({})
   const [pumpOnTime, setPumpOnTime] = useState('')
   const [pumpOffTime, setPumpOffTime] = useState('')
   const [lightOnTime, setLightOnTime] = useState('')
   const [lightOffTime, setLightOffTime] = useState('')
   const [oxyOnTime, setOxyOnTime] = useState('')
   const [oxyOffTime, setOxyOffTime] = useState('')
+  const [deviceRecordId, setDeviceRecordId] = useState<number | null>(null)
+  const [scheduleIds, setScheduleIds] = useState<Partial<Record<RelayKind, number>>>({})
+  const [scheduleModes, setScheduleModes] = useState<Record<RelayKind, { isDaily: boolean; runDate: string }>>({
+    pump: { isDaily: false, runDate: localDate() },
+    light: { isDaily: false, runDate: localDate() },
+    aerator: { isDaily: false, runDate: localDate() },
+  })
+  const [savingSchedule, setSavingSchedule] = useState<RelayKind | null>(null)
   const [ponds, setPonds] = useState<Pond[]>([])
   const [fishSpecies, setFishSpecies] = useState<FishSpecies[]>([])
   const [activeDevice, setActiveDevice] = useState<number | null>(null)
+  const activeDeviceRef = useRef(activeDevice)
+  activeDeviceRef.current = activeDevice
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
   const [hourlySensorData, setHourlySensorData] = useState<SensorData>(emptySensor())
-  const [hourlyActiveTab, setHourlyActiveTab] = useState<keyof SensorData>('ph')
-  const [notification, setNotification] = useState<{ show: boolean, msg: string }>({ show: false, msg: '' })
+  const [notification, setNotification] = useState<{ show: boolean, msg: string, type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' })
 
-  const showNotification = (msg: string) => {
-    setNotification({ show: true, msg })
+  const showNotification = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ show: true, msg, type })
     setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }))
     }, 3000)
   }
+
+  const setScheduleMode = (kind: RelayKind, patch: Partial<{ isDaily: boolean; runDate: string }>) =>
+    setScheduleModes(prev => ({ ...prev, [kind]: { ...prev[kind], ...patch } }))
+
+  const applySchedules = (rows: ScheduleRow[], changedKind?: RelayKind) => {
+    const byName = Object.fromEntries(rows.map(row => [row.relay_name, row])) as Partial<Record<ScheduleRow['relay_name'], ScheduleRow>>
+    const pump = byName.Pump; const light = byName.Light; const aerator = byName.Aerator
+    if (!changedKind || changedKind === 'pump') {
+      setScheduleIds(prev => ({ ...prev, pump: pump?.id }))
+      setPumpOnTime(pump?.on_time?.slice(0, 5) || ''); setPumpOffTime(pump?.off_time?.slice(0, 5) || '')
+      setScheduleMode('pump', { isDaily: pump?.is_daily || false, runDate: pump?.run_date || localDate() })
+    }
+    if (!changedKind || changedKind === 'light') {
+      setScheduleIds(prev => ({ ...prev, light: light?.id }))
+      setLightOnTime(light?.on_time?.slice(0, 5) || ''); setLightOffTime(light?.off_time?.slice(0, 5) || '')
+      setScheduleMode('light', { isDaily: light?.is_daily || false, runDate: light?.run_date || localDate() })
+    }
+    if (!changedKind || changedKind === 'aerator') {
+      setScheduleIds(prev => ({ ...prev, aerator: aerator?.id }))
+      setOxyOnTime(aerator?.on_time?.slice(0, 5) || ''); setOxyOffTime(aerator?.off_time?.slice(0, 5) || '')
+      setScheduleMode('aerator', { isDaily: aerator?.is_daily || false, runDate: aerator?.run_date || localDate() })
+    }
+  }
+
+  const loadSchedules = async (deviceId: number, changedKind?: RelayKind) => {
+    const { data, error } = await supabase.from('device_schedules')
+      .select('id, relay_name, on_time, off_time, is_daily, run_date')
+      .eq('device_id', deviceId).eq('is_active', true)
+    if (error) { console.error('Schedule load error:', error); return }
+    if (activeDeviceRef.current === activeDevice) applySchedules((data || []) as ScheduleRow[], changedKind)
+  }
+
+  const saveSchedule = async (kind: RelayKind, onTime: string, offTime: string) => {
+    if (!deviceRecordId || !activeDevice || savingSchedule) return
+    const tankId = activeDevice
+    if (!onTime && !offTime) { showNotification('Chọn ít nhất một giờ bật hoặc tắt.', 'error'); return }
+    const mode = scheduleModes[kind]
+    if (!mode.isDaily && !mode.runDate) { showNotification('Chọn ngày chạy lịch.', 'error'); return }
+    if (!mode.isDaily) {
+      const now = Date.now()
+      const onAt = onTime ? new Date(`${mode.runDate}T${onTime}:00`).getTime() : null
+      const nextDay = new Date(`${mode.runDate}T00:00:00Z`)
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+      const offDate = onTime && offTime && offTime <= onTime
+        ? nextDay.toISOString().slice(0, 10) : mode.runDate
+      const offAt = offTime ? new Date(`${offDate}T${offTime}:00`).getTime() : null
+      if ((onAt !== null && onAt < now - 120000) ||
+          (offAt !== null && offAt < now - 120000)) {
+        showNotification('Giờ hẹn một lần đã qua. Vui lòng chọn giờ hoặc ngày mới.', 'error')
+        return
+      }
+    }
+    setSavingSchedule(kind)
+    const { data: authData, error: authError } = await supabase.auth.getSession()
+    if (authError || !authData.session) {
+      setSavingSchedule(null)
+      showNotification('Phiên đăng nhập Supabase không còn hiệu lực. Vui lòng đăng nhập lại.', 'error')
+      return
+    }
+    const payload = {
+      device_id: deviceRecordId, relay_name: scheduleNames[kind],
+      on_time: onTime || null, off_time: offTime || null,
+      is_daily: mode.isDaily, run_date: mode.isDaily ? null : mode.runDate,
+      is_active: true, on_executed_on: null, off_executed_on: null,
+      updated_at: new Date().toISOString(),
+    }
+    const existingId = scheduleIds[kind]
+    const result = existingId
+      ? await supabase.from('device_schedules').update(payload).eq('id', existingId).select('id').single()
+      : await supabase.from('device_schedules').insert(payload).select('id').single()
+    setSavingSchedule(null)
+    if (activeDeviceRef.current !== tankId) return
+    if (result.error || !result.data) {
+      console.error('Schedule save error:', result.error)
+      if (result.error?.code === '23505') void loadSchedules(deviceRecordId, kind)
+      showNotification(scheduleErrorMessage(result.error), 'error')
+      return
+    }
+    setScheduleIds(prev => ({ ...prev, [kind]: result.data.id }))
+    showNotification('Đã lưu lịch thiết bị.')
+  }
+
+  const clearSchedule = async (kind: RelayKind) => {
+    const id = scheduleIds[kind]
+    if (!id || !activeDevice || savingSchedule) return
+    const tankId = activeDevice
+    setSavingSchedule(kind)
+    const { error } = await supabase.from('device_schedules')
+      .update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id)
+    setSavingSchedule(null)
+    if (activeDeviceRef.current !== tankId) return
+    if (error) { console.error('Schedule cancel error:', error); showNotification('Không hủy được lịch.', 'error'); return }
+    setScheduleIds(prev => ({ ...prev, [kind]: undefined }))
+    if (kind === 'pump') { setPumpOnTime(''); setPumpOffTime('') }
+    if (kind === 'light') { setLightOnTime(''); setLightOffTime('') }
+    if (kind === 'aerator') { setOxyOnTime(''); setOxyOffTime('') }
+    setScheduleMode(kind, { isDaily: false, runDate: localDate() })
+    showNotification('Đã hủy lịch thiết bị.')
+  }
+
+  const clearRelayVisual = (kind: RelayKind, request: RelayRequest) => {
+    if (relayRequestsRef.current[kind] !== request) return
+    if (request.settleTimer) clearTimeout(request.settleTimer)
+    delete relayRequestsRef.current[kind]
+    setRelayVisual(prev => {
+      const next = { ...prev }
+      delete next[kind]
+      return next
+    })
+  }
+
+  const syncRelayState = (kind: RelayKind, value: boolean, tankId: number, setState: (value: boolean) => void) => {
+    if (activeDeviceRef.current !== tankId) return
+    const request = relayRequestsRef.current[kind]
+    if (request?.tankId === tankId) {
+      if (request.phase === 'pending') return
+      if (value !== request.desired) return
+      setState(value)
+      clearRelayVisual(kind, request)
+      return
+    }
+    setState(value)
+  }
+
+  const toggleRelay = async (
+    kind: RelayKind, currentState: boolean, setState: (value: boolean) => void,
+    pin: number, relayField: string, relayName: string
+  ) => {
+    const tankId = activeDevice
+    if (!tankId || relayRequestsRef.current[kind]?.phase === 'pending') return
+    const previousRequest = relayRequestsRef.current[kind]
+    if (previousRequest) clearRelayVisual(kind, previousRequest)
+    const desired = !currentState
+    const request: RelayRequest = { tankId, desired, phase: 'pending' }
+    relayRequestsRef.current[kind] = request
+    setRelayVisual(prev => ({ ...prev, [kind]: { tankId, desired, pending: true } }))
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    try {
+      const response = await fetch(`${API_URL}/api/device/relay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, state: desired, tank_id: tankId, relay_field: relayField }),
+        signal: controller.signal
+      })
+      if (!response.ok) throw new Error(`Relay request failed: ${response.status}`)
+      if (relayRequestsRef.current[kind] !== request || activeDeviceRef.current !== tankId) return
+
+      setState(desired)
+      request.phase = 'settled'
+      setRelayVisual(prev => ({ ...prev, [kind]: { tankId, desired, pending: false } }))
+      request.settleTimer = setTimeout(() => clearRelayVisual(kind, request), 5000)
+
+      try {
+        const { data: device } = await supabase.from('devices').select('id').eq('tank_id', tankId).single()
+        if (device) {
+          await supabase.from('relay_logs').insert({
+            device_id: device.id,
+            relay_name: relayName,
+            action: desired ? 'ON' : 'OFF',
+            triggered_by: 'USER'
+          })
+        }
+      } catch (error) { console.error('Relay log error:', error) }
+    } catch (error) {
+      console.error('Relay control error:', error)
+      if (relayRequestsRef.current[kind] === request && activeDeviceRef.current === tankId) {
+        clearRelayVisual(kind, request)
+        showNotification('Không xác nhận được lệnh. Vui lòng kiểm tra trạng thái thiết bị.', 'error')
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  useEffect(() => {
+    Object.values(relayRequestsRef.current).forEach(request => {
+      if (request.settleTimer) clearTimeout(request.settleTimer)
+    })
+    relayRequestsRef.current = {}
+    setRelayVisual({})
+    return () => {
+      Object.values(relayRequestsRef.current).forEach(request => {
+        if (request.settleTimer) clearTimeout(request.settleTimer)
+      })
+      relayRequestsRef.current = {}
+    }
+  }, [activeDevice])
 
   // Apply theme
   useEffect(() => {
@@ -1079,24 +1318,36 @@ export default function DashboardPage() {
     if (!activeDevice) return
 
     let channel: any;
+    let scheduleChannel: any;
+    let disposed = false;
+    setDeviceRecordId(null);
+    applySchedules([]);
 
     const setupRealtime = async () => {
       // 1. Load 24 điểm dữ liệu lịch sử ban đầu
       await fetchSensorData();
 
       // 2. Lấy device_id tương ứng với bể cá
-      const { data: devices } = await supabase.from('devices').select('id, relay_pump_state, relay_light_state, relay_aerator_state, pump_on_time, pump_off_time, light_on_time, light_off_time, aerator_on_time, aerator_off_time').eq('tank_id', activeDevice);
-      if (!devices || devices.length === 0) return;
+      const { data: devices } = await supabase.from('devices').select('id, relay_pump_state, relay_light_state, relay_aerator_state').eq('tank_id', activeDevice);
+      if (disposed || !devices || devices.length === 0) return;
       const deviceId = devices[0].id;
-      setPumpState(Boolean(devices[0].relay_pump_state));
-      setLightState(Boolean(devices[0].relay_light_state));
-      setOxyState(Boolean(devices[0].relay_aerator_state));
-      setPumpOnTime(devices[0].pump_on_time || '');
-      setPumpOffTime(devices[0].pump_off_time || '');
-      setLightOnTime(devices[0].light_on_time || '');
-      setLightOffTime(devices[0].light_off_time || '');
-      setOxyOnTime(devices[0].aerator_on_time || '');
-      setOxyOffTime(devices[0].aerator_off_time || '');
+      setDeviceRecordId(deviceId);
+      syncRelayState('pump', Boolean(devices[0].relay_pump_state), activeDevice, setPumpState);
+      syncRelayState('light', Boolean(devices[0].relay_light_state), activeDevice, setLightState);
+      syncRelayState('aerator', Boolean(devices[0].relay_aerator_state), activeDevice, setOxyState);
+      await loadSchedules(deviceId);
+      if (disposed) return;
+      scheduleChannel = supabase.channel(`device-schedules-${deviceId}`)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'device_schedules',
+          filter: `device_id=eq.${deviceId}`
+        }, (payload: any) => {
+          if (disposed) return
+          const name = payload.new?.relay_name || payload.old?.relay_name
+          const kind = (Object.keys(scheduleNames) as RelayKind[]).find(key => scheduleNames[key] === name)
+          void loadSchedules(deviceId, kind)
+        })
+        .subscribe();
 
       // Lấy tất cả loại cảnh báo để thống kê
       const { data: statsData } = await supabase.from('alerts_history').select('alert_type').eq('tank_id', activeDevice)
@@ -1176,15 +1427,9 @@ export default function DashboardPage() {
           (payload) => {
             const newData = payload.new as any;
             // Cập nhật lại các State của nút bấm và cấu hình giờ
-            setPumpState(Boolean(newData.relay_pump_state));
-            setLightState(Boolean(newData.relay_light_state));
-            setOxyState(Boolean(newData.relay_aerator_state));
-            setPumpOnTime(newData.pump_on_time || '');
-            setPumpOffTime(newData.pump_off_time || '');
-            setLightOnTime(newData.light_on_time || '');
-            setLightOffTime(newData.light_off_time || '');
-            setOxyOnTime(newData.aerator_on_time || '');
-            setOxyOffTime(newData.aerator_off_time || '');
+            syncRelayState('pump', Boolean(newData.relay_pump_state), activeDevice, setPumpState);
+            syncRelayState('light', Boolean(newData.relay_light_state), activeDevice, setLightState);
+            syncRelayState('aerator', Boolean(newData.relay_aerator_state), activeDevice, setOxyState);
           }
         )
         .subscribe();
@@ -1194,9 +1439,11 @@ export default function DashboardPage() {
 
     // 4. Dọn dẹp (Cleanup) khi đổi bể khác hoặc unmount
     return () => {
+      disposed = true;
       if (channel) {
         supabase.removeChannel(channel);
       }
+      if (scheduleChannel) supabase.removeChannel(scheduleChannel);
     }
   }, [activeDevice])
 
@@ -1204,20 +1451,23 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!sensorData.ph.length) return
     const newAlerts: AlertItem[] = []
+    const selectedSpecies = fishSpecies.find(species => species.id === ponds.find(pond => pond.id === activeDevice)?.species_id)
+    const speciesThresholds = getSpeciesThresholds(selectedSpecies)
     SENSOR_CFG.forEach(cfg => {
       const latest = sensorData[cfg.key].at(-1)?.value ?? 0
+      const limits = cfg.key === 'waterLevel' ? cfg : speciesThresholds[cfg.key]
       if (cfg.key === 'waterLevel') {
         if (latest === 0) newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `Mực nước bể cá đang ở mức thấp, vui lòng châm thêm nước!`, level: 'danger' })
       } else {
-        if (latest < cfg.warn[0] || latest > cfg.warn[1]) {
+        if (latest < limits.warn[0] || latest > limits.warn[1]) {
           newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `${cfg.label} = ${latest}${cfg.unit} — ngoài ngưỡng cho phép!`, level: 'danger' })
-        } else if (latest < cfg.good[0] || latest > cfg.good[1]) {
+        } else if (latest < limits.good[0] || latest > limits.good[1]) {
           newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `${cfg.label} = ${latest}${cfg.unit} — chạm mức cảnh báo sớm!`, level: 'warn' })
         }
       }
     })
     setAlerts(newAlerts)
-  }, [tick])
+  }, [tick, activeDevice, ponds, fishSpecies])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -1425,16 +1675,16 @@ export default function DashboardPage() {
   `;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', fontFamily: F, color: 'var(--text-primary)', display: 'flex' }}>
+    <div style={{ position: 'fixed', inset: 0, width: '111.111vw', height: '111.111vh', transform: 'scale(0.9)', transformOrigin: 'top left', overflow: 'hidden', background: 'var(--bg-main)', fontFamily: F, color: 'var(--text-primary)', display: 'flex' }}>
       <style>{PowerStyles}</style>
 
       {/* ── Sidebar ── */}
       <aside style={{
-        width: sidebarOpen ? 240 : 64, flexShrink: 0,
+        width: sidebarOpen ? 256 : 68, flexShrink: 0,
         background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)',
         backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
         transition: 'width 280ms cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden',
-        position: 'sticky', top: 0, height: '100vh', zIndex: showFullOverlay ? 1001 : 10,
+        position: 'sticky', top: 0, height: '111.111vh', zIndex: showFullOverlay ? 1001 : 10,
       }}>
         {/* Logo */}
         <div
@@ -1445,6 +1695,9 @@ export default function DashboardPage() {
             alignItems: 'center',
             justifyContent: sidebarOpen ? 'flex-start' : 'center',
             gap: 10,
+            height: 80,
+            flexShrink: 0,
+            boxSizing: 'border-box',
             borderBottom: '1px solid var(--border-color)',
             cursor: 'pointer',
             overflow: 'hidden'
@@ -1464,7 +1717,7 @@ export default function DashboardPage() {
               transition: 'all 200ms ease'
             }}
           />
-          {sidebarOpen && <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
+          {sidebarOpen && <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
         </div>
 
         {/* Nav items */}
@@ -1475,20 +1728,13 @@ export default function DashboardPage() {
             { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
             { id: 'calibration', icon: CheckCircle, label: 'Hiệu chuẩn pH' },
             { id: 'alerts', icon: Bell, label: `Cảnh báo${alerts.length ? ` (${alerts.length})` : ''}` },
-            { id: 'support', icon: HelpCircle, label: 'Hỗ trợ' },
           ].map(item => (
             <button key={item.id}
-              onClick={() => {
-                if (item.id === 'support') {
-                  navigate('/#contact', { state: { scrollTo: 'contact' } })
-                } else {
-                  setActiveTab(item.id as typeof activeTab)
-                }
-              }}
+              onClick={() => setActiveTab(item.id as typeof activeTab)}
               title={!sidebarOpen ? item.label : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
-                border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 12, fontWeight: 500,
+                border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: 500,
                 background: activeTab === item.id ? 'rgba(0,229,160,0.12)' : 'transparent',
                 color: activeTab === item.id ? '#00A896' : (theme === 'dark' ? 'var(--text-nav)' : '#000'),
                 transition: 'all 180ms', whiteSpace: 'nowrap',
@@ -1496,7 +1742,7 @@ export default function DashboardPage() {
               onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'var(--bg-nav-hover)' }}
               onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'transparent' }}
             >
-              <item.icon size={16} style={{ flexShrink: 0 }} />
+              <item.icon size={18} style={{ flexShrink: 0 }} />
               {sidebarOpen && item.label}
             </button>
           ))}
@@ -1593,14 +1839,14 @@ export default function DashboardPage() {
             </div>
             {sidebarOpen && (
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.full_name || 'Người dùng'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUserInfo.email || ''}</div>
               </div>
             )}
           </div>
           <Link to="/" title="Về trang chủ" style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
-            textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', color: 'var(--text-primary)', fontSize: 14, fontWeight: 600,
             transition: 'all 180ms', whiteSpace: 'nowrap'
           }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
@@ -1611,7 +1857,7 @@ export default function DashboardPage() {
           </Link>
           <button onClick={handleLogout}
             title="Đăng xuất"
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 13, fontWeight: 600, background: 'transparent', color: '#FF6B6B', transition: 'all 180ms', whiteSpace: 'nowrap' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: 600, background: 'transparent', color: '#FF6B6B', transition: 'all 180ms', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,107,107,0.15)'; e.currentTarget.style.color = '#ff8282' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#FF6B6B' }}
           >
@@ -1622,13 +1868,13 @@ export default function DashboardPage() {
       </aside>
 
       {/* ── Main ── */}
-      <main style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <main style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column', height: '111.111vh' }}>
 
         {/* Top bar */}
-        <div style={{ padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-topbar)', backdropFilter: showFullOverlay ? 'none' : 'blur(8px)', flexShrink: 0, zIndex: showFullOverlay ? 'auto' : 10, position: 'relative' }}>
+        <div style={{ height: 80, boxSizing: 'border-box', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-topbar)', backdropFilter: showFullOverlay ? 'none' : 'blur(8px)', flexShrink: 0, zIndex: showFullOverlay ? 'auto' : 10, position: 'relative' }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {activeTab === 'overview' && <><Home size={20} color="#00A896" /> Tổng quan hệ thống</>}
+              {activeTab === 'overview' && <><Home size={20} color="#00A896" /> Tổng quan hồ cá</>}
               {activeTab === 'control' && <><Sliders size={20} color="#00A896" /> Điều khiển thiết bị</>}
               {activeTab === 'sensors' && <><Activity size={20} color="#00A896" /> Biểu đồ cảm biến</>}
               {activeTab === 'alerts' && <><Bell size={20} color="#00A896" /> Cảnh báo & Thông báo</>}
@@ -1698,25 +1944,29 @@ export default function DashboardPage() {
             {/* Removed alerts from here */}
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: loading ? '#FFB347' : '#00A896', boxShadow: `0 0 8px ${loading ? '#FFB347' : '#00A896'}`, animation: 'pulse 2s ease-in-out infinite' }} />
             <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{loading ? 'Sync...' : 'Live'}</span>
-            {/* Theme Toggle Button */}
             <button
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              title={theme === 'dark' ? 'Chuyển sang Light Mode' : 'Chuyển sang Dark Mode'}
+              onClick={() => navigate('/#contact', { state: { scrollTo: 'contact' } })}
+              title="Liên hệ hỗ trợ"
+              aria-label="Liên hệ hỗ trợ"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)', cursor: 'pointer', transition: 'all 200ms',
-                color: theme === 'dark' ? '#FFB347' : '#4DA6FF',
+                color: 'var(--text-secondary)',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-nav-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-nav-hover)'; e.currentTarget.style.color = '#00A896' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
             >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              <HelpCircle size={16} />
             </button>
+            <InnerMoonToggle
+              toggled={theme === 'dark'}
+              onToggle={() => setTheme(current => current === 'dark' ? 'light' : 'dark')}
+            />
           </div>
         </div>
 
-        <div className="custom-scrollbar" style={{ padding: '24px 28px', opacity: loading ? 0.5 : 1, transition: 'opacity 300ms', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+        <div className="custom-scrollbar" style={{ padding: '20px 22px', opacity: loading ? 0.5 : 1, transition: 'opacity 300ms', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
 
           {(showEmptyState || showFullOverlay) ? (
             showEmptyState && (
@@ -1729,701 +1979,62 @@ export default function DashboardPage() {
             <>
 
               {/* ═══ TAB: OVERVIEW ═══ */}
-              {activeTab === 'overview' && (
-                <>
-                  {/* 4 Sensor Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
-                    {SENSOR_CFG.map(cfg => {
-                      const val = latest[cfg.key]
-                      const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
-                      const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
-                      const histData = sensorData[cfg.key]
-                      const hist = histData.map(d => d.value)
-                      const prev = hist.at(-2) ?? val
-                      const delta = val - prev
-                      return (
-                        <div key={cfg.key}
-                          onClick={() => { setSelectedSensor(cfg.key); setActiveTab('sensors') }}
-                          style={{ padding: '20px', borderRadius: 16, background: 'var(--bg-card)', border: `1px solid ${cfg.color}18`, cursor: 'pointer', transition: 'all 220ms', position: 'relative', overflow: 'hidden' }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = `${cfg.color}40`; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = `${cfg.color}18`; e.currentTarget.style.transform = 'translateY(0)' }}
-                        >
-                          <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${cfg.color}08 0%, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <cfg.icon size={16} color={cfg.color} />
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{cfg.label}</div>
-                                <div style={{ fontSize: 9, color: sc, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{sl}</div>
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: delta >= 0 ? '#00A896' : '#FF6B6B' }}>
-                              {delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                              {delta >= 0 ? '+' : ''}{delta.toFixed(2)}
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 32, fontWeight: 700, color: sc, marginBottom: 12, letterSpacing: '-0.02em' }}>
-                            {cfg.key === 'waterLevel' ? '' : `${val}${cfg.unit}`}
-                          </div>
-                          {cfg.key === 'waterLevel' ? (
-                            <div style={{ marginTop: 16, height: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                              <Droplets size={28} color={sc} />
-                              <span style={{ fontSize: 16, fontWeight: 600, color: sc, letterSpacing: '0.02em' }}>
-                                {val === 1 ? 'Mực nước Ổn định' : 'Cảnh báo Cạn nước'}
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <Sparkline data={sensorData[cfg.key]} color={cfg.color} height={75} />
-                              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'var(--bg-btn-cancel)', overflow: 'hidden' }}>
-                                  <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, ((val - cfg.warn[0]) / (cfg.warn[1] - cfg.warn[0])) * 100))}%`, background: sc, borderRadius: 2, transition: 'width 600ms ease' }} />
-                                </div>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{cfg.warn[0]}–{cfg.warn[1]}{cfg.unit}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Bottom charts row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Hoạt động 12 giờ qua</h3>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {SENSOR_CFG.map(cfg => (
-                            <button key={cfg.key} onClick={() => setHourlyActiveTab(cfg.key)} style={{
-                              padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, fontFamily: F, border: 'none', cursor: 'pointer', transition: 'all 150ms',
-                              background: hourlyActiveTab === cfg.key ? `${cfg.color}20` : 'transparent',
-                              color: hourlyActiveTab === cfg.key ? cfg.color : 'var(--text-muted)'
-                            }}>
-                              {cfg.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div style={{ height: 160, width: '100%', marginTop: 10 }}>
-                        {hourlyActiveTab === 'waterLevel' ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0', height: '100%', justifyContent: 'center' }}>
-                            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                              {(hourlySensorData['waterLevel'].length > 0
-                                ? hourlySensorData['waterLevel']
-                                : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
-                              ).map((d, i) => (
-                                <div
-                                  key={i}
-                                  title={`${d.time} - ${d.value === 1 ? 'Ổn định' : 'Có khoảnh khắc cạn nước'}`}
-                                  style={{
-                                    flex: 1,
-                                    height: 40,
-                                    borderRadius: 6,
-                                    background: d.value === 1 ? '#00A896' : '#FF6B6B',
-                                    transition: 'transform 150ms',
-                                    cursor: 'pointer'
-                                  }}
-                                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                />
-                              ))}
-                            </div>
-                            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                              {(hourlySensorData['waterLevel'].length > 0
-                                ? hourlySensorData['waterLevel']
-                                : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))
-                              ).map((d, i) => (
-                                <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)' }}>
-                                  {d.time}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={hourlySensorData[hourlyActiveTab].length > 0 ? hourlySensorData[hourlyActiveTab] : Array.from({ length: 12 }).map(() => ({ time: '00:00', value: 0 }))}
-                              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                            >
-                              <XAxis
-                                dataKey="time"
-                                fontSize={10}
-                                tick={{ fill: 'var(--text-secondary)' }}
-                                axisLine={false}
-                                tickLine={false}
-                              />
-                              <YAxis
-                                domain={['auto', 'auto']}
-                                tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
-                                axisLine={false}
-                                tickLine={false}
-                                width={35}
-                                tickFormatter={(val) => val.toFixed(1)}
-                              />
-                              <Tooltip
-                                cursor={{ fill: 'rgba(0,0,0,0.1)' }}
-                                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                formatter={(value: any, _name: any) => [`${value}${SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.unit}`, SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.label]}
-                                labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
-                                itemStyle={{ color: 'var(--text-primary)', fontWeight: 600 }}
-                              />
-                              <Bar
-                                dataKey="value"
-                                fill={SENSOR_CFG.find(c => c.key === hourlyActiveTab)?.color || '#00A896'}
-                                radius={[4, 4, 0, 0]}
-                                barSize={30}
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ padding: 20, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                      <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Trạng thái tổng hợp</h3>
-                      {SENSOR_CFG.map(cfg => {
-                        const val = latest[cfg.key]
-                        const sc = statusColor(val, cfg.good, cfg.warn, cfg.key)
-                        const sl = statusLabel(val, cfg.good, cfg.warn, cfg.key)
-                        return (
-                          <div key={cfg.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <cfg.icon size={13} color={cfg.color} />
-                              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cfg.label}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{val}{cfg.unit}</span>
-                              <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: `${sc}18`, color: sc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sl}</span>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
+              {activeTab === 'overview' && <CustomerOverview
+                pondName={activePond?.name}
+                userName={currentUserInfo?.full_name || currentUserInfo?.name}
+                species={fishSpecies.find(species => species.id === activePond?.species_id)}
+                sensorData={sensorData}
+                hourlySensorData={hourlySensorData}
+                alertsCount={alerts.length}
+                onOpenSensor={key => { setSelectedSensor(key); setActiveTab('sensors') }}
+                onOpenAlerts={() => setActiveTab('alerts')}
+              />}
 
               {/* ═══ TAB: CONTROL ═══ */}
-              {activeTab === 'control' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24 }}>
-
-                  {/* Máy bơm nước */}
-                  <div style={{
-                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                    border: `1px solid ${pumpState ? '#00A896' : 'rgba(26,45,74,0.5)'}`,
-                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{
-                          width: 48, height: 48, borderRadius: 12,
-                          background: pumpState ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms'
-                        }}>
-                          <Droplets size={24} color={pumpState ? '#00A896' : 'var(--text-muted)'} />
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy bơm nước</h3>
-                          <p style={{ fontSize: 13, margin: 0, color: pumpState ? '#00A896' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                            {pumpState ? 'Đang hoạt động' : 'Đang tắt'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const newState = !pumpState;
-                          try {
-                            const res = await fetch(`${API_URL}/api/device/relay`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ pin: 3, state: newState, tank_id: activeDevice, relay_field: 'relay_pump_state' })
-                            });
-                            if (res.ok) {
-                              setPumpState(newState);
-                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
-                              if (dev) {
-                                await supabase.from('relay_logs').insert({
-                                  device_id: dev.id,
-                                  relay_name: 'Pump',
-                                  action: newState ? 'ON' : 'OFF',
-                                  triggered_by: 'USER'
-                                });
-                              }
-                            }
-                          } catch (err) { console.error(err); }
-                        }}
-                        style={{
-                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                          background: pumpState ? '#00A896' : 'var(--btn-power-bg)',
-                          boxShadow: pumpState ? '0 0 20px rgba(0,168,150,0.4)' : 'none',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms', flexShrink: 0
-                        }}
-                      >
-                        <Power size={24} color={pumpState ? '#fff' : 'var(--text-secondary)'} />
-                      </button>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                      {(pumpOnTime || pumpOffTime) && (
-                        <div style={{
-                          background: 'var(--bg-btn-cancel)', border: '1px dashed #00A896', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                              Lịch tự động:
-                            </span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {pumpOnTime && `Bật ${pumpOnTime}`}
-                              {pumpOnTime && pumpOffTime && ' - '}
-                              {pumpOffTime && `Tắt ${pumpOffTime}`}
-                            </span>
-                          </div>
-                          <button onClick={async () => {
-                            const { error } = await supabase.from('devices').update({ pump_on_time: null, pump_off_time: null }).eq('tank_id', activeDevice);
-                            if (!error) {
-                              setPumpOnTime('');
-                              setPumpOffTime('');
-                              showNotification('Đã hủy lịch hẹn Máy bơm');
-                            }
-                          }} style={{
-                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                          }}
-                          >Hủy lịch</button>
-                        </div>
-                      )}
-
-                      <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {['07:00', '09:00', '12:00'].map(t => (
-                            <button key={t} onClick={() => setPumpOnTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOnTime === t ? '#00A896' : 'var(--border-color)'}`,
-                              background: pumpOnTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                              color: pumpOnTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={pumpOnTime} onChange={e => setPumpOnTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                          {['08:00', '10:00'].map(t => (
-                            <button key={t} onClick={() => setPumpOffTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${pumpOffTime === t ? '#00A896' : 'var(--border-color)'}`,
-                              background: pumpOffTime === t ? 'rgba(0,168,150,0.15)' : 'var(--bg-btn-cancel)',
-                              color: pumpOffTime === t ? '#00A896' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={pumpOffTime} onChange={e => setPumpOffTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#00A896'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                            <button key={item.l} onClick={() => {
-                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                              setPumpOffTime(d.toTimeString().slice(0, 5));
-                            }} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}
-                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                            >{item.l}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <button onClick={async () => {
-                        const { error, data: dev } = await supabase.from('devices').update({
-                          pump_on_time: pumpOnTime || null,
-                          pump_off_time: pumpOffTime || null
-                        }).eq('tank_id', activeDevice).select('id').single();
-                        if (!error && dev) {
-                          await supabase.from('relay_logs').insert({
-                            device_id: dev.id,
-                            relay_name: 'Pump',
-                            action: 'ON',
-                            triggered_by: 'AUTO'
-                          });
-                          showNotification('Đã lưu cấu hình thành công!');
-                        }
-                      }} style={{
-                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896',
-                        border: theme === 'dark' ? '1px solid rgba(0,168,150,0.4)' : 'none',
-                        color: theme === 'dark' ? '#00A896' : '#fff',
-                        cursor: 'pointer', transition: 'all 200ms'
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.35)' : '#008F80'}
-                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(0,168,150,0.25)' : '#00A896'}
-                      >
-                        Lưu hẹn giờ Máy bơm
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Đèn thủy sinh */}
-                  <div style={{
-                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                    border: `1px solid ${lightState ? '#FFB347' : 'rgba(26,45,74,0.5)'}`,
-                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{
-                          width: 48, height: 48, borderRadius: 12,
-                          background: lightState ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms'
-                        }}>
-                          <Lightbulb size={24} color={lightState ? '#FFB347' : 'var(--text-muted)'} />
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Đèn thủy sinh</h3>
-                          <p style={{ fontSize: 13, margin: 0, color: lightState ? '#FFB347' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                            {lightState ? 'Đang hoạt động' : 'Đang tắt'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const newState = !lightState;
-                          try {
-                            const res = await fetch(`${API_URL}/api/device/relay`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ pin: 1, state: newState, tank_id: activeDevice, relay_field: 'relay_light_state' })
-                            });
-                            if (res.ok) {
-                              setLightState(newState);
-                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
-                              if (dev) {
-                                await supabase.from('relay_logs').insert({
-                                  device_id: dev.id,
-                                  relay_name: 'Light',
-                                  action: newState ? 'ON' : 'OFF',
-                                  triggered_by: 'USER'
-                                });
-                              }
-                            }
-                          } catch (err) { console.error(err); }
-                        }}
-                        style={{
-                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                          background: lightState ? '#FFB347' : 'var(--btn-power-bg)',
-                          boxShadow: lightState ? '0 0 20px rgba(255,179,71,0.4)' : 'none',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms', flexShrink: 0
-                        }}
-                      >
-                        <Power size={24} color={lightState ? '#fff' : 'var(--text-secondary)'} />
-                      </button>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                      {(lightOnTime || lightOffTime) && (
-                        <div style={{
-                          background: 'var(--bg-btn-cancel)', border: '1px dashed #FFB347', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                              Lịch tự động:
-                            </span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {lightOnTime && `Bật ${lightOnTime}`}
-                              {lightOnTime && lightOffTime && ' - '}
-                              {lightOffTime && `Tắt ${lightOffTime}`}
-                            </span>
-                          </div>
-                          <button onClick={async () => {
-                            const { error } = await supabase.from('devices').update({ light_on_time: null, light_off_time: null }).eq('tank_id', activeDevice);
-                            if (!error) {
-                              setLightOnTime('');
-                              setLightOffTime('');
-                              showNotification('Đã hủy lịch hẹn Đèn thủy sinh');
-                            }
-                          }} style={{
-                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                          }}
-                          >Hủy lịch</button>
-                        </div>
-                      )}
-
-                      <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {['07:00', '09:00', '12:00'].map(t => (
-                            <button key={t} onClick={() => setLightOnTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOnTime === t ? '#FFB347' : 'var(--border-color)'}`,
-                              background: lightOnTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                              color: lightOnTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={lightOnTime} onChange={e => setLightOnTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                          {['08:00', '10:00'].map(t => (
-                            <button key={t} onClick={() => setLightOffTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${lightOffTime === t ? '#FFB347' : 'var(--border-color)'}`,
-                              background: lightOffTime === t ? 'rgba(255,179,71,0.15)' : 'var(--bg-btn-cancel)',
-                              color: lightOffTime === t ? '#FFB347' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={lightOffTime} onChange={e => setLightOffTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#FFB347'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                            <button key={item.l} onClick={() => {
-                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                              setLightOffTime(d.toTimeString().slice(0, 5));
-                            }} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}
-                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                            >{item.l}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <button onClick={async () => {
-                        const { error, data: dev } = await supabase.from('devices').update({
-                          light_on_time: lightOnTime || null,
-                          light_off_time: lightOffTime || null
-                        }).eq('tank_id', activeDevice).select('id').single();
-                        if (!error && dev) {
-                          await supabase.from('relay_logs').insert({
-                            device_id: dev.id,
-                            relay_name: 'Light',
-                            action: 'ON',
-                            triggered_by: 'AUTO'
-                          });
-                          showNotification('Đã lưu cấu hình thành công!');
-                        }
-                      }} style={{
-                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500',
-                        border: theme === 'dark' ? '1px solid rgba(255,179,71,0.4)' : 'none',
-                        color: theme === 'dark' ? '#FFB347' : '#fff',
-                        cursor: 'pointer', transition: 'all 200ms'
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.35)' : '#E08300'}
-                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,179,71,0.25)' : '#FF9500'}
-                      >
-                        Lưu hẹn giờ Đèn thủy sinh
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Máy sục oxy */}
-                  <div style={{
-                    padding: 24, borderRadius: 16, background: 'var(--bg-card)',
-                    border: `1px solid ${oxyState ? '#3B82F6' : 'rgba(26,45,74,0.5)'}`,
-                    transition: 'all 200ms', display: 'flex', flexDirection: 'column', gap: 24
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{
-                          width: 48, height: 48, borderRadius: 12,
-                          background: oxyState ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms'
-                        }}>
-                          <Wind size={24} color={oxyState ? '#3B82F6' : 'var(--text-muted)'} />
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--text-primary)' }}>Máy sục oxy</h3>
-                          <p style={{ fontSize: 13, margin: 0, color: oxyState ? '#3B82F6' : 'var(--text-muted)', transition: 'color 200ms' }}>
-                            {oxyState ? 'Đang hoạt động' : 'Đang tắt'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const newState = !oxyState;
-                          try {
-                            const res = await fetch(`${API_URL}/api/device/relay`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ pin: 2, state: newState, tank_id: activeDevice, relay_field: 'relay_aerator_state' })
-                            });
-                            if (res.ok) {
-                              setOxyState(newState);
-                              const { data: dev } = await supabase.from('devices').select('id').eq('tank_id', activeDevice).single();
-                              if (dev) {
-                                await supabase.from('relay_logs').insert({
-                                  device_id: dev.id,
-                                  relay_name: 'Aerator',
-                                  action: newState ? 'ON' : 'OFF',
-                                  triggered_by: 'USER'
-                                });
-                              }
-                            }
-                          } catch (err) { console.error(err); }
-                        }}
-                        style={{
-                          width: 52, height: 52, borderRadius: '50%', border: '1px solid var(--border-color)', cursor: 'pointer',
-                          background: oxyState ? '#3B82F6' : 'var(--btn-power-bg)',
-                          boxShadow: oxyState ? '0 0 20px rgba(59,130,246,0.4)' : 'none',
-                          display: 'flex', justifyContent: 'center', alignItems: 'center',
-                          transition: 'all 200ms', flexShrink: 0
-                        }}
-                      >
-                        <Power size={24} color={oxyState ? '#fff' : 'var(--text-secondary)'} />
-                      </button>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                      {(oxyOnTime || oxyOffTime) && (
-                        <div style={{
-                          background: 'var(--bg-btn-cancel)', border: '1px dashed #3B82F6', borderRadius: 12, padding: '12px 16px', marginBottom: '16px',
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                              Lịch tự động:
-                            </span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {oxyOnTime && `Bật ${oxyOnTime}`}
-                              {oxyOnTime && oxyOffTime && ' - '}
-                              {oxyOffTime && `Tắt ${oxyOffTime}`}
-                            </span>
-                          </div>
-                          <button onClick={async () => {
-                            const { error } = await supabase.from('devices').update({ aerator_on_time: null, aerator_off_time: null }).eq('tank_id', activeDevice);
-                            if (!error) {
-                              setOxyOnTime('');
-                              setOxyOffTime('');
-                              showNotification('Đã hủy lịch hẹn Máy sục oxy');
-                            }
-                          }} style={{
-                            background: 'transparent', border: 'none', color: '#FF6B6B', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0
-                          }}
-                          >Hủy lịch</button>
-                        </div>
-                      )}
-
-                      <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ bật</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {['07:00', '09:00', '12:00'].map(t => (
-                            <button key={t} onClick={() => setOxyOnTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOnTime === t ? '#3B82F6' : 'var(--border-color)'}`,
-                              background: oxyOnTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                              color: oxyOnTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={oxyOnTime} onChange={e => setOxyOnTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 600 }}>Hẹn giờ tắt / Thời lượng</div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-                          {['08:00', '10:00'].map(t => (
-                            <button key={t} onClick={() => setOxyOffTime(t)} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${oxyOffTime === t ? '#3B82F6' : 'var(--border-color)'}`,
-                              background: oxyOffTime === t ? 'rgba(59,130,246,0.15)' : 'var(--bg-btn-cancel)',
-                              color: oxyOffTime === t ? '#3B82F6' : 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}>{t}</button>
-                          ))}
-                          <input type="time" value={oxyOffTime} onChange={e => setOxyOffTime(e.target.value)} style={{
-                            padding: '6px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--border-color)',
-                            background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, transition: 'border-color 200ms'
-                          }}
-                            onFocus={e => e.currentTarget.style.borderColor = '#3B82F6'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {[{ l: 'Sau 1p', m: 1 }, { l: 'Sau 30p', m: 30 }, { l: 'Sau 1h', m: 60 }].map(item => (
-                            <button key={item.l} onClick={() => {
-                              const d = new Date(); d.setMinutes(d.getMinutes() + item.m);
-                              setOxyOffTime(d.toTimeString().slice(0, 5));
-                            }} style={{
-                              padding: '7px 12px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border-color)',
-                              background: 'var(--bg-btn-cancel)', color: 'var(--text-primary)', cursor: 'pointer', transition: 'all 150ms'
-                            }}
-                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)' }}
-                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-btn-cancel)' }}
-                            >{item.l}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <button onClick={async () => {
-                        const { error, data: dev } = await supabase.from('devices').update({
-                          aerator_on_time: oxyOnTime || null,
-                          aerator_off_time: oxyOffTime || null
-                        }).eq('tank_id', activeDevice).select('id').single();
-                        if (!error && dev) {
-                          await supabase.from('relay_logs').insert({
-                            device_id: dev.id,
-                            relay_name: 'Aerator',
-                            action: 'ON',
-                            triggered_by: 'AUTO'
-                          });
-                          showNotification('Đã lưu cấu hình thành công!');
-                        }
-                      }} style={{
-                        width: '100%', padding: '10px', marginTop: 10, borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6',
-                        border: theme === 'dark' ? '1px solid rgba(59,130,246,0.4)' : 'none',
-                        color: theme === 'dark' ? '#3B82F6' : '#fff',
-                        cursor: 'pointer', transition: 'all 200ms'
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.35)' : '#2563EB'}
-                        onMouseLeave={e => e.currentTarget.style.background = theme === 'dark' ? 'rgba(59,130,246,0.25)' : '#3B82F6'}
-                      >
-                        Lưu hẹn giờ Máy sục oxy
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              )}
+              {activeTab === 'control' && <DeviceControlPanel items={[
+                {
+                  id: 'pump', title: 'Máy bơm nước', description: 'Tuần hoàn và lọc nước',
+                  active: relayVisual.pump?.tankId === activeDevice ? relayVisual.pump.desired : pumpState,
+                  pending: relayVisual.pump?.tankId === activeDevice && relayVisual.pump.pending,
+                  onTime: pumpOnTime, offTime: pumpOffTime,
+                  isDaily: scheduleModes.pump.isDaily, runDate: scheduleModes.pump.runDate,
+                  saved: Boolean(scheduleIds.pump), saving: savingSchedule === 'pump',
+                  onDailyChange: value => setScheduleMode('pump', { isDaily: value }),
+                  onRunDateChange: value => setScheduleMode('pump', { runDate: value }),
+                  onOnTimeChange: setPumpOnTime, onOffTimeChange: setPumpOffTime,
+                  onToggle: () => toggleRelay('pump', pumpState, setPumpState, 3, 'relay_pump_state', 'Pump'),
+                  onClear: () => { void clearSchedule('pump') },
+                  onSave: () => { void saveSchedule('pump', pumpOnTime, pumpOffTime) }
+                },
+                {
+                  id: 'light', title: 'Đèn thủy sinh', description: 'Chiếu sáng hồ cá, cây thủy sinh',
+                  active: relayVisual.light?.tankId === activeDevice ? relayVisual.light.desired : lightState,
+                  pending: relayVisual.light?.tankId === activeDevice && relayVisual.light.pending,
+                  onTime: lightOnTime, offTime: lightOffTime,
+                  isDaily: scheduleModes.light.isDaily, runDate: scheduleModes.light.runDate,
+                  saved: Boolean(scheduleIds.light), saving: savingSchedule === 'light',
+                  onDailyChange: value => setScheduleMode('light', { isDaily: value }),
+                  onRunDateChange: value => setScheduleMode('light', { runDate: value }),
+                  onOnTimeChange: setLightOnTime, onOffTimeChange: setLightOffTime,
+                  onToggle: () => toggleRelay('light', lightState, setLightState, 1, 'relay_light_state', 'Light'),
+                  onClear: () => { void clearSchedule('light') },
+                  onSave: () => { void saveSchedule('light', lightOnTime, lightOffTime) }
+                },
+                {
+                  id: 'aerator', title: 'Máy sục oxy', description: 'Cung cấp oxy cho hồ cá',
+                  active: relayVisual.aerator?.tankId === activeDevice ? relayVisual.aerator.desired : oxyState,
+                  pending: relayVisual.aerator?.tankId === activeDevice && relayVisual.aerator.pending,
+                  onTime: oxyOnTime, offTime: oxyOffTime,
+                  isDaily: scheduleModes.aerator.isDaily, runDate: scheduleModes.aerator.runDate,
+                  saved: Boolean(scheduleIds.aerator), saving: savingSchedule === 'aerator',
+                  onDailyChange: value => setScheduleMode('aerator', { isDaily: value }),
+                  onRunDateChange: value => setScheduleMode('aerator', { runDate: value }),
+                  onOnTimeChange: setOxyOnTime, onOffTimeChange: setOxyOffTime,
+                  onToggle: () => toggleRelay('aerator', oxyState, setOxyState, 2, 'relay_aerator_state', 'Aerator'),
+                  onClear: () => { void clearSchedule('aerator') },
+                  onSave: () => { void saveSchedule('aerator', oxyOnTime, oxyOffTime) }
+                }
+              ]} />}
 
               {/* ═══ TAB: SENSORS ═══ */}
               {activeTab === 'sensors' && (
@@ -3128,8 +2739,8 @@ export default function DashboardPage() {
         zIndex: 1000,
         background: 'var(--bg-notif)',
         backdropFilter: 'blur(8px)',
-        border: '1px solid #00A896',
-        color: '#00A896',
+        border: `1px solid ${notification.type === 'error' ? '#e05252' : '#00A896'}`,
+        color: notification.type === 'error' ? '#e05252' : '#00A896',
         padding: '12px 24px',
         borderRadius: 12,
         fontSize: 14,
@@ -3141,9 +2752,9 @@ export default function DashboardPage() {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        boxShadow: '0 8px 32px rgba(0, 168, 150, 0.2)'
+        boxShadow: notification.type === 'error' ? '0 8px 32px rgba(224, 82, 82, 0.16)' : '0 8px 32px rgba(0, 168, 150, 0.2)'
       }}>
-        <CheckCircle size={18} />
+        {notification.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
         {notification.msg}
       </div>
 
