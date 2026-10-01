@@ -8,6 +8,7 @@ import './CustomerOverview.css'
 type SensorKey = 'ph' | 'temp' | 'tds' | 'waterLevel'
 type Reading = { time: string; value: number }
 type SensorData = Record<SensorKey, Reading[]>
+type TrendData = Record<SensorKey, { time: string; value: number | null }[]>
 
 const metrics = [
   { key: 'ph', label: 'pH', unit: '', icon: Activity, color: '#0aa795', good: [6.5, 7.5], warn: [6, 8], range: '6.0 – 8.0' },
@@ -28,7 +29,7 @@ interface Props {
   userName?: string
   species?: SpeciesRanges
   sensorData: SensorData
-  hourlySensorData: SensorData
+  hourlySensorData: TrendData
   alertsCount: number
   onOpenSensor: (key: SensorKey) => void
   onOpenAlerts: () => void
@@ -60,6 +61,7 @@ export default function CustomerOverview({ pondName, userName, species, sensorDa
   const shieldLevel = present.length === 0 ? 'waiting' : danger ? 'danger' : allSafe ? 'safe' : 'warning'
   const chartMetric = resolvedMetrics.find(metric => metric.key === chartKey)!
   const chartData = hourlySensorData[chartKey]
+  const measuredValues = chartData.map(point => point.value).filter((value): value is number => value !== null)
 
   return <section className="customer-overview">
     <div className="overview-hero">
@@ -106,9 +108,9 @@ export default function CustomerOverview({ pondName, userName, species, sensorDa
       <div className="overview-panel overview-trend">
         <div className="overview-panel-head"><h3><Activity size={19} /> Xu hướng chất lượng nước <small>(12 giờ qua)</small></h3><div className="overview-tabs">{resolvedMetrics.map(metric => <button key={metric.key} className={chartKey === metric.key ? 'active' : ''} onClick={() => setChartKey(metric.key)}>{metric.label}</button>)}</div></div>
         <div className="overview-chart">
-          {chartData.length === 0 ? <div className="overview-chart-empty">Chưa có dữ liệu trong 12 giờ qua</div> : chartKey === 'waterLevel' ? <div className="overview-level-bars">{chartData.map((point, index) => <div key={`${point.time}-${index}`} title={`${point.time}: ${point.value === 1 ? 'Ổn định' : 'Cạn nước'}`}><span className={point.value === 1 ? 'good' : 'alert'} />{point.time}</div>)}</div> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 12, right: 8, bottom: 0, left: -20 }}><defs><linearGradient id={`overview-trend-${chartKey}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={chartMetric.color} stopOpacity={0.24} /><stop offset="100%" stopColor={chartMetric.color} stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="var(--overview-grid)" vertical={false} /><XAxis dataKey="time" tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} minTickGap={28} /><YAxis domain={['auto', 'auto']} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} /><Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, color: 'var(--text-primary)' }} formatter={value => [`${value ?? '—'}${chartMetric.unit}`, chartMetric.label]} /><Area type="monotone" dataKey="value" stroke={chartMetric.color} strokeWidth={2.5} fill={`url(#overview-trend-${chartKey})`} fillOpacity={1} isAnimationActive={false} /></AreaChart></ResponsiveContainer>}
+          {measuredValues.length === 0 ? <div className="overview-chart-empty">Chưa có dữ liệu trong 12 giờ qua</div> : chartKey === 'waterLevel' ? <div className="overview-level-bars">{chartData.map((point, index) => <div key={`${point.time}-${index}`} title={`${point.time}: ${point.value === null ? 'Chưa có dữ liệu' : point.value === 1 ? 'Ổn định' : 'Cạn nước'}`}><span className={point.value === null ? '' : point.value === 1 ? 'good' : 'alert'} />{point.time}</div>)}</div> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 12, right: 8, bottom: 0, left: -20 }}><defs><linearGradient id={`overview-trend-${chartKey}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={chartMetric.color} stopOpacity={0.24} /><stop offset="100%" stopColor={chartMetric.color} stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="var(--overview-grid)" vertical={false} /><XAxis dataKey="time" tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} minTickGap={28} /><YAxis domain={['auto', 'auto']} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} /><Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, color: 'var(--text-primary)' }} formatter={value => [`${value ?? '—'}${chartMetric.unit}`, chartMetric.label]} /><Area type="monotone" dataKey="value" stroke={chartMetric.color} strokeWidth={2.5} dot={measuredValues.length <= 3 ? { r: 3 } : false} fill={`url(#overview-trend-${chartKey})`} fillOpacity={1} isAnimationActive={false} /></AreaChart></ResponsiveContainer>}
         </div>
-        {chartData.length > 0 && chartKey !== 'waterLevel' && <div className="overview-chart-stats">{[['Thấp nhất', Math.min(...chartData.map(d => d.value))], ['Cao nhất', Math.max(...chartData.map(d => d.value))], ['Trung bình', chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{Number(value).toFixed(chartKey === 'tds' ? 0 : 2)}{chartMetric.unit}</strong></div>)}</div>}
+        {measuredValues.length > 0 && chartKey !== 'waterLevel' && <div className="overview-chart-stats">{[['Thấp nhất', Math.min(...measuredValues)], ['Cao nhất', Math.max(...measuredValues)], ['Trung bình', measuredValues.reduce((sum, value) => sum + value, 0) / measuredValues.length]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{Number(value).toFixed(chartKey === 'tds' ? 0 : 2)}{chartMetric.unit}</strong></div>)}</div>}
       </div>
       <div className="overview-side">
         <div className="overview-panel overview-status"><div className="overview-panel-head"><h3><Fish size={19} /> Trạng thái hồ cá</h3><span className="overview-preview">Giao diện xem trước</span></div><div className="overview-status-body"><div className="overview-pond-image" /><div className="overview-status-fields"><div><span>Trạng thái tổng thể</span><strong className={allSafe ? 'positive' : ''}>{present.length === 0 ? 'Chờ dữ liệu' : allSafe ? 'Ổn định' : 'Cần theo dõi'}</strong></div><div><span>Bể cá</span><strong>{pondName || 'Chưa chọn bể'}</strong></div><div><span>Chỉ số an toàn</span><strong>{safe}/4</strong></div><div><span>Cảnh báo hiện tại</span><strong>{alertsCount}</strong></div></div></div></div>

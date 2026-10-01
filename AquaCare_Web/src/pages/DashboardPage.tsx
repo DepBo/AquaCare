@@ -48,6 +48,15 @@ interface FishSpecies extends SpeciesRanges {
   id: number
   species_name: string
 }
+interface TrendReading { time: string; value: number | null }
+type TrendData = Record<keyof SensorData, TrendReading[]>
+type TelemetryTrendRow = {
+  ph: number | string | null
+  tds: number | string | null
+  temp: number | string | null
+  water_level_ok: boolean | null
+  recorded_at: string
+}
 
 type RelayKind = 'pump' | 'light' | 'aerator'
 type ScheduleRow = {
@@ -86,6 +95,59 @@ type RelayRequest = {
 
 // ── Sinh dữ liệu giả ─────────────────────────────────────────
 const emptySensor = (): SensorData => ({ ph: [], tds: [], temp: [], waterLevel: [] })
+
+const trendTimeLabel = (recordedAt: string) => new Date(recordedAt).toLocaleTimeString('vi-VN', {
+  hour: '2-digit',
+  minute: '2-digit'
+})
+
+const finiteTelemetryValue = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined || value === '') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const buildNumericTrend = (
+  rows: TelemetryTrendRow[],
+  field: 'ph' | 'tds' | 'temp',
+  maxPoints = 180
+): TrendReading[] => {
+  const readings = rows.flatMap(row => {
+    const value = finiteTelemetryValue(row[field])
+    return value === null ? [] : [{ recordedAt: row.recorded_at, value }]
+  })
+  if (readings.length === 0) return []
+
+  // Keep recent minute-level movement visible while limiting the chart payload.
+  const chunkSize = Math.max(1, Math.ceil(readings.length / maxPoints))
+  const result: TrendReading[] = []
+  for (let index = 0; index < readings.length; index += chunkSize) {
+    const chunk = readings.slice(index, index + chunkSize)
+    result.push({
+      time: trendTimeLabel(chunk.at(-1)!.recordedAt),
+      value: Number((chunk.reduce((sum, reading) => sum + reading.value, 0) / chunk.length).toFixed(2))
+    })
+  }
+  return result
+}
+
+const buildWaterTrend = (rows: TelemetryTrendRow[], maxPoints = 48): TrendReading[] => {
+  const readings = rows.filter(row => row.water_level_ok !== null)
+  if (readings.length === 0) return []
+  const chunkSize = Math.max(1, Math.ceil(readings.length / maxPoints))
+  const result: TrendReading[] = []
+  for (let index = 0; index < readings.length; index += chunkSize) {
+    const chunk = readings.slice(index, index + chunkSize)
+    result.push({
+      time: trendTimeLabel(chunk.at(-1)!.recorded_at),
+      value: chunk.every(reading => reading.water_level_ok) ? 1 : 0
+    })
+  }
+  return result
+}
+
+const appendLiveTrend = (readings: TrendReading[], time: string, value: number, maxPoints: number) =>
+  [...readings, { time, value }].slice(-maxPoints)
 
 const getInitialsAvatar = (name: string) => {
   if (!name) return 'U'
@@ -857,7 +919,7 @@ export default function DashboardPage() {
   const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
-  const [hourlySensorData, setHourlySensorData] = useState<SensorData>(emptySensor())
+  const [hourlySensorData, setHourlySensorData] = useState<TrendData>(emptySensor())
   const [notification, setNotification] = useState<{ show: boolean, msg: string, type: 'success' | 'error' }>({ show: false, msg: '', type: 'success' })
 
   const showNotification = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -1187,6 +1249,7 @@ export default function DashboardPage() {
     const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice)
     if (!devices || devices.length === 0) {
       setSensorData(emptySensor())
+      setHourlySensorData(emptySensor())
       setAlerts([])
       // setLoading(false)
       return
@@ -1214,75 +1277,63 @@ export default function DashboardPage() {
     }
     setTick(t => t + 1)
     setLoading(false)
-    fetchHourlyData()
+    await fetchHourlyData()
   }
 
   const fetchHourlyData = async () => {
     if (!activeDevice) return
-    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice)
+    const tankId = activeDevice
+    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', tankId)
     if (!devices || devices.length === 0) return
 
     const deviceId = devices[0].id
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
-    const { data } = await supabase.from('telemetry_logs')
-      .select('ph, tds, temp, water_level_ok, recorded_at')
+    const { data: latestRows, error: latestError } = await supabase.from('telemetry_logs')
+      .select('recorded_at')
       .eq('device_id', deviceId)
-      .gte('recorded_at', twelveHoursAgo)
-      .order('recorded_at', { ascending: true })
+      .order('recorded_at', { ascending: false })
+      .limit(1)
 
-    const buckets: Record<string, {
-      phSum: number, phCount: number,
-      tdsSum: number, tdsCount: number,
-      tempSum: number, tempCount: number,
-      waterSum: number, waterCount: number
-    }> = {}
-    const now = new Date()
-
-    // Create 12 buckets for the last 12 hours
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 60 * 60 * 1000)
-      const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
-      buckets[hourStr] = { phSum: 0, phCount: 0, tdsSum: 0, tdsCount: 0, tempSum: 0, tempCount: 0, waterSum: 0, waterCount: 0 }
+    const latestRecordedAt = latestRows?.[0]?.recorded_at
+    const latestRecordedMs = latestRecordedAt ? Date.parse(latestRecordedAt) : Number.NaN
+    if (latestError || !Number.isFinite(latestRecordedMs)) {
+      if (latestError) console.error('Không xác định được mốc dữ liệu cảm biến cuối:', latestError)
+      if (activeDeviceRef.current === tankId) setHourlySensorData(emptySensor())
+      return
     }
 
-    if (data) {
-      data.forEach(t => {
-        const d = new Date(t.recorded_at)
-        const hourStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(/:.*/, ':00')
-        if (buckets[hourStr]) {
-          buckets[hourStr].phSum += Number(t.ph) || 0
-          buckets[hourStr].phCount += 1
-          buckets[hourStr].tdsSum += Number(t.tds) || 0
-          buckets[hourStr].tdsCount += 1
-          buckets[hourStr].tempSum += Number(t.temp) || 0
-          buckets[hourStr].tempCount += 1
-          buckets[hourStr].waterSum += t.water_level_ok ? 1 : 0
-          buckets[hourStr].waterCount += 1
-        }
-      })
+    // The 12-hour window follows the sensor's last reading, not the time the page is opened.
+    const queryEnd = new Date(latestRecordedMs).toISOString()
+    const queryStart = new Date(latestRecordedMs - 12 * 60 * 60 * 1000).toISOString()
+    const trendRows: TelemetryTrendRow[] = []
+
+    // PostgREST can cap a response; read each page so the newest hours are included.
+    const pageSize = 1000
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabase.from('telemetry_logs')
+        .select('ph, tds, temp, water_level_ok, recorded_at')
+        .eq('device_id', deviceId)
+        .gte('recorded_at', queryStart)
+        .lte('recorded_at', queryEnd)
+        .order('recorded_at', { ascending: true })
+        .range(offset, offset + pageSize - 1)
+
+      if (error || !data) {
+        console.error('Không tải được xu hướng 12 giờ:', error)
+        if (activeDeviceRef.current === tankId) setHourlySensorData(emptySensor())
+        return
+      }
+
+      trendRows.push(...data as TelemetryTrendRow[])
+
+      if (data.length < pageSize) break
     }
 
-    const mapMetric = (sumKey: string, countKey: string) => {
-      return Object.keys(buckets).map(time => {
-        const b = buckets[time] as any
-        return {
-          time,
-          value: b[countKey] > 0 ? Number((b[sumKey] / b[countKey]).toFixed(2)) : 0
-        }
-      })
-    }
-
+    if (activeDeviceRef.current !== tankId) return
     setHourlySensorData({
-      ph: mapMetric('phSum', 'phCount'),
-      tds: mapMetric('tdsSum', 'tdsCount'),
-      temp: mapMetric('tempSum', 'tempCount'),
-      waterLevel: Object.keys(buckets).map(time => {
-        const b = buckets[time] as any;
-        return {
-          time,
-          value: (b.waterCount > 0 && b.waterSum === b.waterCount) ? 1 : 0
-        };
-      })
+      ph: buildNumericTrend(trendRows, 'ph'),
+      tds: buildNumericTrend(trendRows, 'tds'),
+      temp: buildNumericTrend(trendRows, 'temp'),
+      waterLevel: buildWaterTrend(trendRows)
     })
   }
 
@@ -1385,6 +1436,17 @@ export default function DashboardPage() {
                 waterLevel: appendData(prev.waterLevel, newData.water_level_ok ? 1 : 0),
               };
             });
+            setHourlySensorData(prev => {
+              const ph = finiteTelemetryValue(newData.ph)
+              const tds = finiteTelemetryValue(newData.tds)
+              const temp = finiteTelemetryValue(newData.temp)
+              return {
+                ph: ph !== null ? appendLiveTrend(prev.ph, timeStr, ph, 180) : prev.ph,
+                tds: tds !== null ? appendLiveTrend(prev.tds, timeStr, tds, 180) : prev.tds,
+                temp: temp !== null ? appendLiveTrend(prev.temp, timeStr, temp, 180) : prev.temp,
+                waterLevel: appendLiveTrend(prev.waterLevel, timeStr, newData.water_level_ok ? 1 : 0, 48),
+              }
+            })
             setTick(t => t + 1); // Trigger check cảnh báo
           }
         )
@@ -1436,10 +1498,12 @@ export default function DashboardPage() {
     }
 
     setupRealtime();
+    const trendRefresh = window.setInterval(() => { void fetchHourlyData() }, 5 * 60 * 1000);
 
     // 4. Dọn dẹp (Cleanup) khi đổi bể khác hoặc unmount
     return () => {
       disposed = true;
+      window.clearInterval(trendRefresh);
       if (channel) {
         supabase.removeChannel(channel);
       }
