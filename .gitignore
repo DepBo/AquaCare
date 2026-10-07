@@ -107,6 +107,12 @@ AquaCare_App/ios/Runner/GoogleService-Info.plist
 AquaCare_App/macos/Runner/GoogleService-Info.plist
 
 # ==============================================================================
+# AquaCare TVC — chỉ lưu cục bộ, không đưa lên Git
+# ==============================================================================
+AquaCare_TVC/
+landingpage_video.mp4
+
+# ==============================================================================
 # Tài liệu nội bộ nhạy cảm (KHÔNG commit lên GitHub)
 # ==============================================================================
 about.md

@@ -51,6 +51,7 @@ interface FishSpecies extends SpeciesRanges {
 interface TrendReading { time: string; value: number | null }
 type TrendData = Record<keyof SensorData, TrendReading[]>
 type TelemetryTrendRow = {
+  id: number
   ph: number | string | null
   tds: number | string | null
   temp: number | string | null
@@ -1301,20 +1302,23 @@ export default function DashboardPage() {
       return
     }
 
-    // The 12-hour window follows the sensor's last reading, not the time the page is opened.
+    // Freeze the upper bound so pagination stays stable while realtime data is inserted.
     const queryEnd = new Date(latestRecordedMs).toISOString()
-    const queryStart = new Date(latestRecordedMs - 12 * 60 * 60 * 1000).toISOString()
-    const trendRows: TelemetryTrendRow[] = []
+    const hourMs = 60 * 60 * 1000
+    const activeHourKeys = new Set<number>()
+    const trendRowsDescending: TelemetryTrendRow[] = []
 
-    // PostgREST can cap a response; read each page so the newest hours are included.
+    // Read the 12 newest hours that actually contain sensor records. Offline gaps do
+    // not consume hours, so older recorded periods remain visible after a restart.
     const pageSize = 1000
+    let collectedTwelveActiveHours = false
     for (let offset = 0; ; offset += pageSize) {
       const { data, error } = await supabase.from('telemetry_logs')
-        .select('ph, tds, temp, water_level_ok, recorded_at')
+        .select('id, ph, tds, temp, water_level_ok, recorded_at')
         .eq('device_id', deviceId)
-        .gte('recorded_at', queryStart)
         .lte('recorded_at', queryEnd)
-        .order('recorded_at', { ascending: true })
+        .order('recorded_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(offset, offset + pageSize - 1)
 
       if (error || !data) {
@@ -1323,12 +1327,25 @@ export default function DashboardPage() {
         return
       }
 
-      trendRows.push(...data as TelemetryTrendRow[])
+      for (const row of data as TelemetryTrendRow[]) {
+        const recordedMs = Date.parse(row.recorded_at)
+        if (!Number.isFinite(recordedMs)) continue
+        const hourKey = Math.floor(recordedMs / hourMs) * hourMs
+        if (!activeHourKeys.has(hourKey)) {
+          if (activeHourKeys.size === 12) {
+            collectedTwelveActiveHours = true
+            break
+          }
+          activeHourKeys.add(hourKey)
+        }
+        trendRowsDescending.push(row)
+      }
 
-      if (data.length < pageSize) break
+      if (collectedTwelveActiveHours || data.length < pageSize) break
     }
 
     if (activeDeviceRef.current !== tankId) return
+    const trendRows = trendRowsDescending.reverse()
     setHourlySensorData({
       ph: buildNumericTrend(trendRows, 'ph'),
       tds: buildNumericTrend(trendRows, 'tds'),
