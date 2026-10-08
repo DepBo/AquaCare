@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download } from 'lucide-react'
 
 const SLIDES = [
   {
@@ -283,10 +283,10 @@ export default function HeroSection() {
       <div
         style={{
           position: 'absolute',
-          bottom: mobile ? 28 : 56,
+          bottom: mobile ? 118 : 56,
           left: mobile ? 20 : 56,
           zIndex: 60,
-          maxWidth: mobile ? 280 : 360,
+          maxWidth: mobile ? 'calc(100% - 40px)' : 360,
         }}
       >
         {/* Accent line + subtitle */}
@@ -402,48 +402,81 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* ── Bottom-right CTA ── */}
+      {/* ── Hero actions ── */}
       <div
         style={{
           position: 'absolute',
-          bottom: mobile ? 28 : 56,
+          bottom: mobile ? 24 : 56,
+          left: mobile ? 20 : 'auto',
           right: mobile ? 20 : 40,
           zIndex: 60,
           textAlign: 'right' as const,
+          display: 'flex',
+          alignItems: mobile ? 'stretch' : 'flex-end',
+          flexDirection: mobile ? 'row' : 'column',
+          gap: mobile ? 10 : 12,
         }}
       >
+        <a
+          href="/AquaCare.apk"
+          download="AquaCare.apk"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            minHeight: mobile ? 48 : 50,
+            padding: mobile ? '0 14px' : '0 20px',
+            borderRadius: 999,
+            background: '#ffffff', color: '#0a2330',
+            fontSize: mobile ? 13 : 14, fontWeight: 700,
+            textDecoration: 'none', whiteSpace: 'nowrap',
+            flex: mobile ? 1 : 'none',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
+            transition: 'transform 180ms ease, box-shadow 180ms ease',
+          }}
+          aria-label="Tải ứng dụng AquaCare cho Android"
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 34px rgba(0, 0, 0, 0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.22)' }}
+        >
+          <Download size={mobile ? 16 : 18} strokeWidth={2} />
+          Tải app Android
+        </a>
         <a
           href="#about"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 8,
             fontFamily: "'Anton', sans-serif",
-            fontSize: mobile ? 22 : 40,
+            fontSize: mobile ? 15 : 30,
             fontWeight: 400,
             color: '#fff',
-            opacity: 0.85,
             textTransform: 'uppercase' as const,
             textDecoration: 'none',
             letterSpacing: '-0.01em',
             lineHeight: 1,
-            transition: 'opacity 200ms',
+            minHeight: mobile ? 48 : 'auto',
+            padding: mobile ? '0 16px' : 0,
+            border: mobile ? '1px solid rgba(255,255,255,0.35)' : 'none',
+            borderRadius: mobile ? 999 : 0,
+            background: mobile ? 'rgba(10,22,40,0.55)' : 'transparent',
+            backdropFilter: mobile ? 'blur(12px)' : 'none',
+            transition: 'opacity 200ms, background 200ms',
           }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '0.85' }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '0.75' }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
         >
           KHÁM PHÁ
-          <ArrowRight size={mobile ? 18 : 24} strokeWidth={2} />
+          <ArrowRight size={mobile ? 15 : 20} strokeWidth={2} />
         </a>
-        <div
+        {!mobile && <div
           style={{
             fontSize: 10, fontWeight: 500, color: s.accent, opacity: 0.5,
-            letterSpacing: '0.06em', marginTop: 4,
+            letterSpacing: '0.06em',
             transition: `color ${DUR}ms ${EASE}`,
           }}
         >
           IoT × Nuôi trồng thủy sản
-        </div>
+        </div>}
       </div>
 
       {/* ── Right-side stats (xl only) ── */}
