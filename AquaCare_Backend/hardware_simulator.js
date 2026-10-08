@@ -28,7 +28,7 @@ function initDeviceState(deviceId) {
   if (!deviceStates[deviceId]) {
     deviceStates[deviceId] = {
       temp: 26.0,
-      ph: 7.0,
+      ph: 7.2,
       tds: 250,
       water_level_ok: true
     };
@@ -55,7 +55,7 @@ async function fetchActiveDevices() {
   try {
     const { data, error } = await supabase
       .from('devices')
-      .select('id, mac_address, tank_id')
+      .select('id, mac_address, tank_id, tank:tanks(tank_name)')
       .eq('is_active', true)
       .eq('is_simulator', true)
       .not('tank_id', 'is', null);
@@ -188,8 +188,8 @@ async function pushTelemetryData() {
     const state = deviceStates[device.id];
 
     // Cập nhật trạng thái bằng Random Walk
-    state.temp = getNextValue(state.temp, 0.2, 24.0, 28.5);
-    state.ph = getNextValue(state.ph, 0.05, 6.5, 7.5);
+    state.temp = getNextValue(state.temp, 0.2, 24.0, 26.0);
+    state.ph = getNextValue(state.ph, 0.05, 7.05, 7.35);
     state.tds = getNextValue(state.tds, 5, 150, 300);
 
     // Mực nước: 99% true, 1% false
@@ -210,6 +210,7 @@ async function pushTelemetryData() {
 
     reportData.push({
       'MAC Address': device.mac_address,
+      'Tên bể': device.tank?.tank_name || `ID ${device.tank_id}`,
       'Temp (°C)': state.temp.toFixed(2),
       'pH': state.ph.toFixed(2),
       'TDS (ppm)': state.tds.toFixed(0),
@@ -328,11 +329,18 @@ async function main() {
   // Gửi data lần đầu ngay lập tức
   await pushTelemetryData();
 
-  // Đặt lịch cập nhật danh sách thiết bị mỗi 1 phút (60,000 ms)
-  setInterval(fetchActiveDevices, 60000);
-
-  // Đặt lịch gửi dữ liệu telemetry mỗi 10 giây (10,000 ms)
-  setInterval(pushTelemetryData, 60000);
+  // Làm mới trạng thái trước khi ghi để thiết bị vừa tắt không nhận thêm bản ghi.
+  let cycleRunning = false;
+  setInterval(async () => {
+    if (cycleRunning) return;
+    cycleRunning = true;
+    try {
+      await fetchActiveDevices();
+      await pushTelemetryData();
+    } finally {
+      cycleRunning = false;
+    }
+  }, 60000);
 }
 
 main();

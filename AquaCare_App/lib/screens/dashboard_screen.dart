@@ -1436,6 +1436,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: [
                     Text(
                       _tabTitles[_selectedTab],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: _selectedTab == 0 ? 20 : 18,
                         fontWeight: FontWeight.w800,
@@ -1447,6 +1449,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _selectedTab == 0
                           ? 'Theo dõi bể cá của bạn'
                           : 'Cập nhật lúc $_currentTime',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: CustomerColors.secondaryText,
@@ -1490,11 +1494,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    _isLoading
-                        ? 'Sync'
-                        : _currentSensors.every((sensor) => sensor.hasData)
-                        ? 'Live'
-                        : 'Chờ dữ liệu',
+                    MediaQuery.sizeOf(context).width < 430
+                        ? ''
+                        : _isLoading
+                            ? 'Sync'
+                            : _currentSensors.every((sensor) => sensor.hasData)
+                                ? 'Live'
+                                : 'Chờ dữ liệu',
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -3863,10 +3869,20 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: CustomerColors.text.withValues(alpha: 0.08)),
       ),
-      child: Container(
-        width: 400,
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: max(
+            160,
+            MediaQuery.sizeOf(context).height -
+                MediaQuery.viewInsetsOf(context).bottom -
+                48,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Container(
+            width: 400,
+            padding: const EdgeInsets.all(24),
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4120,9 +4136,11 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

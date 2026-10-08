@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import { clearVerifiedRole } from '../authRoleCache'
 
 const F = "'Inter', sans-serif"
 const supabase = createClient(
@@ -23,6 +24,7 @@ const inputStyle: React.CSSProperties = {
 }
 
 function clearLocalAuth() {
+  clearVerifiedRole()
   for (const key of ['cs_auth', 'access_token', 'refresh_token', 'cs_role', 'user_info']) {
     localStorage.removeItem(key)
   }

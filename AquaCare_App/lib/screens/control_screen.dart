@@ -17,6 +17,7 @@ class _ControlScreenState extends State<ControlScreen> {
   Stream<Map<String, dynamic>?>? _deviceStream;
   Stream<List<Map<String, dynamic>>>? _scheduleStream;
   int? _scheduleDeviceId;
+  bool _updatingDeviceActive = false;
 
   @override
   void initState() {
@@ -102,6 +103,22 @@ class _ControlScreenState extends State<ControlScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _setDeviceActive(int deviceId, bool isActive) async {
+    if (_updatingDeviceActive) return;
+    final tankId = widget.tankId;
+    setState(() => _updatingDeviceActive = true);
+    try {
+      await SupabaseService.instance.setDeviceActive(tankId, deviceId, isActive);
+      if (!mounted || widget.tankId != tankId) return;
+      setState(_initStream);
+      _showNotification(isActive ? 'Đã bật thiết bị.' : 'Đã tắt thiết bị.');
+    } catch (error) {
+      _showNotification('Không thể đổi trạng thái thiết bị. Vui lòng thử lại.', error: true);
+    } finally {
+      if (mounted) setState(() => _updatingDeviceActive = false);
+    }
   }
 
   Future<void> _editSchedule(
@@ -543,6 +560,45 @@ class _ControlScreenState extends State<ControlScreen> {
               ),
               child: Column(
                 children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: CustomerColors.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: CustomerColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Thiết bị của bể', style: GoogleFonts.inter(
+                                fontSize: 15, fontWeight: FontWeight.w600,
+                                color: CustomerColors.text,
+                              )),
+                              const SizedBox(height: 4),
+                              Text(device['is_active'] == true
+                                  ? 'Đang bật · simulator sẽ ghi dữ liệu'
+                                  : 'Đã tắt · simulator ngừng ghi dữ liệu',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12, color: CustomerColors.secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: device['is_active'] == true,
+                          activeThumbColor: const Color(0xFF00A896),
+                          onChanged: _updatingDeviceActive
+                              ? null
+                              : (value) => _setDeviceActive(deviceId, value),
+                        ),
+                      ],
+                    ),
+                  ),
                   _buildDeviceCard(
                     'Máy bơm nước',
                     Icons.water_drop,

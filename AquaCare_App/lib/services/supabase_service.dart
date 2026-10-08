@@ -534,6 +534,19 @@ class SupabaseService {
         .map((list) => list.isNotEmpty ? list.first : null);
   }
 
+  Future<void> setDeviceActive(String tankId, int deviceId, bool isActive) async {
+    final updated = await client
+        .from('devices')
+        .update({'is_active': isActive})
+        .eq('id', deviceId)
+        .eq('tank_id', int.parse(tankId))
+        .select('id, is_active')
+        .maybeSingle();
+    if (updated == null) {
+      throw StateError('Không tìm thấy thiết bị của bể này.');
+    }
+  }
+
   /// Cập nhật trạng thái thủ công (Bật/Tắt) của một Relay qua API (0-delay)
   Future<void> updateRelayState(
     String tankId,

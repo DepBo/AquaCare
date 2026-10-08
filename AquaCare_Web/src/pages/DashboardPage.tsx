@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import DeviceControlPanel from '../components/DeviceControlPanel'
+import { clearVerifiedRole } from '../authRoleCache'
 import InnerMoonToggle from '../components/InnerMoonToggle'
 import { getSpeciesThresholds } from '../components/speciesThresholds'
 import type { SpeciesRanges } from '../components/speciesThresholds'
@@ -905,6 +906,8 @@ export default function DashboardPage() {
   const [oxyOnTime, setOxyOnTime] = useState('')
   const [oxyOffTime, setOxyOffTime] = useState('')
   const [deviceRecordId, setDeviceRecordId] = useState<number | null>(null)
+  const [deviceActive, setDeviceActive] = useState<boolean | null>(null)
+  const [savingDeviceActive, setSavingDeviceActive] = useState(false)
   const [scheduleIds, setScheduleIds] = useState<Partial<Record<RelayKind, number>>>({})
   const [scheduleModes, setScheduleModes] = useState<Record<RelayKind, { isDaily: boolean; runDate: string }>>({
     pump: { isDaily: false, runDate: localDate() },
@@ -928,6 +931,29 @@ export default function DashboardPage() {
     setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }))
     }, 3000)
+  }
+
+  const toggleDeviceActive = async () => {
+    if (!deviceRecordId || !activeDevice || deviceActive === null || savingDeviceActive) return
+    const tankId = activeDevice
+    const nextActive = !deviceActive
+    setSavingDeviceActive(true)
+    try {
+      const { data, error } = await supabase.from('devices')
+        .update({ is_active: nextActive })
+        .eq('id', deviceRecordId)
+        .eq('tank_id', tankId)
+        .select('id, is_active')
+        .single()
+      if (error || !data) throw error || new Error('Không tìm thấy thiết bị của bể này.')
+      if (activeDeviceRef.current === tankId) setDeviceActive(data.is_active === true)
+      showNotification(nextActive ? 'Đã bật thiết bị.' : 'Đã tắt thiết bị.')
+    } catch (error) {
+      console.error('Không cập nhật được trạng thái thiết bị:', error)
+      showNotification('Không thể đổi trạng thái thiết bị. Vui lòng thử lại.', 'error')
+    } finally {
+      setSavingDeviceActive(false)
+    }
   }
 
   const setScheduleMode = (kind: RelayKind, patch: Partial<{ isDaily: boolean; runDate: string }>) =>
@@ -1389,6 +1415,7 @@ export default function DashboardPage() {
     let scheduleChannel: any;
     let disposed = false;
     setDeviceRecordId(null);
+    setDeviceActive(null);
     applySchedules([]);
 
     const setupRealtime = async () => {
@@ -1396,10 +1423,11 @@ export default function DashboardPage() {
       await fetchSensorData();
 
       // 2. Lấy device_id tương ứng với bể cá
-      const { data: devices } = await supabase.from('devices').select('id, relay_pump_state, relay_light_state, relay_aerator_state').eq('tank_id', activeDevice);
+      const { data: devices } = await supabase.from('devices').select('id, is_active, relay_pump_state, relay_light_state, relay_aerator_state').eq('tank_id', activeDevice);
       if (disposed || !devices || devices.length === 0) return;
       const deviceId = devices[0].id;
       setDeviceRecordId(deviceId);
+      setDeviceActive(devices[0].is_active === true);
       syncRelayState('pump', Boolean(devices[0].relay_pump_state), activeDevice, setPumpState);
       syncRelayState('light', Boolean(devices[0].relay_light_state), activeDevice, setLightState);
       syncRelayState('aerator', Boolean(devices[0].relay_aerator_state), activeDevice, setOxyState);
@@ -1505,6 +1533,7 @@ export default function DashboardPage() {
           },
           (payload) => {
             const newData = payload.new as any;
+            setDeviceActive(newData.is_active === true);
             // Cập nhật lại các State của nút bấm và cấu hình giờ
             syncRelayState('pump', Boolean(newData.relay_pump_state), activeDevice, setPumpState);
             syncRelayState('light', Boolean(newData.relay_light_state), activeDevice, setLightState);
@@ -1551,6 +1580,7 @@ export default function DashboardPage() {
   }, [tick, activeDevice, ponds, fishSpecies])
 
   const handleLogout = async () => {
+    clearVerifiedRole()
     await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
@@ -2070,7 +2100,18 @@ export default function DashboardPage() {
               />}
 
               {/* ═══ TAB: CONTROL ═══ */}
-              {activeTab === 'control' && <DeviceControlPanel items={[
+              {activeTab === 'control' && <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '16px 20px', marginBottom: 18, borderRadius: 16, border: '1px solid var(--border-color)', background: 'var(--bg-card)' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Thiết bị của bể</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{deviceActive === null ? 'Chưa có thiết bị' : deviceActive ? 'Đang bật · simulator sẽ ghi dữ liệu' : 'Đã tắt · simulator ngừng ghi dữ liệu'}</div>
+                  </div>
+                  <button type="button" role="switch" aria-label="Bật hoặc tắt thiết bị của bể" aria-checked={deviceActive === true} disabled={deviceActive === null || savingDeviceActive} onClick={() => { void toggleDeviceActive() }}
+                    style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid var(--border-color)', background: deviceActive ? '#00A896' : 'var(--bg-btn-cancel)', color: deviceActive ? '#fff' : 'var(--text-primary)', fontWeight: 700, fontFamily: F, cursor: deviceActive === null || savingDeviceActive ? 'not-allowed' : 'pointer', opacity: savingDeviceActive ? 0.6 : 1 }}>
+                    {savingDeviceActive ? 'Đang lưu...' : deviceActive ? 'Bật' : 'Tắt'}
+                  </button>
+                </div>
+                <DeviceControlPanel items={[
                 {
                   id: 'pump', title: 'Máy bơm nước', description: 'Tuần hoàn và lọc nước',
                   active: relayVisual.pump?.tankId === activeDevice ? relayVisual.pump.desired : pumpState,
@@ -2113,7 +2154,8 @@ export default function DashboardPage() {
                   onClear: () => { void clearSchedule('aerator') },
                   onSave: () => { void saveSchedule('aerator', oxyOnTime, oxyOffTime) }
                 }
-              ]} />}
+              ]} />
+              </>}
 
               {/* ═══ TAB: SENSORS ═══ */}
               {activeTab === 'sensors' && (

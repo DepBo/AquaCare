@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
+import { clearVerifiedRole } from '../authRoleCache'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
@@ -1428,6 +1429,7 @@ export default function StaffPage() {
   }, [])
 
   const handleLogout = async () => {
+    clearVerifiedRole()
     await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
