@@ -316,6 +316,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
+  static const _onboardingPreferenceKey = 'hide_onboarding_v2';
+
   int _selectedTab = 0;
   late Timer _clockTimer;
   late Timer _pulseTimer;
@@ -367,7 +369,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     'Tổng quan',
     'Cảm biến',
     'Điều khiển',
-    'Hiệu chuẩn',
+    // Tạm ẩn hiệu chuẩn pH cho đến khi hoàn thiện phần cứng.
+    // 'Hiệu chuẩn',
     'Cảnh báo',
   ];
 
@@ -399,7 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     FCMService.onAlertReceived = () {
       if (mounted) {
         setState(() {
-          if (_selectedTab != 4) {
+          if (_selectedTab != 3) {
             _unreadAlertCount++;
           }
         });
@@ -557,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _hideOnboarding = prefs.getBool('hide_onboarding') ?? false;
+        _hideOnboarding = prefs.getBool(_onboardingPreferenceKey) ?? false;
       });
     }
   }
@@ -654,68 +657,37 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ─────────────── POND CRUD ───────────────────────────────
 
-  void _showAddPondDialog() {
-    final ctrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    var saving = false;
-    var error = '';
-    showCustomerDialog(
+  Future<void> _showAddPondDialog() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng đăng nhập lại.')),
+        );
+      }
+      return;
+    }
+
+    final created = await showCustomerDialog<Map<String, dynamic>>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, updateDialog) => _buildPondDialog(
-          title: '➕ Thêm bể cá mới',
-          confirmLabel: 'Thêm bể',
-          confirmColor: Color(0xFF00A896),
-          controller: ctrl,
-          formKey: formKey,
-          hint: 'VD: Bể Rồng Phòng Ngủ',
-          isSaving: saving,
-          error: error,
-          onCancel: () => Navigator.pop(ctx),
-          onConfirm: () async {
-            if (saving || !formKey.currentState!.validate()) return;
-            final userId = Supabase.instance.client.auth.currentUser?.id;
-            if (userId == null) {
-              updateDialog(() => error = 'Vui lòng đăng nhập lại.');
-              return;
-            }
-            updateDialog(() {
-              saving = true;
-              error = '';
-            });
-            try {
-              final created = await SupabaseService.instance.createTank(
-                userId: userId,
-                name: ctrl.text,
-              );
-              if (!mounted) return;
-              setState(() {
-                _ponds.add(
-                  Pond(
-                    id: created['id'].toString(),
-                    name: created['tank_name'] as String,
-                  ),
-                );
-                _activePondId = created['id'].toString();
-                _updateStream();
-              });
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-            } catch (e) {
-              if (ctx.mounted) {
-                updateDialog(() => error = 'Không thể thêm bể: $e');
-              }
-            } finally {
-              if (ctx.mounted) {
-                updateDialog(() => saving = false);
-              }
-            }
-          },
-        ),
-      ),
-    ).whenComplete(ctrl.dispose);
+      builder: (_) =>
+          _AddPondDialog(userId: userId, fishSpeciesList: _fishSpecies),
+    );
+    if (!mounted || created == null) return;
+
+    final newPond = Pond(
+      id: created['id'].toString(),
+      name: created['tank_name'] as String,
+      volume: created['water_volume_liter']?.toString(),
+      speciesId: created['species_id'] as int?,
+      macAddress: created['mac_address'] as String?,
+    );
+    setState(() {
+      _ponds.add(newPond);
+      _activePondId = newPond.id;
+      _updateStream();
+    });
   }
 
   void _showPondSettingsDialog(Pond pond) {
@@ -880,148 +852,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
       ),
-    );
-  }
-
-  // ── Shared dialog builder ─────────────────────────────────
-  Widget _buildPondDialog({
-    required String title,
-    required String confirmLabel,
-    required Color confirmColor,
-    required TextEditingController controller,
-    required GlobalKey<FormState> formKey,
-    required String hint,
-    required VoidCallback onConfirm,
-    required VoidCallback onCancel,
-    bool isSaving = false,
-    String error = '',
-  }) {
-    return AlertDialog(
-      backgroundColor: CustomerColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: CustomerColors.text.withValues(alpha: 0.08)),
-      ),
-      title: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: CustomerColors.text,
-        ),
-      ),
-      content: Form(
-        key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'TÊN BỂ CÁ',
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: CustomerColors.mutedText,
-                letterSpacing: 0.8,
-              ),
-            ),
-            SizedBox(height: 8),
-            TextFormField(
-              controller: controller,
-              autofocus: true,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: CustomerColors.text,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: CustomerColors.mutedText,
-                ),
-                filled: true,
-                fillColor: CustomerColors.text.withValues(alpha: 0.04),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: CustomerColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: CustomerColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF00A896), width: 1.5),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFFFF6B6B)),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFFFF6B6B)),
-                ),
-                errorStyle: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Color(0xFFFF6B6B),
-                ),
-              ),
-              onFieldSubmitted: (_) => onConfirm(),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Vui lòng nhập tên bể';
-                }
-                return null;
-              },
-            ),
-            if (error.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  error,
-                  style: const TextStyle(color: Color(0xFFFF6B6B)),
-                ),
-              ),
-          ],
-        ),
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      actions: [
-        TextButton(
-          onPressed: isSaving ? null : onCancel,
-          style: TextButton.styleFrom(
-            foregroundColor: CustomerColors.secondaryText,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Hủy',
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: isSaving ? null : onConfirm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: confirmColor,
-            foregroundColor: CustomerColors.text,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            elevation: 0,
-          ),
-          child: Text(
-            confirmLabel,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1279,36 +1109,38 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildOnboardingSection() {
     bool isOverlay = !_hideOnboarding;
+    final headingColor = isOverlay ? Colors.white : CustomerColors.text;
+    final descriptionColor = isOverlay
+        ? const Color(0xFFD7E1EA)
+        : CustomerColors.secondaryText;
 
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (isOverlay) ...[
-          Text(
-            'Chào mừng đến với AquaCare!',
+        Text(
+          'Chào mừng đến với AquaCare!',
+          style: GoogleFonts.inter(
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            color: headingColor,
+            letterSpacing: -0.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
             style: GoogleFonts.inter(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: CustomerColors.text,
-              letterSpacing: -0.5,
+              fontSize: 14,
+              color: descriptionColor,
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Hệ thống giám sát và điều khiển hồ cá thông minh. Hãy cùng tìm hiểu nhanh các chức năng chính để bắt đầu.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: CustomerColors.secondaryText,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          SizedBox(height: 32),
-        ],
+        ),
+        SizedBox(height: 32),
         // Card 1
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -1466,7 +1298,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           GestureDetector(
             onTap: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('hide_onboarding', true);
+              await prefs.setBool(_onboardingPreferenceKey, true);
               setState(() {
                 _hideOnboarding = true;
               });
@@ -1478,7 +1310,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    border: Border.all(color: CustomerColors.mutedText),
+                    border: Border.all(
+                      color: isOverlay
+                          ? Colors.white.withValues(alpha: 0.72)
+                          : CustomerColors.mutedText,
+                    ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -1488,7 +1324,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: CustomerColors.text,
+                    color: headingColor,
                   ),
                 ),
               ],
@@ -1516,29 +1352,49 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           // Arrow up (to "Chọn bể cá")
           Positioned(
-            top: 10,
-            right: 60,
-            width: 80,
+            top: 8,
+            left: 0,
+            right: 0,
             height: 60,
-            child: CustomPaint(
-              painter: ArrowPainter(color: Color(0xFF4DA6FF), pointUp: true),
+            child: Align(
+              alignment: const Alignment(-0.32, 0),
+              child: SizedBox(
+                width: 88,
+                height: 60,
+                child: CustomPaint(
+                  painter: ArrowPainter(
+                    color: Color(0xFF4DA6FF),
+                    pointUp: true,
+                  ),
+                ),
+              ),
             ),
           ),
           // Arrow down (to Bottom Tabs)
           Positioned(
-            bottom: 10,
-            left: 40,
-            width: 80,
-            height: 80,
-            child: CustomPaint(
-              painter: ArrowPainter(color: Color(0xFF00A896), pointUp: false),
+            bottom: 68,
+            left: 0,
+            right: 0,
+            height: 58,
+            child: Align(
+              alignment: const Alignment(-0.58, 0),
+              child: SizedBox(
+                width: 72,
+                height: 58,
+                child: CustomPaint(
+                  painter: ArrowPainter(
+                    color: Color(0xFF00A896),
+                    pointUp: false,
+                  ),
+                ),
+              ),
             ),
           ),
           Center(
             child: SingleChildScrollView(
               physics: BouncingScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
+                padding: const EdgeInsets.fromLTRB(0, 40, 0, 110),
                 child: content,
               ),
             ),
@@ -1660,7 +1516,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ? 'Chuyển sang giao diện sáng'
                         : 'Chuyển sang giao diện tối',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
                   ),
                   IconButton(
                     onPressed: _handleLogout,
@@ -1670,7 +1529,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       color: CustomerColors.secondaryText,
                     ),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
                     tooltip: 'Đăng xuất',
                     splashRadius: 18,
                   ),
@@ -1694,13 +1556,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                             gradient: _userInfo?['avatar_url'] != null
                                 ? null
                                 : const LinearGradient(
-                                    colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+                                    colors: [
+                                      Color(0xFF1B4F72),
+                                      Color(0xFF00A896),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                             image: _userInfo?['avatar_url'] != null
                                 ? DecorationImage(
-                                    image: NetworkImage(_userInfo!['avatar_url']),
+                                    image: NetworkImage(
+                                      _userInfo!['avatar_url'],
+                                    ),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
@@ -1709,7 +1576,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ? Center(
                                   child: Text(
                                     getInitialsAvatar(
-                                      _userInfo?['full_name'] ?? _userInfo?['name'],
+                                      _userInfo?['full_name'] ??
+                                          _userInfo?['name'],
                                     ),
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
@@ -1913,7 +1781,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       {'icon': 'home', 'label': 'Tổng quan'},
       {'icon': 'chart', 'label': 'Cảm biến'},
       {'icon': 'controls', 'label': 'Điều khiển'},
-      {'icon': 'check', 'label': 'Hiệu chuẩn'},
+      // {'icon': 'check', 'label': 'Hiệu chuẩn'},
       {'icon': 'bell', 'label': 'Cảnh báo'},
     ];
 
@@ -1948,7 +1816,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   onTap: () {
                     setState(() => _selectedTab = i);
                     // Reset badge khi bấm vào tab Cảnh báo
-                    if (i == 4) {
+                    if (i == 3) {
                       setState(() => _unreadAlertCount = 0);
                     }
                   },
@@ -1977,7 +1845,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   : CustomerColors.mutedText,
                             ),
                             // Badge cho tab Cảnh báo
-                            if (i == 4 && _unreadAlertCount > 0)
+                            if (i == 3 && _unreadAlertCount > 0)
                               Positioned(
                                 right: -8,
                                 top: -4,
@@ -2032,7 +1900,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _buildOverviewTab(),
         _buildSensorsTab(),
         ControlScreen(tankId: _activePondId),
-        _buildCalibrationTab(),
+        // _buildCalibrationTab(), // Tạm ẩn; giữ nguyên mã bên dưới để dùng lại.
         _buildAlertsTab(),
       ],
     );
@@ -2269,7 +2137,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final hasNewAlerts = _unreadAlertCount > 0;
     return InkWell(
       onTap: () => setState(() {
-        _selectedTab = 4;
+        _selectedTab = 3;
         _unreadAlertCount = 0;
       }),
       borderRadius: BorderRadius.circular(18),
@@ -2475,6 +2343,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════
   //                   TAB: HIỆU CHUẨN
   // ══════════════════════════════════════════════════════════
+  // Giữ nguyên phần triển khai để bật lại khi phần cứng hiệu chuẩn sẵn sàng.
+  // ignore: unused_element
   Widget _buildCalibrationTab() {
     bool isCalibNeeded = true;
     if (_activePond.lastCalibPh != null) {
@@ -2765,6 +2635,281 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════
   Widget _buildAlertsTab() {
     return AlertsScreen(key: ValueKey(_activePondId), tankId: _activePondId);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//                  ADD POND DIALOG
+// ════════════════════════════════════════════════════════════
+class _AddPondDialog extends StatefulWidget {
+  final String userId;
+  final List<Map<String, dynamic>> fishSpeciesList;
+
+  const _AddPondDialog({required this.userId, required this.fishSpeciesList});
+
+  @override
+  State<_AddPondDialog> createState() => _AddPondDialogState();
+}
+
+class _AddPondDialogState extends State<_AddPondDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _volumeController = TextEditingController();
+  final _macController = TextEditingController();
+  int? _speciesId;
+  bool _saving = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _volumeController.dispose();
+    _macController.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _decoration(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: GoogleFonts.inter(fontSize: 13, color: CustomerColors.mutedText),
+    filled: true,
+    fillColor: CustomerColors.text.withValues(alpha: 0.04),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: CustomerColors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: CustomerColors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF00A896), width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+    ),
+    errorStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFFF6B6B)),
+  );
+
+  Widget _label(String text, {bool optional = false}) => Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Text(
+      optional ? '$text (TÙY CHỌN)' : text,
+      style: GoogleFonts.inter(
+        fontSize: 9,
+        fontWeight: FontWeight.w600,
+        color: CustomerColors.mutedText,
+        letterSpacing: 0.8,
+      ),
+    ),
+  );
+
+  Future<void> _submit() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    final volumeText = _volumeController.text.trim().replaceAll(',', '.');
+    setState(() {
+      _saving = true;
+      _error = '';
+    });
+    var completed = false;
+    try {
+      final created = await SupabaseService.instance.createTank(
+        userId: widget.userId,
+        name: _nameController.text,
+        volumeLiters: volumeText.isEmpty ? null : double.parse(volumeText),
+        speciesId: _speciesId,
+        macAddress: _macController.text,
+      );
+      if (!mounted) return;
+      completed = true;
+      Navigator.of(context).pop(created);
+    } catch (error) {
+      if (!mounted) return;
+      final message = error
+          .toString()
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('Invalid argument(s): ', '')
+          .replaceFirst('Exception: ', '');
+      setState(() => _error = message);
+    } finally {
+      if (mounted && !completed) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: CustomerColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: CustomerColors.border),
+      ),
+      title: Row(
+        children: [
+          const _AquaSvg('plus', size: 20, color: Color(0xFF00A896)),
+          const SizedBox(width: 8),
+          Text(
+            'Thêm bể cá mới',
+            style: GoogleFonts.inter(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: CustomerColors.text,
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 360,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _label('TÊN BỂ CÁ'),
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  enabled: !_saving,
+                  textInputAction: TextInputAction.next,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: CustomerColors.text,
+                  ),
+                  decoration: _decoration('VD: Bể Rồng Phòng Ngủ'),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Vui lòng nhập tên bể'
+                      : null,
+                ),
+                const SizedBox(height: 14),
+                _label('THỂ TÍCH (LÍT)'),
+                TextFormField(
+                  controller: _volumeController,
+                  enabled: !_saving,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: CustomerColors.text,
+                  ),
+                  decoration: _decoration('VD: 250'),
+                  validator: (value) {
+                    final text = value?.trim().replaceAll(',', '.') ?? '';
+                    if (text.isEmpty) return null;
+                    final volume = double.tryParse(text);
+                    return volume == null || volume <= 0
+                        ? 'Thể tích phải là số lớn hơn 0'
+                        : null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                _label('LOÀI CÁ', optional: true),
+                DropdownButtonFormField<int>(
+                  initialValue: _speciesId,
+                  isExpanded: true,
+                  dropdownColor: CustomerColors.card,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: CustomerColors.text,
+                  ),
+                  decoration: _decoration('-- Chọn loài cá --'),
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: null,
+                      child: Text('Không xác định'),
+                    ),
+                    ...widget.fishSpeciesList.map(
+                      (species) => DropdownMenuItem<int>(
+                        value: species['id'] as int,
+                        child: Text(species['species_name'] as String),
+                      ),
+                    ),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _speciesId = value),
+                ),
+                const SizedBox(height: 14),
+                _label('MÃ THIẾT BỊ (MAC)', optional: true),
+                TextFormField(
+                  controller: _macController,
+                  enabled: !_saving,
+                  textCapitalization: TextCapitalization.characters,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: CustomerColors.text,
+                  ),
+                  decoration: _decoration(
+                    'VD: 68:FE:71:16:A5:18 hoặc để trống',
+                  ),
+                ),
+                if (_error.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _error,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFFF6B6B),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: CustomerColors.secondaryText,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          ),
+          child: Text('Hủy', style: GoogleFonts.inter(fontSize: 13)),
+        ),
+        ElevatedButton(
+          onPressed: _saving ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00A896),
+            foregroundColor: CustomerColors.text,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'Thêm bể',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 }
 

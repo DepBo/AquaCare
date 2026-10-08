@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +17,7 @@ import 'customer_theme.dart';
 // Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,14 +76,54 @@ void main() async {
   runApp(AquaCareApp(initialScreen: initialScreen));
 }
 
-class AquaCareApp extends StatelessWidget {
+class AquaCareApp extends StatefulWidget {
   final Widget initialScreen;
   const AquaCareApp({super.key, required this.initialScreen});
+
+  @override
+  State<AquaCareApp> createState() => _AquaCareAppState();
+}
+
+class _AquaCareAppState extends State<AquaCareApp> {
+  late final StreamSubscription<AuthState> _authSubscription;
+  bool _openingRecovery = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (authState) {
+        if (authState.event != AuthChangeEvent.passwordRecovery ||
+            authState.session == null ||
+            _openingRecovery) {
+          return;
+        }
+
+        _openingRecovery = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+            (_) => false,
+          );
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Lỗi xử lý liên kết đặt lại mật khẩu: $error');
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AquaCare',
+      navigatorKey: navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -93,7 +136,7 @@ class AquaCareApp extends StatelessWidget {
           surface: const Color(0xFF0F1A30),
         ),
       ),
-      home: initialScreen,
+      home: widget.initialScreen,
     );
   }
 }

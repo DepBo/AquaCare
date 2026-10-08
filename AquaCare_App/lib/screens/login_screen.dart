@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // const String apiUrl = 'http://172.20.10.8:5000/api/auth';
 const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
+const String passwordRecoveryRedirect = 'aquacare://reset-password';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -372,12 +373,26 @@ class _LoginScreenState extends State<LoginScreen>
                                         ],
                                       ),
                                     ),
-                                    Text(
-                                      'Quên mật khẩu?',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: const Color(0xFF00A896),
-                                        fontWeight: FontWeight.w500,
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ForgotPasswordScreen(),
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        child: Text(
+                                          'Quên mật khẩu?',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: const Color(0xFF00A896),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -499,11 +514,7 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildBrandHeader() {
     return Row(
       children: [
-        Image.asset(
-          'assets/images/logo.png',
-          height: 48,
-          fit: BoxFit.contain,
-        ),
+        Image.asset('assets/images/logo.png', height: 48, fit: BoxFit.contain),
         const SizedBox(width: 14),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -752,6 +763,616 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+}
+
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  bool _loading = false;
+  bool _sent = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendResetEmail() async {
+    if (_loading || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        _emailController.text.trim().toLowerCase(),
+        redirectTo: passwordRecoveryRedirect,
+      );
+      if (!mounted) return;
+      setState(() => _sent = true);
+    } on AuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error =
+              'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _RecoveryPageFrame(
+      onBack: () => Navigator.of(context).pop(),
+      child: _sent ? _buildSentState() : _buildRequestForm(),
+    );
+  }
+
+  Widget _buildRequestForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _RecoveryHeader(
+            title: 'Quên mật khẩu?',
+            description:
+                'Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu cho bạn.',
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'EMAIL',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.48),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
+            onFieldSubmitted: (_) => _sendResetEmail(),
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+            decoration: _recoveryInputDecoration('email@example.com'),
+            validator: (value) {
+              final email = value?.trim() ?? '';
+              if (email.isEmpty) return 'Vui lòng nhập email';
+              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+                return 'Email không hợp lệ';
+              }
+              return null;
+            },
+          ),
+          if (_error.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _RecoveryError(message: _error),
+          ],
+          const SizedBox(height: 20),
+          _RecoveryButton(
+            label: 'GỬI LINK ĐẶT LẠI',
+            loading: _loading,
+            onPressed: _sendResetEmail,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSentState() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _RecoveryHeader(
+          title: 'Email đã được gửi!',
+          description:
+              'Nếu email thuộc một tài khoản AquaCare, bạn sẽ nhận được liên kết đặt lại mật khẩu.',
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _emailController.text.trim().toLowerCase(),
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF00A896),
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 24),
+        OutlinedButton(
+          onPressed: _loading
+              ? null
+              : () => setState(() {
+                  _sent = false;
+                  _error = '';
+                }),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            foregroundColor: Colors.white.withValues(alpha: 0.75),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text('Gửi lại email', style: GoogleFonts.inter(fontSize: 13)),
+        ),
+      ],
+    );
+  }
+}
+
+class ResetPasswordScreen extends StatefulWidget {
+  const ResetPasswordScreen({super.key});
+
+  @override
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+}
+
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _loading = false;
+  bool _completed = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updatePassword() async {
+    if (_loading || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _passwordController.text),
+      );
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (error) {
+        debugPrint('Không thể đóng recovery session: $error');
+      }
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in [
+        'cs_auth',
+        'access_token',
+        'refresh_token',
+        'role',
+        'user_info',
+      ]) {
+        await prefs.remove(key);
+      }
+      if (!mounted) return;
+      setState(() => _completed = true);
+    } on AuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error =
+              'Không thể cập nhật mật khẩu. Liên kết có thể đã hết hạn.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _returnToLogin() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: _RecoveryPageFrame(
+        onBack: _returnToLogin,
+        child: _completed ? _buildCompletedState() : _buildResetForm(),
+      ),
+    );
+  }
+
+  Widget _buildResetForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _RecoveryHeader(
+            title: 'Đặt mật khẩu mới',
+            description: 'Tạo mật khẩu mới cho tài khoản AquaCare của bạn.',
+          ),
+          const SizedBox(height: 24),
+          _RecoveryPasswordField(
+            label: 'MẬT KHẨU MỚI',
+            controller: _passwordController,
+            obscure: _obscurePassword,
+            textInputAction: TextInputAction.next,
+            onToggle: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Vui lòng nhập mật khẩu mới';
+              }
+              if (value.length < 6) return 'Mật khẩu ít nhất 6 ký tự';
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _RecoveryPasswordField(
+            label: 'XÁC NHẬN MẬT KHẨU',
+            controller: _confirmController,
+            obscure: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onToggle: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
+            onSubmitted: (_) => _updatePassword(),
+            validator: (value) => value != _passwordController.text
+                ? 'Mật khẩu xác nhận không khớp'
+                : null,
+          ),
+          if (_error.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _RecoveryError(message: _error),
+          ],
+          const SizedBox(height: 20),
+          _RecoveryButton(
+            label: 'CẬP NHẬT MẬT KHẨU',
+            loading: _loading,
+            onPressed: _updatePassword,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletedState() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _RecoveryHeader(
+          title: 'Đã cập nhật mật khẩu',
+          description: 'Bạn có thể đăng nhập bằng mật khẩu mới.',
+        ),
+        const SizedBox(height: 24),
+        _RecoveryButton(
+          label: 'ĐĂNG NHẬP',
+          loading: false,
+          onPressed: _returnToLogin,
+        ),
+      ],
+    );
+  }
+}
+
+class _RecoveryPageFrame extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onBack;
+
+  const _RecoveryPageFrame({required this.child, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF060E1A),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF060E1A), Color(0xFF0A1628), Color(0xFF0D1D33)],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: onBack,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white.withValues(alpha: 0.62),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: Text(
+                          'Quay lại đăng nhập',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.035),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: child,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecoveryHeader extends StatelessWidget {
+  final String title;
+  final String description;
+
+  const _RecoveryHeader({required this.title, required this.description});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            'A',
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          description,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            height: 1.55,
+            color: Colors.white.withValues(alpha: 0.52),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecoveryPasswordField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final bool obscure;
+  final VoidCallback onToggle;
+  final TextInputAction textInputAction;
+  final FormFieldValidator<String>? validator;
+  final ValueChanged<String>? onSubmitted;
+
+  const _RecoveryPasswordField({
+    required this.label,
+    required this.controller,
+    required this.obscure,
+    required this.onToggle,
+    required this.textInputAction,
+    this.validator,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.48),
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: obscure,
+          textInputAction: textInputAction,
+          autofillHints: const [AutofillHints.newPassword],
+          onFieldSubmitted: onSubmitted,
+          validator: validator,
+          style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          decoration: _recoveryInputDecoration('••••••••').copyWith(
+            suffixIcon: TextButton(
+              onPressed: onToggle,
+              child: Text(
+                obscure ? 'Hiện' : 'Ẩn',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: const Color(0xFF00A896),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecoveryButton extends StatelessWidget {
+  final String label;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  const _RecoveryButton({
+    required this.label,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ElevatedButton(
+          onPressed: loading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecoveryError extends StatelessWidget {
+  final String message;
+
+  const _RecoveryError({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF6B6B).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFFFF6B6B).withValues(alpha: 0.28),
+        ),
+      ),
+      child: Text(
+        message,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          height: 1.4,
+          color: const Color(0xFFFFB4B4),
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _recoveryInputDecoration(String hint) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: GoogleFonts.inter(
+      fontSize: 13,
+      color: Colors.white.withValues(alpha: 0.26),
+    ),
+    filled: true,
+    fillColor: Colors.white.withValues(alpha: 0.04),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF00A896)),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
+    ),
+    errorStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFFF6B6B)),
+  );
 }
 
 // ════════════════════════════════════════════════════════════

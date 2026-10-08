@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:aquacare_app/customer_theme.dart';
 import 'package:aquacare_app/screens/dashboard_screen.dart';
+import 'package:aquacare_app/screens/login_screen.dart';
 import 'package:aquacare_app/services/supabase_service.dart';
 import 'package:aquacare_app/widgets/floating_role_nav.dart';
 import 'package:flutter/material.dart';
@@ -173,6 +174,154 @@ void main() {
     },
   );
 
+  test(
+    'tank creation saves details and attaches an available device',
+    () async {
+      final requests = <http.Request>[];
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'test-anon-key',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          if (request.method == 'GET' &&
+              request.url.path.endsWith('/devices')) {
+            return http.Response(
+              jsonEncode({
+                'id': 7,
+                'tank_id': null,
+                'mac_address': 'AA:BB:CC:DD:EE:FF',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+              request: request,
+            );
+          }
+          if (request.method == 'POST' && request.url.path.endsWith('/tanks')) {
+            return http.Response(
+              jsonEncode({
+                'id': 43,
+                'tank_name': 'Bể Cá Dĩa',
+                'water_volume_liter': 250,
+                'species_id': 5,
+                'fish_species': {'species_name': 'Cá Dĩa'},
+              }),
+              201,
+              headers: {'content-type': 'application/json'},
+              request: request,
+            );
+          }
+          if (request.method == 'PATCH' &&
+              request.url.path.endsWith('/devices')) {
+            return http.Response(
+              jsonEncode({'id': 7, 'mac_address': 'AA:BB:CC:DD:EE:FF'}),
+              200,
+              headers: {'content-type': 'application/json'},
+              request: request,
+            );
+          }
+          throw StateError(
+            'Unexpected request: ${request.method} ${request.url}',
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final service = SupabaseService.forTesting(client);
+
+      final created = await service.createTank(
+        userId: 'owner-1',
+        name: ' Bể Cá Dĩa ',
+        volumeLiters: 250,
+        speciesId: 5,
+        macAddress: 'aa:bb:cc:dd:ee:ff',
+      );
+
+      expect(created['id'], 43);
+      expect(created['mac_address'], 'AA:BB:CC:DD:EE:FF');
+      final tankRequest = requests.firstWhere(
+        (request) => request.method == 'POST',
+      );
+      expect(jsonDecode(tankRequest.body), {
+        'user_id': 'owner-1',
+        'tank_name': 'Bể Cá Dĩa',
+        'water_volume_liter': 250.0,
+        'species_id': 5,
+      });
+      final attachRequest = requests.firstWhere(
+        (request) => request.method == 'PATCH',
+      );
+      expect(jsonDecode(attachRequest.body), {
+        'tank_id': 43,
+        'is_active': true,
+      });
+      expect(attachRequest.url.queryParameters['tank_id'], 'is.null');
+    },
+  );
+
+  test('mobile relay schedules write to device_schedules', () async {
+    final requests = <http.Request>[];
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-anon-key',
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        if (request.method == 'POST') {
+          return http.Response('', 201, request: request);
+        }
+        if (request.method == 'PATCH') {
+          return http.Response(
+            '{"id":7}',
+            200,
+            headers: {'content-type': 'application/json'},
+            request: request,
+          );
+        }
+        throw StateError(
+          'Unexpected request: ${request.method} ${request.url}',
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final service = SupabaseService.forTesting(client);
+
+    await service.saveDeviceSchedule(
+      deviceId: 12,
+      relayName: 'Pump',
+      onTime: '09:00',
+      offTime: '10:00',
+      isDaily: false,
+      runDate: '2026-10-09',
+    );
+    await service.saveDeviceSchedule(
+      deviceId: 12,
+      relayName: 'Pump',
+      onTime: '09:00',
+      offTime: '10:00',
+      isDaily: true,
+      runDate: null,
+      existingId: 7,
+    );
+    await service.cancelDeviceSchedule(deviceId: 12, scheduleId: 7);
+
+    expect(requests, hasLength(3));
+    expect(
+      requests.every(
+        (request) => request.url.path.endsWith('/device_schedules'),
+      ),
+      isTrue,
+    );
+    expect(
+      jsonDecode(requests[0].body),
+      containsPair('run_date', '2026-10-09'),
+    );
+    expect(jsonDecode(requests[0].body), containsPair('is_daily', false));
+    expect(jsonDecode(requests[0].body), containsPair('relay_name', 'Pump'));
+    expect(jsonDecode(requests[1].body), containsPair('is_daily', true));
+    expect(jsonDecode(requests[1].body), containsPair('run_date', null));
+    expect(requests[1].url.queryParameters['device_id'], 'eq.12');
+    expect(jsonDecode(requests[2].body), containsPair('is_active', false));
+    expect(requests[2].url.queryParameters['id'], 'eq.7');
+  });
+
   testWidgets('floating role navigation fits a narrow phone and keeps badges', (
     tester,
   ) async {
@@ -216,5 +365,29 @@ void main() {
     await tester.tap(find.byType(InkWell).last);
     expect(selected, 4);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('forgot password action opens the recovery request form', (
+    tester,
+  ) async {
+    GoogleFonts.config.allowRuntimeFetching = false;
+    // A slightly wider logical size avoids the Ahem test font's exaggerated
+    // Vietnamese glyph widths while still exercising the mobile layout.
+    tester.view.physicalSize = const Size(480, 960);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+    await tester.pumpAndSettle();
+    final loginError = tester.takeException();
+    expect(loginError, isNull, reason: 'Login screen: $loginError');
+    await tester.tap(find.text('Quên mật khẩu?'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Quên mật khẩu?'), findsOneWidget);
+    expect(find.text('GỬI LINK ĐẶT LẠI'), findsOneWidget);
+    final recoveryError = tester.takeException();
+    expect(recoveryError, isNull, reason: 'Recovery screen: $recoveryError');
   });
 }

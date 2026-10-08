@@ -24,15 +24,77 @@ class SupabaseService {
   Future<Map<String, dynamic>> createTank({
     required String userId,
     required String name,
+    double? volumeLiters,
+    int? speciesId,
+    String? macAddress,
   }) async {
     if (userId.isEmpty || name.trim().isEmpty) {
       throw ArgumentError('Cần đăng nhập và nhập tên bể.');
     }
-    return await client
+    if (volumeLiters != null && volumeLiters <= 0) {
+      throw ArgumentError('Thể tích bể phải lớn hơn 0.');
+    }
+
+    final normalizedMac = macAddress?.trim() ?? '';
+    Map<String, dynamic>? availableDevice;
+    if (normalizedMac.isNotEmpty) {
+      availableDevice = await client
+          .from('devices')
+          .select('id, tank_id, mac_address')
+          .ilike('mac_address', normalizedMac)
+          .maybeSingle();
+      if (availableDevice == null) {
+        throw StateError('Mã thiết bị không tồn tại trên hệ thống.');
+      }
+      if (availableDevice['tank_id'] != null) {
+        throw StateError('Thiết bị này đã được sử dụng cho bể khác.');
+      }
+    }
+
+    final tankPayload = <String, dynamic>{
+      'user_id': userId,
+      'tank_name': name.trim(),
+    };
+    if (volumeLiters != null) {
+      tankPayload['water_volume_liter'] = volumeLiters;
+    }
+    if (speciesId != null) {
+      tankPayload['species_id'] = speciesId;
+    }
+    final created = await client
         .from('tanks')
-        .insert({'user_id': userId, 'tank_name': name.trim()})
-        .select('id, tank_name')
+        .insert(tankPayload)
+        .select(
+          'id, tank_name, water_volume_liter, species_id, fish_species(species_name)',
+        )
         .single();
+
+    if (availableDevice == null) return created;
+    try {
+      final attached = await client
+          .from('devices')
+          .update({'tank_id': created['id'], 'is_active': true})
+          .eq('id', availableDevice['id'])
+          .isFilter('tank_id', null)
+          .select('id, mac_address')
+          .maybeSingle();
+      if (attached == null) {
+        throw StateError('Thiết bị vừa được gán cho một bể khác.');
+      }
+      created['mac_address'] = attached['mac_address'];
+      return created;
+    } catch (_) {
+      try {
+        await client
+            .from('tanks')
+            .delete()
+            .eq('id', created['id'])
+            .eq('user_id', userId);
+      } catch (cleanupError) {
+        debugPrint('Không thể hoàn tác bể vừa tạo: $cleanupError');
+      }
+      rethrow;
+    }
   }
 
   /// Returns false only when the tank was deleted but device cleanup failed.
@@ -559,23 +621,79 @@ class SupabaseService {
     }
   }
 
-  /// Cập nhật giờ bật/tắt tự động của một Relay
-  Future<void> updateDeviceSchedule(
-    String tankId,
-    String field,
-    String? time,
-  ) async {
-    try {
-      await client
-          .from('devices')
-          .update({field: time})
-          .eq('tank_id', int.parse(tankId));
-      debugPrint(
-        '✅ [DB UPDATE]: Cập nhật hẹn giờ $field thành $time cho bể $tankId',
-      );
-    } catch (e) {
-      debugPrint('❌ [DB ERROR]: Lỗi khi cập nhật Hẹn giờ: $e');
-      rethrow;
+  /// Đọc lịch đang hoạt động; stream nhận cả thay đổi được lưu từ web.
+  Stream<List<Map<String, dynamic>>> getDeviceSchedulesStream(int deviceId) {
+    return client
+        .from('device_schedules')
+        .stream(primaryKey: ['id'])
+        .eq('device_id', deviceId)
+        .map((rows) => rows.where((row) => row['is_active'] == true).toList());
+  }
+
+  /// Mỗi relay có tối đa một lịch đang hoạt động, cùng định dạng với web.
+  Future<void> saveDeviceSchedule({
+    required int deviceId,
+    required String relayName,
+    required String? onTime,
+    required String? offTime,
+    required bool isDaily,
+    required String? runDate,
+    int? existingId,
+  }) async {
+    if (onTime == null && offTime == null) {
+      throw ArgumentError('Chọn ít nhất một giờ bật hoặc tắt.');
+    }
+    if (!isDaily && (runDate == null || runDate.isEmpty)) {
+      throw ArgumentError('Chọn ngày chạy lịch.');
+    }
+
+    final payload = <String, dynamic>{
+      'device_id': deviceId,
+      'relay_name': relayName,
+      'on_time': onTime,
+      'off_time': offTime,
+      'is_daily': isDaily,
+      'run_date': isDaily ? null : runDate,
+      'is_active': true,
+      'on_executed_on': null,
+      'off_executed_on': null,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    if (existingId == null) {
+      await client.from('device_schedules').insert(payload);
+    } else {
+      final updated = await client
+          .from('device_schedules')
+          .update(payload)
+          .eq('id', existingId)
+          .eq('device_id', deviceId)
+          .eq('is_active', true)
+          .select('id')
+          .maybeSingle();
+      if (updated == null) {
+        throw StateError('Lịch đã thay đổi. Vui lòng tải lại trước khi lưu.');
+      }
+    }
+  }
+
+  Future<void> cancelDeviceSchedule({
+    required int deviceId,
+    required int scheduleId,
+  }) async {
+    final updated = await client
+        .from('device_schedules')
+        .update({
+          'is_active': false,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', scheduleId)
+        .eq('device_id', deviceId)
+        .eq('is_active', true)
+        .select('id')
+        .maybeSingle();
+    if (updated == null) {
+      throw StateError('Lịch đã thay đổi. Vui lòng tải lại trước khi hủy.');
     }
   }
 

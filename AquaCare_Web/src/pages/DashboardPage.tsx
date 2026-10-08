@@ -1771,11 +1771,10 @@ export default function DashboardPage() {
         <div
           title={sidebarOpen ? 'Thu gọn thanh menu' : 'Mở rộng thanh menu'}
           style={{
-            padding: sidebarOpen ? '16px 14px' : '16px 8px',
+            padding: sidebarOpen ? '12px 14px' : '16px 8px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: sidebarOpen ? 'flex-start' : 'center',
-            gap: 10,
+            justifyContent: 'center',
             height: 80,
             flexShrink: 0,
             boxSizing: 'border-box',
@@ -1786,19 +1785,17 @@ export default function DashboardPage() {
           onClick={() => setSidebarOpen(o => !o)}
         >
           <img
-            src="/logo.png"
+            src="/logo_ngang.png"
             alt="AquaCare"
             style={{
-              height: sidebarOpen ? 36 : 26,
-              width: 'auto',
-              maxWidth: sidebarOpen ? 48 : 40,
-              objectFit: 'contain',
+              height: sidebarOpen ? 45 : 34,
+              width: sidebarOpen ? 172 : 34,
+              objectFit: 'cover',
+              objectPosition: 'left center',
               flexShrink: 0,
-              filter: 'drop-shadow(0 2px 8px rgba(0,229,160,0.3))',
               transition: 'all 200ms ease'
             }}
           />
-          {sidebarOpen && <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>AQUACARE</span>}
         </div>
 
         {/* Nav items */}
@@ -1807,7 +1804,8 @@ export default function DashboardPage() {
             { id: 'overview', icon: Home, label: 'Tổng quan' },
             { id: 'sensors', icon: Activity, label: 'Cảm biến' },
             { id: 'control', icon: Sliders, label: 'Điều khiển thiết bị' },
-            { id: 'calibration', icon: CheckCircle, label: 'Hiệu chuẩn pH' },
+            // Tạm ẩn hiệu chuẩn pH cho đến khi hoàn thiện phần cứng.
+            // { id: 'calibration', icon: CheckCircle, label: 'Hiệu chuẩn pH' },
             { id: 'alerts', icon: Bell, label: `Cảnh báo${alerts.length ? ` (${alerts.length})` : ''}` },
           ].map(item => (
             <button key={item.id}
@@ -2229,7 +2227,7 @@ export default function DashboardPage() {
                   <DrillDownHistory selectedSensor={selectedSensor} activeDevice={activeDevice} selectedCfg={selectedCfg} />
                 </>
               )}
-              {/* ═══ TAB: CALIBRATION ═══ */}
+              {/* Tạm ẩn tab hiệu chuẩn pH; giữ nguyên giao diện và lệnh để dùng lại sau.
               {activeTab === 'calibration' && (
                 <div style={{ padding: 24, borderRadius: 16, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2347,6 +2345,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+              */}
 
               {/* ═══ TAB: ALERTS ═══ */}
               {activeTab === 'alerts' && (
