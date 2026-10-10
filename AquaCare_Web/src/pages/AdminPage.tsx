@@ -4,17 +4,21 @@ import {
   Fish, Box, LogOut, ArrowLeft,
   Plus, Edit, Trash2, X, Users, ShoppingCart,
   FileText, Truck, CheckCircle, ArrowRight, Eye, EyeOff, AlertTriangle, RefreshCw, User, Search,
-  Phone, Mail, MapPin, CreditCard, Package
+  Phone, Mail, MapPin, CreditCard, Package, LayoutDashboard
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
 import { clearVerifiedRole } from '../authRoleCache'
+import AdminDashboardPreview from './AdminDashboardPreview'
+import './AdminHeader.css'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
+// Dashboard admin còn beta; giữ toàn bộ component để bật lại sau buổi demo.
+const ADMIN_DASHBOARD_ENABLED = false
 
 const getInitialsAvatar = (name: string) => {
   if (!name) return 'A'
@@ -165,6 +169,15 @@ interface Order {
   createdAt: string
 }
 
+const ORDER_STATUS_META: Record<Order['status'], { label: string; color: string; background: string; border: string }> = {
+  pending: { label: 'Chờ duyệt', color: '#d97706', background: '#fef3c7', border: '#fde68a' },
+  approved: { label: 'Đã duyệt', color: '#16a34a', background: '#dcfce7', border: '#bbf7d0' },
+  confirmed: { label: 'Đã duyệt', color: '#16a34a', background: '#dcfce7', border: '#bbf7d0' },
+  shipping: { label: 'Đang giao', color: '#0284c7', background: '#e0f2fe', border: '#bae6fd' },
+  delivered: { label: 'Đã giao', color: '#16a34a', background: '#dcfce7', border: '#bbf7d0' },
+  cancelled: { label: 'Đã hủy', color: '#dc2626', background: '#fee2e2', border: '#fecaca' },
+}
+
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
   confirmColor = 'var(--ap-primary)', onConfirm, onCancel, loading = false, children,
@@ -269,7 +282,7 @@ export default function AdminPage() {
   const navigate = useNavigate()
   const userInfoStr = localStorage.getItem('user_info')
   const userInfo = userInfoStr ? JSON.parse(userInfoStr) : {}
-  const [activeTab, setActiveTab] = useState<'species' | 'devices' | 'staff' | 'orders' | 'subscriptions'>('species')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'species' | 'devices' | 'staff' | 'orders' | 'subscriptions'>(ADMIN_DASHBOARD_ENABLED ? 'dashboard' : 'species')
 
   // Orders state
   const [orders, setOrders] = useState<Order[]>([])
@@ -676,11 +689,12 @@ export default function AdminPage() {
   const pendingOrdersCount = orders.filter(o => o.status === 'pending').length
 
   const NAV_ITEMS = [
-    { id: 'species', label: 'Quản lý loài cá', icon: Fish },
-    { id: 'devices', label: 'Thiết bị & Kho', icon: Box },
-    { id: 'staff', label: 'Quản lý nhân viên', icon: Users },
-    { id: 'orders', label: 'Quản lý Đơn hàng', icon: ShoppingCart, badge: pendingOrdersCount },
-    { id: 'subscriptions', label: 'Gói cước', icon: FileText },
+    ...(ADMIN_DASHBOARD_ENABLED ? [{ id: 'dashboard', label: 'Tổng quan', title: 'Tổng quan quản trị', icon: LayoutDashboard }] : []),
+    { id: 'species', label: 'Loài cá', title: 'Quản lý loài cá', icon: Fish },
+    { id: 'devices', label: 'Thiết bị', title: 'Thiết bị & Kho', icon: Box },
+    { id: 'staff', label: 'Nhân viên', title: 'Quản lý nhân viên', icon: Users },
+    { id: 'orders', label: 'Đơn hàng', title: 'Quản lý Đơn hàng', icon: ShoppingCart, badge: pendingOrdersCount },
+    { id: 'subscriptions', label: 'Gói cước', title: 'Gói cước dịch vụ', icon: FileText },
   ]
 
   return (
@@ -688,28 +702,25 @@ export default function AdminPage() {
       <ThemeStyles theme={theme} />
 
       {/* ── Top Header / Minimalist Navigation Tier ── */}
-      <header style={{
+      <header className="admin-header" style={{
         background: 'var(--ap-bg-topbar)',
         borderBottom: '1px solid var(--ap-border)',
         boxShadow: 'none',
         position: 'sticky', top: 0, zIndex: 100,
       }}>
-        <div style={{
-          maxWidth: 1320, margin: '0 auto', padding: '0 24px', height: 56,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16
-        }}>
+        <div className="admin-header__inner">
           {/* Brand Identity - Minimalist Clean */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div className="admin-header__brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--ap-primary)', letterSpacing: '-0.02em' }}>
               AquaCare
             </span>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ap-text-muted)' }}>
+            <span className="admin-header__role" style={{ fontSize: 12, fontWeight: 500, color: 'var(--ap-text-muted)' }}>
               | Admin
             </span>
           </div>
 
           {/* Clean Navigation Links */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', overflowX: 'auto' }}>
+          <nav className="admin-header__nav" aria-label="Điều hướng quản trị">
             {NAV_ITEMS.map(item => {
               const Icon = item.icon
               const isActive = activeTab === item.id
@@ -717,9 +728,12 @@ export default function AdminPage() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id as any)}
+                  className="admin-header__nav-item"
+                  aria-label={item.title}
+                  title={item.title}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    height: '100%', padding: '0 14px', border: 'none', cursor: 'pointer',
+                    border: 'none', cursor: 'pointer',
                     fontFamily: F, fontSize: 13, fontWeight: isActive ? 700 : 500,
                     background: 'transparent',
                     color: isActive ? 'var(--ap-primary)' : 'var(--ap-text-secondary)',
@@ -730,9 +744,9 @@ export default function AdminPage() {
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'var(--ap-text-secondary)' }}
                 >
                   <Icon size={14} />
-                  {item.label}
+                  <span className="admin-header__nav-label">{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span style={{
+                    <span className="admin-header__badge" style={{
                       padding: '1px 6px', borderRadius: 100, background: 'var(--ap-primary)', color: '#fff',
                       fontSize: 10, fontWeight: 700, lineHeight: 1.2
                     }}>
@@ -745,7 +759,7 @@ export default function AdminPage() {
           </nav>
 
           {/* Right Action Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <div className="admin-header__actions">
             {/* User Avatar with initials + Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{
@@ -757,7 +771,7 @@ export default function AdminPage() {
               }}>
                 {getInitialsAvatar(userInfo.full_name || userInfo.name || 'Admin')}
               </div>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-text-primary)' }}>
+              <span className="admin-header__user-name" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ap-text-primary)' }}>
                 {userInfo.full_name || 'Admin'}
               </span>
             </div>
@@ -796,7 +810,7 @@ export default function AdminPage() {
               onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = '#fca5a5' }}
             >
               <LogOut size={14} />
-              <span>Thoát</span>
+              <span className="admin-header__logout-label">Thoát</span>
             </button>
           </div>
         </div>
@@ -809,6 +823,7 @@ export default function AdminPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--ap-text-primary)' }}>
+              {activeTab === 'dashboard' && 'Tổng quan quản trị'}
               {activeTab === 'species' && 'Quản lý loài cá'}
               {activeTab === 'devices' && 'Thiết bị & Kho'}
               {activeTab === 'staff' && 'Quản lý nhân viên'}
@@ -881,6 +896,8 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
+        {ADMIN_DASHBOARD_ENABLED && activeTab === 'dashboard' && <AdminDashboardPreview onNavigate={setActiveTab} supabase={supabase} />}
 
         {/* TAB SPECIES */}
         {activeTab === 'species' && (() => {
@@ -1357,10 +1374,9 @@ export default function AdminPage() {
                           {order.paymentMethod}
                         </td>
                         <td style={{ padding: '14px 20px' }}>
-                          {order.status === 'pending'
-                            ? <span style={{ color: '#d97706', fontSize: 13, fontWeight: 700 }}>Chờ duyệt</span>
-                            : <span style={{ color: '#16a34a', fontSize: 13, fontWeight: 700 }}>Đã duyệt</span>
-                          }
+                          <span style={{ color: ORDER_STATUS_META[order.status]?.color || 'var(--ap-text-secondary)', fontSize: 13, fontWeight: 700 }}>
+                            {ORDER_STATUS_META[order.status]?.label || order.status}
+                          </span>
                         </td>
                         <td style={{ padding: '14px 20px', color: 'var(--ap-text-muted)', fontSize: 12.5 }}>
                           {new Date(order.createdAt).toLocaleDateString('vi-VN')}
@@ -1896,11 +1912,11 @@ export default function AdminPage() {
               <span style={{
                 display: 'inline-block', padding: '4px 10px', borderRadius: 20,
                 fontSize: 12, fontWeight: 700,
-                background: detailsModal.order.status === 'pending' ? '#fef3c7' : '#dcfce7',
-                color: detailsModal.order.status === 'pending' ? '#d97706' : '#16a34a',
-                border: `1px solid ${detailsModal.order.status === 'pending' ? '#fde68a' : '#bbf7d0'}`
+                background: ORDER_STATUS_META[detailsModal.order.status]?.background || 'var(--ap-bg-subtle)',
+                color: ORDER_STATUS_META[detailsModal.order.status]?.color || 'var(--ap-text-secondary)',
+                border: `1px solid ${ORDER_STATUS_META[detailsModal.order.status]?.border || 'var(--ap-border)'}`
               }}>
-                {detailsModal.order.status === 'pending' ? 'Chờ duyệt' : 'Đã duyệt'}
+                {ORDER_STATUS_META[detailsModal.order.status]?.label || detailsModal.order.status}
               </span>
               <div style={{ fontSize: 11, color: 'var(--ap-text-muted)', marginTop: 3 }}>
                 {new Date(detailsModal.order.createdAt).toLocaleString('vi-VN')}

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -136,7 +138,9 @@ class _AquaCareAppState extends State<AquaCareApp> {
           surface: const Color(0xFF0F1A30),
         ),
       ),
-      home: widget.initialScreen,
+      home: SplashScreen(
+        destination: OnboardingScreen(destination: widget.initialScreen),
+      ),
     );
   }
 }

@@ -2,10 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
+const { createAdminDashboardRouter } = require('./routes/admin-dashboard.routes');
 const { getSpeciesThresholds } = require('./config/species_thresholds');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+// Dashboard admin còn beta; giữ router để bật lại sau buổi demo.
+const ADMIN_DASHBOARD_ENABLED = false;
 
 // Middlewares – CORS phải được khai báo ĐẦU TIÊN, trước mọi route
 const allowedOrigins = [
@@ -40,6 +43,9 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+if (ADMIN_DASHBOARD_ENABLED) {
+  app.use('/api/admin/dashboard', createAdminDashboardRouter({ supabase: require('./config/supabase') }));
+}
 
 // Route Health Check dành cho UptimeRobot
 app.get('/api/health', (req, res) => {

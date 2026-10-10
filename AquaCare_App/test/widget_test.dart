@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:aquacare_app/customer_theme.dart';
 import 'package:aquacare_app/screens/dashboard_screen.dart';
 import 'package:aquacare_app/screens/login_screen.dart';
+import 'package:aquacare_app/screens/onboarding_screen.dart';
+import 'package:aquacare_app/screens/splash_screen.dart';
 import 'package:aquacare_app/services/supabase_service.dart';
 import 'package:aquacare_app/widgets/floating_role_nav.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +19,50 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('splash finishes before opening the existing destination', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SplashScreen(destination: Scaffold(body: Text('Destination'))),
+      ),
+    );
+
+    expect(find.text('Destination'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 2400));
+    expect(find.text('Destination'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('Destination'), findsOneWidget);
+  });
+
+  testWidgets('Get Started opens the existing destination', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: OnboardingScreen(
+          destination: Scaffold(body: Text('Destination')),
+        ),
+      ),
+    );
+
+    expect(find.text('Get Started'), findsOneWidget);
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Destination'), findsOneWidget);
+  });
+
+  testWidgets('onboarding fits a compact phone screen', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const MaterialApp(home: OnboardingScreen(destination: Scaffold())),
+    );
+
+    expect(find.text('Get Started'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   test('customer theme is restored after switching to light mode', () async {
     SharedPreferences.setMockInitialValues({});

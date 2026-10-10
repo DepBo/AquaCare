@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArrowLeft, ArrowRight, Download } from 'lucide-react'
 
+declare const __AQUACARE_APP_VERSION__: string
+
 const SLIDES = [
   {
     src: '/images/fish1.png',
@@ -432,12 +434,12 @@ export default function HeroSection() {
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
             transition: 'transform 180ms ease, box-shadow 180ms ease',
           }}
-          aria-label="Tải ứng dụng AquaCare cho Android"
+          aria-label={`Tải ứng dụng AquaCare cho Android phiên bản ${__AQUACARE_APP_VERSION__}`}
           onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 34px rgba(0, 0, 0, 0.3)' }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.22)' }}
         >
           <Download size={mobile ? 16 : 18} strokeWidth={2} />
-          Tải app Android
+          Tải app Android v{__AQUACARE_APP_VERSION__}
         </a>
         <a
           href="#about"
