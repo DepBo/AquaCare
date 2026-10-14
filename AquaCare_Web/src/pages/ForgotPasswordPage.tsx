@@ -6,8 +6,8 @@ import { clearVerifiedRole } from '../authRoleCache'
 
 const F = "'Inter', sans-serif"
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder',
 )
 
 const inputStyle: React.CSSProperties = {

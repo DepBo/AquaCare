@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import './LoginPage.css'
 
 const F = "'Inter', sans-serif"
 const API_URL = import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 )
 
 export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (userId: string, role: string) => void }) {
@@ -149,7 +150,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
   }
 
   return (
-    <div style={{
+    <div className="auth-page" style={{
       minHeight: '100vh',
       display: 'flex',
       fontFamily: F,
@@ -168,25 +169,26 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
         className="auth-brand-panel"
       >
         {/* Background decoration */}
-        <div style={{
+        <div className="auth-orb auth-orb--top" style={{
           position: 'absolute', top: -120, right: -120,
           width: 400, height: 400, borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(0,229,160,0.06) 0%, transparent 70%)',
         }} />
-        <div style={{
+        <div className="auth-orb auth-orb--bottom" style={{
           position: 'absolute', bottom: -80, left: -80,
           width: 300, height: 300, borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(11,110,110,0.08) 0%, transparent 70%)',
         }} />
 
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 12, marginBottom: 48, transition: 'color 200ms' }}
+        <div className="auth-brand-content">
+        <Link to="/" className="auth-back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 12, marginBottom: 48, transition: 'color 200ms' }}
           onMouseEnter={e => e.currentTarget.style.color = '#00A896'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
         >
           <ArrowLeft size={14} /> Về trang chủ
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+        <div className="auth-brand-logo" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
           <img src="/logo.png" alt="AquaCare" style={{
             height: 52, width: 'auto',
             objectFit: 'contain',
@@ -198,21 +200,22 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
           </div>
         </div>
 
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 16, letterSpacing: '-0.02em' }}>
+        <h1 className="auth-brand-title" style={{ fontSize: 36, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 16, letterSpacing: '-0.02em' }}>
           Chào mừng<br />trở lại! <span style={{ color: '#00A896' }}>👋</span>
         </h1>
-        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: 360 }}>
+        <p className="auth-brand-copy" style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: 360 }}>
           Đăng nhập vào dashboard để theo dõi ao nuôi cá cảnh của bạn theo thời gian thực.
         </p>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 32, marginTop: 48 }}>
+        <div className="auth-stats" style={{ display: 'flex', gap: 32, marginTop: 48 }}>
           {[{ v: '24/7', l: 'Giám sát' }, { v: '99.5%', l: 'Chính xác' }, { v: '500+', l: 'Ao nuôi' }].map((s, i) => (
-            <div key={i}>
+            <div className="auth-stat" key={i}>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#00A896' }}>{s.v}</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{s.l}</div>
             </div>
           ))}
+        </div>
         </div>
       </div>
 
@@ -226,14 +229,15 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
       }}
         className="auth-form-panel"
       >
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Đăng nhập</h2>
+        <div className="auth-card" style={{ width: '100%', maxWidth: 380 }}>
+          <span className="auth-card__eyebrow">AQUACARE · CỔNG THÀNH VIÊN</span>
+          <h2 className="auth-card__title" style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Đăng nhập</h2>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 32 }}>
             Nhập thông tin tài khoản của bạn
           </p>
 
           {error && (
-            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10, lineHeight: 1.5 }}>
+            <div className="auth-error" style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)', color: '#FF6B6B', fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10, lineHeight: 1.5 }}>
               <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} /> 
               <span>{error}</span>
             </div>
@@ -242,9 +246,10 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
             {/* Email */}
             <div>
               <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 8 }}>Email</label>
-              <div style={{ position: 'relative' }}>
+              <div className="auth-input-wrap" style={{ position: 'relative' }}>
                 <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.2)' }} />
                 <input
+                  className="auth-input"
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="email@example.com"
                   style={{
@@ -262,9 +267,10 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
             {/* Password */}
             <div>
               <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 8 }}>Mật khẩu</label>
-              <div style={{ position: 'relative' }}>
+              <div className="auth-input-wrap" style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.2)' }} />
                 <input
+                  className="auth-input"
                   type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   style={{
@@ -276,7 +282,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
                   onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.3)'}
                   onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)}
+                <button className="auth-password-toggle" type="button" onClick={() => setShowPass(!showPass)}
                   style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', padding: 4 }}>
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -290,7 +296,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
                   style={{ width: 16, height: 16, borderRadius: 4, accentColor: '#00A896', cursor: 'pointer' }} />
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Ghi nhớ đăng nhập</span>
               </label>
-              <Link to="/forgot-password" style={{ fontSize: 12, color: '#00A896', textDecoration: 'none', transition: 'opacity 200ms' }}
+              <Link className="auth-inline-link" to="/forgot-password" style={{ fontSize: 12, color: '#00A896', textDecoration: 'none', transition: 'opacity 200ms' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
@@ -299,7 +305,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
             </div>
 
             {/* Submit */}
-            <button type="submit" disabled={loading} style={{
+            <button className="auth-submit" type="submit" disabled={loading} style={{
               width: '100%', padding: '13px 0', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
               fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
               background: loading ? 'rgba(0,229,160,0.3)' : 'linear-gradient(135deg, #1B4F72, #00A896)', color: '#fff',
@@ -323,6 +329,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
 
           {/* Social login - Google only */}
           <button
+            className="auth-google"
             onClick={handleGoogleLogin}
             disabled={googleLoading}
             style={{
@@ -354,7 +361,7 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
           {/* Sign up link */}
           <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 28 }}>
             Chưa có tài khoản?{' '}
-            <Link to="/signup" style={{ color: '#00A896', textDecoration: 'none', fontWeight: 600 }}>Đăng ký ngay</Link>
+            <Link className="auth-inline-link" to="/signup" style={{ color: '#00A896', textDecoration: 'none', fontWeight: 600 }}>Đăng ký ngay</Link>
           </p>
         </div>
       </div>

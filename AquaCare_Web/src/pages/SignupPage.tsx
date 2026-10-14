@@ -7,8 +7,8 @@ const F = "'Inter', sans-serif"
 const API_URL = import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 )
 
 export default function SignupPage() {
