@@ -20,6 +20,8 @@ class AdminDashboardPreview extends StatefulWidget {
 }
 
 class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
+  // FE preview only. Keep the API loader below for a later backend release.
+  static const bool _previewOnly = true;
   static const _productionEndpoint =
       'https://aquacare-p78r.onrender.com/api/admin/dashboard';
   static const _debugEndpointOverride =
@@ -49,10 +51,47 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
   @override
   void initState() {
     super.initState();
-    _load();
+    if (_previewOnly) {
+      _data = _demoDashboard();
+      _loading = false;
+    } else {
+      _load();
+    }
+  }
+
+  Map<String, dynamic> _demoDashboard() {
+    final now = DateTime.now();
+    final series = List.generate(30, (index) {
+      final date = now.subtract(Duration(days: 29 - index));
+      final day = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      const amounts = [950000, 0, 3700000, 1800000, 2400000, 0, 3700000];
+      return <String, dynamic>{'date': day, 'amount': amounts[index % 7]};
+    });
+    return {
+      'generatedAt': now.toIso8601String(),
+      'revenue': {
+        'currentMonth': 12845000,
+        'previousMonth': 10450000,
+        'changePercent': 22.9,
+        'deliveredMonth': 4,
+        'averageOrder': 3211250,
+        'last7Days': 12550000,
+        'series7': series.sublist(23),
+        'series30': series,
+      },
+      'orders': {'pending': 5, 'packing': 3, 'shipping': 2, 'deliveredMonth': 4},
+      'devices': {'assigned': 12},
+      'staff': {'total': 6},
+      'recentOrders': [
+        {'id': 27, 'status': 'delivered', 'createdAt': now.toIso8601String()},
+        {'id': 26, 'status': 'shipping', 'createdAt': now.toIso8601String()},
+        {'id': 25, 'status': 'pending', 'createdAt': now.toIso8601String()},
+      ],
+    };
   }
 
   Future<void> _load() async {
+    if (_previewOnly) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -159,7 +198,7 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
     final devices = _map(data['devices']);
     final staff = _map(data['staff']);
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: _previewOnly ? () async {} : _load,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),
@@ -174,12 +213,16 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
             Text('Theo dõi kinh doanh và hoạt động vận hành.',
                 style: _style(13, _muted)),
             const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: _loading ? null : _load,
-              icon: Icon(_loading ? Icons.hourglass_top_rounded : Icons.refresh_rounded,
-                  size: 17),
-              label: Text(_loading ? 'Đang cập nhật' : 'Cập nhật dữ liệu'),
-            ),
+            if (_previewOnly)
+              Text('Dữ liệu minh họa · Chưa kết nối backend',
+                  style: _style(12, const Color(0xFF0284C7), FontWeight.w700))
+            else
+              TextButton.icon(
+                onPressed: _loading ? null : _load,
+                icon: Icon(_loading ? Icons.hourglass_top_rounded : Icons.refresh_rounded,
+                    size: 17),
+                label: Text(_loading ? 'Đang cập nhật' : 'Cập nhật dữ liệu'),
+              ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -462,7 +505,8 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
       children: [
         Text('Đơn hàng gần đây', style: _style(16, _text, FontWeight.w800)),
         const SizedBox(height: 4),
-        Text('Cập nhật từ hệ thống', style: _style(11, _muted)),
+        Text(_previewOnly ? 'Ví dụ hiển thị' : 'Cập nhật từ hệ thống',
+            style: _style(11, _muted)),
         const SizedBox(height: 12),
         if (orders.isEmpty) Text('Chưa có đơn hàng.', style: _style(12, _muted)),
         for (final order in orders)

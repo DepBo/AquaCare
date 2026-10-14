@@ -17,8 +17,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
-// Dashboard admin còn beta; giữ toàn bộ component để bật lại sau buổi demo.
-const ADMIN_DASHBOARD_ENABLED = false
+// Chỉ bật giao diện xem trước; API dashboard trong backend vẫn tắt.
+const ADMIN_DASHBOARD_ENABLED = true
 
 const getInitialsAvatar = (name: string) => {
   if (!name) return 'A'

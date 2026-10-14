@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AquaCare — Onboarding gradient concepts</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #edf3f1; color: #17352d; font-family: Arial, sans-serif; }
+    .sheet { width: 1120px; margin: 0 auto; padding: 42px 40px 48px; }
+    header { margin: 0 0 30px; }
+    .eyebrow { color: #27866a; font-size: 13px; font-weight: 800; letter-spacing: 2px; }
+    h1 { margin: 8px 0 5px; font-size: 34px; letter-spacing: -1.1px; }
+    header p { margin: 0; color: #62766e; font-size: 15px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .concept { min-height: 844px; padding: 24px 25px 22px; background: #fff; border: 1px solid #deebe5; border-radius: 28px; box-shadow: 0 12px 32px #2b695b12; }
+    .heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .number { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; background: #e6f6ec; color: #168964; font-size: 14px; font-weight: 800; }
+    .name { font-size: 18px; font-weight: 800; }
+    .description { margin-left: auto; font-size: 12px; color: #6f857b; }
+    .phone { position: relative; width: 320px; height: 680px; margin: 0 auto; overflow: hidden; border-radius: 36px; background: #fff; border: 8px solid #172b28; box-shadow: 0 15px 35px #1a4b3e33, inset 0 0 0 1px #ffffff80; }
+    .phone::before { content: ''; position: absolute; z-index: 10; top: 8px; left: 126px; width: 68px; height: 19px; border-radius: 12px; background: #172b28; }
+    .showcase { position: relative; height: 450px; overflow: hidden; }
+    .v1 .showcase { background: linear-gradient(180deg, #ffffff 0%, #eafbf0 48%, #83d9aa 100%); }
+    .v2 .showcase { background: linear-gradient(90deg, #b6e9cf 0%, #e8faef 52%, #ffffff 100%); }
+    .v3 .showcase { background: linear-gradient(135deg, #ffffff 0%, #effdf4 38%, #8dd9b7 100%); }
+    .v4 .showcase { background: linear-gradient(315deg, #ffffff 0%, #eafbf3 43%, #78cfa5 100%); }
+    .screens { position: absolute; inset: -46px -27px -60px; transform: rotate(7deg); transform-origin: 50% 50%; display: flex; gap: 10px; }
+    .column { flex: 0 0 92px; display: flex; flex-direction: column; gap: 11px; }
+    .column:nth-child(2), .column:nth-child(4) { transform: translateY(-114px); }
+    .column:nth-child(1), .column:nth-child(3) { transform: translateY(14px); }
+    .screen-card { width: 92px; height: 204px; object-fit: cover; border-radius: 11px; border: 3px solid #ffffff; box-shadow: 0 5px 14px #24473b2a; }
+    .fade { position: absolute; bottom: 0; left: 0; right: 0; height: 106px; background: linear-gradient(to bottom, transparent, white); }
+    .bottom { position: relative; z-index: 2; height: 214px; margin-top: -4px; padding: 25px 16px 14px; background: #fff; border-radius: 26px 26px 0 0; box-shadow: 0 -9px 23px #32654a16; }
+    .features { display: flex; justify-content: space-between; text-align: center; gap: 6px; }
+    .feature { width: 25%; color: #253c34; font-size: 9px; font-weight: 700; }
+    .icon { width: 43px; height: 43px; margin: 0 auto 8px; display: grid; place-items: center; border-radius: 15px; background: #1d382f; color: white; font-size: 24px; line-height: 1; }
+    .button { display: flex; align-items: center; justify-content: center; gap: 9px; height: 49px; margin-top: 29px; border-radius: 17px; background: #4da72c; color: #fff; font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', Arial, sans-serif; font-size: 18px; font-weight: 800; }
+    .v2 .button { background: linear-gradient(90deg, #a5dcbb 0%, #def5e7 52%, #fff 100%); color: #174637; border: 1px solid #9dd8ba; box-shadow: 0 5px 12px #3c977324; }
+    .button span { font-size: 22px; font-family: Arial, sans-serif; font-weight: 400; }
+    .foot { display: flex; align-items: center; justify-content: space-between; margin: 17px 5px 0; color: #527062; font-size: 13px; }
+    .swatch { width: 164px; height: 29px; border-radius: 11px; border: 1px solid #d7e8dd; }
+    .v1 .swatch { background: linear-gradient(90deg, #fff, #83d9aa); }
+    .v2 .swatch { background: linear-gradient(90deg, #b6e9cf, #fff); }
+    .v3 .swatch { background: linear-gradient(90deg, #fff, #8dd9b7); }
+    .v4 .swatch { background: linear-gradient(90deg, #78cfa5, #fff); }
+    body.single .sheet { width: 560px; padding: 25px 25px 30px; }
+    body.single .grid { display: block; }
+    body.single .concept { min-height: 835px; }
+    body.single header { margin-bottom: 20px; }
+    body.single h1 { font-size: 27px; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <header>
+      <div class="eyebrow">AQUACARE · ONBOARDING STUDIES</div>
+      <h1>Trắng × lục, theo bốn hướng sáng</h1>
+      <p>Phương án 02 đã được áp dụng cho nền và nút Get Started trong ứng dụng.</p>
+    </header>
+    <section class="grid">
+      <article class="concept v1"><div class="heading"><span class="number">01</span><span class="name">Sương sớm</span><span class="description">Trắng trên → lục dưới</span></div><div class="phone"></div><div class="foot"><span>Mềm, sáng và tự nhiên</span><span class="swatch"></span></div></article>
+      <article class="concept v2"><div class="heading"><span class="number">02</span><span class="name">Dòng chảy</span><span class="description">Lục trái → trắng phải</span></div><div class="phone"></div><div class="foot"><span>Cảm giác chuyển động ngang</span><span class="swatch"></span></div></article>
+      <article class="concept v3"><div class="heading"><span class="number">03</span><span class="name">Nắng qua lá</span><span class="description">Trắng ↘ lục</span></div><div class="phone"></div><div class="foot"><span>Có chiều sâu, cân bằng</span><span class="swatch"></span></div></article>
+      <article class="concept v4"><div class="heading"><span class="number">04</span><span class="name">Làn nước</span><span class="description">Lục ↖ trắng</span></div><div class="phone"></div><div class="foot"><span>Xanh rõ hơn nhưng vẫn dịu</span><span class="swatch"></span></div></article>
+    </section>
+  </main>
+  <script>
+    const selected = new URLSearchParams(location.search).get('only');
+    if (selected) {
+      document.body.classList.add('single');
+      for (const concept of document.querySelectorAll('.concept')) {
+        if (!concept.classList.contains(`v${selected}`)) concept.remove();
+      }
+    }
+    const sources = [
+      '../AquaCare_App/assets/images/onboarding_controls.jpg',
+      '../AquaCare_App/assets/images/onboarding_overview.jpg',
+      '../AquaCare_App/assets/images/onboarding_sensors.jpg',
+      '../AquaCare_App/assets/images/onboarding_alerts.jpg',
+    ];
+    const featureNames = ['Tổng quan', 'Cảm biến', 'Điều khiển', 'Cảnh báo'];
+    const symbols = ['⌂', '◉', '☷', '♧'];
+    for (const phone of document.querySelectorAll('.phone')) {
+      const showcase = document.createElement('div');
+      showcase.className = 'showcase';
+      const screens = document.createElement('div');
+      screens.className = 'screens';
+      for (let column = 0; column < 4; column++) {
+        const stack = document.createElement('div');
+        stack.className = 'column';
+        for (let row = 0; row < 3; row++) {
+          const img = document.createElement('img');
+          img.className = 'screen-card';
+          img.src = sources[(column + row) % sources.length];
+          stack.append(img);
+        }
+        screens.append(stack);
+      }
+      showcase.append(screens);
+      const fade = document.createElement('div');
+      fade.className = 'fade';
+      showcase.append(fade);
+      const bottom = document.createElement('div');
+      bottom.className = 'bottom';
+      const features = document.createElement('div');
+      features.className = 'features';
+      for (let index = 0; index < 4; index++) {
+        const item = document.createElement('div');
+        item.className = 'feature';
+        item.innerHTML = `<span class="icon">${symbols[index]}</span>${featureNames[index]}`;
+        features.append(item);
+      }
+      bottom.append(features);
+      const button = document.createElement('div');
+      button.className = 'button';
+      button.innerHTML = 'Get Started <span>➜</span>';
+      bottom.append(button);
+      phone.append(showcase, bottom);
+    }
+  </script>
+</body>
+</html>

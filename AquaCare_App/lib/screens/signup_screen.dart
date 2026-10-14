@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart' show GoogleLogoPainter;
 import 'dart:convert';
@@ -35,7 +36,6 @@ class _SignupScreenState extends State<SignupScreen>
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
@@ -45,10 +45,6 @@ class _SignupScreenState extends State<SignupScreen>
       duration: const Duration(milliseconds: 800),
     )..forward();
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0.04, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut));
   }
 
   @override
@@ -156,7 +152,23 @@ class _SignupScreenState extends State<SignupScreen>
 
       // Save to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('remember_login', true);
       await prefs.setString('role', role);
+      await prefs.remove('refresh_token');
+      await prefs.setString(
+        'user_info',
+        jsonEncode({
+          'id': user.id,
+          'email': user.email,
+          'full_name':
+              user.userMetadata?['full_name'] ??
+              user.userMetadata?['name'] ??
+              '',
+          'avatar_url':
+              user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+          'role': role,
+        }),
+      );
       if (res.session?.accessToken != null) {
         await prefs.setString('access_token', res.session!.accessToken);
       }
@@ -263,296 +275,253 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF060E1A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF060E1A), Color(0xFF0A1628), Color(0xFF0D1D33)],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: SlideTransition(
-              position: _slideAnim,
-              child: Column(
-                children: [
-                  // ── Top bar với nút back ──
-                  _buildTopBar(context),
-
-                  // ── Nội dung scroll ──
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 8, 28, 40),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Tạo tài khoản',
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            ),
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(context),
+              Expanded(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(28, 18, 28, 24),
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tạo tài khoản',
+                          style: GoogleFonts.inter(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF09213B),
+                            letterSpacing: -0.5,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Điền thông tin để bắt đầu sử dụng AquaCare',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.4),
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bắt đầu chăm sóc bể cá cùng AquaCare',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFF66758B),
                           ),
-                          const SizedBox(height: 32),
-
-                          Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                _buildField(
-                                  controller: _nameCtrl,
-                                  label: 'HỌ VÀ TÊN',
-                                  hint: 'Nguyễn Văn A',
-                                  icon: Icons.person_outline,
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Vui lòng nhập họ tên'
-                                      : null,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildField(
-                                  controller: _emailCtrl,
-                                  label: 'EMAIL',
-                                  hint: 'email@example.com',
-                                  icon: Icons.mail_outline,
-                                  keyboardType: TextInputType.emailAddress,
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return 'Vui lòng nhập email';
-                                    }
-                                    if (!v.contains('@')) {
-                                      return 'Email không hợp lệ';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                                _buildField(
-                                  controller: _phoneCtrl,
-                                  label: 'SỐ ĐIỆN THOẠI',
-                                  hint: '0912 345 678',
-                                  icon: Icons.phone_outlined,
-                                  keyboardType: TextInputType.phone,
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Vui lòng nhập số điện thoại'
-                                      : null,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildPasswordField(
-                                  controller: _passCtrl,
-                                  label: 'MẬT KHẨU',
-                                  hint: '••••••••',
-                                  showPass: _showPassword,
-                                  onToggle: () => setState(
-                                    () => _showPassword = !_showPassword,
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return 'Vui lòng nhập mật khẩu';
-                                    }
-                                    if (v.length < 6) {
-                                      return 'Mật khẩu ít nhất 6 ký tự';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                                _buildPasswordField(
-                                  controller: _confirmCtrl,
-                                  label: 'XÁC NHẬN MẬT KHẨU',
-                                  hint: '••••••••',
-                                  showPass: _showConfirm,
-                                  onToggle: () => setState(
-                                    () => _showConfirm = !_showConfirm,
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return 'Vui lòng xác nhận mật khẩu';
-                                    }
-                                    if (v != _passCtrl.text) {
-                                      return 'Mật khẩu không khớp';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 24),
-
-                                // ── Điều khoản & Chính sách ──
-                                GestureDetector(
-                                  onTap: () => setState(
-                                    () => _agreeTerms = !_agreeTerms,
-                                  ),
-                                  behavior: HitTestBehavior.opaque,
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Transform.scale(
-                                        scale: 0.85,
-                                        child: Checkbox(
-                                          value: _agreeTerms,
-                                          onChanged: (v) => setState(
-                                            () => _agreeTerms = v ?? false,
-                                          ),
-                                          activeColor: const Color(0xFF00A896),
-                                          checkColor: Colors.white,
-                                          side: const BorderSide(
-                                            color: Colors.white24,
-                                            width: 1.5,
-                                          ),
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 11,
-                                          ),
-                                          child: RichText(
-                                            text: TextSpan(
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.35,
-                                                ),
-                                                height: 1.5,
-                                              ),
-                                              children: const [
-                                                TextSpan(
-                                                  text: 'Tôi đồng ý với ',
-                                                ),
-                                                TextSpan(
-                                                  text: 'Điều khoản dịch vụ',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF00A896),
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                TextSpan(text: ' và '),
-                                                TextSpan(
-                                                  text: 'Chính sách bảo mật',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF00A896),
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                const SizedBox(height: 20),
-                                _buildSignupButton(),
-
-                                // ── Divider ──
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 24,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Container(
-                                          height: 1,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                        ),
-                                        child: Text(
-                                          'hoặc',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            color: Colors.white.withValues(
-                                              alpha: 0.25,
-                                            ),
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Container(
-                                          height: 1,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // ── Google Signup Button ──
-                                _buildGoogleButton(),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 28),
-                          Center(
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: RichText(
-                                text: TextSpan(
-                                  style: GoogleFonts.inter(fontSize: 13),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Đã có tài khoản? ',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.35,
-                                        ),
-                                      ),
-                                    ),
-                                    const TextSpan(
-                                      text: 'Đăng nhập',
-                                      style: TextStyle(
-                                        color: Color(0xFF00A896),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        ),
+                        const SizedBox(height: 30),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _buildField(
+                                controller: _nameCtrl,
+                                label: 'HỌ VÀ TÊN',
+                                hint: 'Nguyễn Văn A',
+                                icon: Icons.person_outline,
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                    ? 'Vui lòng nhập họ tên'
+                                    : null,
                               ),
-                            ),
+                              const SizedBox(height: 19),
+                              _buildField(
+                                controller: _emailCtrl,
+                                label: 'EMAIL',
+                                hint: 'email@example.com',
+                                icon: Icons.mail_outline,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Vui lòng nhập email';
+                                  }
+                                  if (!value.contains('@')) {
+                                    return 'Email không hợp lệ';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 19),
+                              _buildField(
+                                controller: _phoneCtrl,
+                                label: 'SỐ ĐIỆN THOẠI',
+                                hint: '0912 345 678',
+                                icon: Icons.phone_outlined,
+                                keyboardType: TextInputType.phone,
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                    ? 'Vui lòng nhập số điện thoại'
+                                    : null,
+                              ),
+                              const SizedBox(height: 19),
+                              _buildPasswordField(
+                                controller: _passCtrl,
+                                label: 'MẬT KHẨU',
+                                hint: '••••••••',
+                                showPass: _showPassword,
+                                onToggle: () => setState(
+                                  () => _showPassword = !_showPassword,
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Vui lòng nhập mật khẩu';
+                                  }
+                                  return value.length < 6
+                                      ? 'Mật khẩu ít nhất 6 ký tự'
+                                      : null;
+                                },
+                              ),
+                              const SizedBox(height: 19),
+                              _buildPasswordField(
+                                controller: _confirmCtrl,
+                                label: 'XÁC NHẬN MẬT KHẨU',
+                                hint: '••••••••',
+                                showPass: _showConfirm,
+                                onToggle: () => setState(
+                                  () => _showConfirm = !_showConfirm,
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Vui lòng xác nhận mật khẩu';
+                                  }
+                                  return value != _passCtrl.text
+                                      ? 'Mật khẩu không khớp'
+                                      : null;
+                                },
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+              _buildFooter(context, keyboardOpen),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context, bool keyboardOpen) {
+    final compact = MediaQuery.sizeOf(context).height < 700;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        compact ? 20 : 28,
+        keyboardOpen ? 6 : 8,
+        compact ? 20 : 28,
+        keyboardOpen ? 4 : (compact ? 4 : 12),
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE8EDF2))),
+      ),
+      child: keyboardOpen
+          ? _buildSignupButton(compact: true)
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: () => setState(() => _agreeTerms = !_agreeTerms),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _agreeTerms,
+                        onChanged: (value) =>
+                            setState(() => _agreeTerms = value ?? false),
+                        activeColor: const Color(0xFF00A896),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Expanded(
+                        child: Text.rich(
+                          const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Tôi đồng ý với ',
+                                style: TextStyle(color: Color(0xFF52647B)),
+                              ),
+                              TextSpan(
+                                text: 'Điều khoản dịch vụ',
+                                style: TextStyle(color: Color(0xFF00A896)),
+                              ),
+                              TextSpan(
+                                text: ' và ',
+                                style: TextStyle(color: Color(0xFF52647B)),
+                              ),
+                              TextSpan(
+                                text: 'Chính sách bảo mật',
+                                style: TextStyle(color: Color(0xFF00A896)),
+                              ),
+                            ],
+                          ),
+                          style: GoogleFonts.inter(fontSize: compact ? 10 : 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: compact ? 5 : 12),
+                _buildSignupButton(compact: compact),
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: compact ? 7 : 13),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Divider(color: Color(0xFFD7DFE6))),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Text(
+                          'hoặc',
+                          style: GoogleFonts.inter(
+                            fontSize: compact ? 11 : 13,
+                            color: const Color(0xFF8995A4),
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: Divider(color: Color(0xFFD7DFE6))),
+                    ],
+                  ),
+                ),
+                _buildGoogleButton(compact: compact),
+                SizedBox(height: compact ? 5 : 12),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size(0, compact ? 30 : 40),
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Đã có tài khoản? ',
+                          style: TextStyle(color: Color(0xFF66758B)),
+                        ),
+                        TextSpan(
+                          text: 'Đăng nhập',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF00A896),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: GoogleFonts.inter(fontSize: compact ? 11 : 13),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -568,24 +537,24 @@ class _SignupScreenState extends State<SignupScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: const Color(0xFFF3F5F8),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: const Color(0xFFDCE3EB)),
               ),
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: const Color(0xFF09213B),
                 size: 16,
               ),
             ),
           ),
           const SizedBox(width: 14),
           Text(
-            'Đăng ký',
+            'AquaCare',
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: const Color(0xFF0A76B4),
             ),
           ),
         ],
@@ -610,7 +579,7 @@ class _SignupScreenState extends State<SignupScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.4),
+            color: const Color(0xFF52647B),
             letterSpacing: 0.08,
           ),
         ),
@@ -618,7 +587,10 @@ class _SignupScreenState extends State<SignupScreen>
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: const Color(0xFF09213B),
+          ),
           validator: validator,
           decoration: _fieldDecoration(hint, icon),
         ),
@@ -643,7 +615,7 @@ class _SignupScreenState extends State<SignupScreen>
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.4),
+            color: const Color(0xFF52647B),
             letterSpacing: 0.08,
           ),
         ),
@@ -651,7 +623,10 @@ class _SignupScreenState extends State<SignupScreen>
         TextFormField(
           controller: controller,
           obscureText: !showPass,
-          style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: const Color(0xFF09213B),
+          ),
           validator: validator,
           decoration: _fieldDecoration(hint, Icons.lock_outline).copyWith(
             suffixIcon: GestureDetector(
@@ -661,7 +636,7 @@ class _SignupScreenState extends State<SignupScreen>
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: Colors.white.withValues(alpha: 0.25),
+                color: const Color(0xFF728197),
               ),
             ),
           ),
@@ -675,36 +650,23 @@ class _SignupScreenState extends State<SignupScreen>
       hintText: hint,
       hintStyle: GoogleFonts.inter(
         fontSize: 13,
-        color: Colors.white.withValues(alpha: 0.2),
+        color: const Color(0xFF8895A8),
       ),
-      prefixIcon: Icon(
-        icon,
-        size: 18,
-        color: Colors.white.withValues(alpha: 0.2),
-      ),
+      prefixIcon: Icon(icon, size: 18, color: const Color(0xFF728197)),
       filled: true,
-      fillColor: const Color.fromRGBO(255, 255, 255, 0.04),
+      fillColor: const Color(0xFFF3F5F8),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color.fromRGBO(255, 255, 255, 0.08),
-          width: 1,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFDCE3EB), width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color.fromRGBO(255, 255, 255, 0.08),
-          width: 1,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFDCE3EB), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color.fromRGBO(0, 229, 160, 0.3),
-          width: 1,
-        ),
+        borderSide: const BorderSide(color: Color(0xFF00A896), width: 1),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -722,14 +684,14 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ── Signup Button ─────────────────────────────────────────
-  Widget _buildSignupButton() {
+  Widget _buildSignupButton({bool compact = false}) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: compact ? 44 : 50,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+            colors: [Color(0xFF16BFC8), Color(0xFF00A896)],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
@@ -773,18 +735,15 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   // ── Google Button ───────────────────────────────────────
-  Widget _buildGoogleButton() {
+  Widget _buildGoogleButton({bool compact = false}) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: compact ? 44 : 50,
       child: OutlinedButton(
         onPressed: _googleLoading ? null : _handleGoogleAuth,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.04),
-          side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.12),
-            width: 1,
-          ),
+          backgroundColor: Colors.white,
+          side: const BorderSide(color: Color(0xFFC5D1DC), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -802,18 +761,27 @@ class _SignupScreenState extends State<SignupScreen>
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
+                  Container(
+                    width: 24,
+                    height: 24,
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF17283B),
+                      shape: BoxShape.circle,
+                    ),
                     child: CustomPaint(painter: GoogleLogoPainter()),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Đăng ký bằng Google',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.75),
+                  Flexible(
+                    child: Text(
+                      'Đăng ký bằng Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF09213B),
+                      ),
                     ),
                   ),
                 ],

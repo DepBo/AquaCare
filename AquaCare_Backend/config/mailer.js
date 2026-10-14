@@ -9,11 +9,24 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+if (process.env.RENDER && !process.env.BREVO_API_KEY) {
+  console.warn('[Alert Email] Chưa cấu hình BREVO_API_KEY. Nếu dùng Render Free, SMTP bị chặn và email cảnh báo sẽ không gửi được.');
+}
+
 // Hàm gửi email cảnh báo
 async function sendAlertEmail(toEmail, pondName, alertContent) {
   try {
-    const info = await transporter.sendMail({
-      from: '"AquaCare System" <' + process.env.EMAIL_USER + '>',
+    const useHttp = Boolean(process.env.BREVO_API_KEY);
+    const from = useHttp
+      ? (process.env.ALERT_EMAIL_FROM || process.env.EMAIL_USER)
+      : '"AquaCare System" <' + process.env.EMAIL_USER + '>';
+    if (useHttp && !from) throw new Error('Thiếu ALERT_EMAIL_FROM hoặc EMAIL_USER cho Brevo.');
+    if (!useHttp && (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) {
+      throw new Error('Thiếu EMAIL_USER hoặc EMAIL_PASS cho SMTP.');
+    }
+
+    const email = {
+      from,
       to: toEmail,
       subject: `⚠️ Cảnh báo khẩn cấp từ bể: ${pondName}`,
       html: `
@@ -38,10 +51,35 @@ async function sendAlertEmail(toEmail, pondName, alertContent) {
           </div>
         </div>
       `
-    });
-    console.log(`📧 [Nodemailer] Đã gửi email cảnh báo tới ${toEmail} thành công (MessageId: ${info.messageId})`);
+    };
+
+    if (useHttp) {
+      // Render Free chặn cổng SMTP; HTTPS vẫn gửi được qua API của Brevo.
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: 'AquaCare System', email: from },
+          to: [{ email: toEmail }],
+          subject: email.subject,
+          htmlContent: email.html,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(`Brevo HTTP ${response.status}: ${result.message || 'Không rõ lỗi'}`);
+      console.log(`📧 [Brevo] Đã nhận email cảnh báo gửi tới ${toEmail} (ID: ${result.messageId})`);
+    } else {
+      const info = await transporter.sendMail(email);
+      console.log(`📧 [Nodemailer] Đã gửi email cảnh báo tới ${toEmail} thành công (MessageId: ${info.messageId})`);
+    }
+    return true;
   } catch (err) {
-    console.error('❌ [Nodemailer] Lỗi khi gửi email:', err.message);
+    console.error('❌ [Alert Email] Lỗi khi gửi email:', err.message);
+    return false;
   }
 }
 

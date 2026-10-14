@@ -421,7 +421,7 @@ export default function HeroSection() {
       >
         <a
           href="/AquaCare.apk"
-          download="AquaCare.apk"
+          download={`AquaCare-${__AQUACARE_APP_VERSION__}.apk`}
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             minHeight: mobile ? 48 : 50,

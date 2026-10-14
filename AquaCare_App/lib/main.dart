@@ -52,7 +52,24 @@ void main() async {
   final role = prefs.getString('role');
   Widget initialScreen = const LoginScreen();
 
-  if (refreshToken != null && refreshToken.isNotEmpty) {
+  if (prefs.getBool('remember_login') == false) {
+    // The user opted out of restoring their session on the next app launch.
+    if (Supabase.instance.client.auth.currentSession != null) {
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (error) {
+        debugPrint('Không thể đóng phiên đăng nhập cũ: $error');
+      }
+    }
+    await prefs.remove('access_token');
+    await prefs.remove('refresh_token');
+    await prefs.remove('role');
+    await prefs.remove('user_info');
+  }
+
+  if (prefs.getBool('remember_login') != false &&
+      refreshToken != null &&
+      refreshToken.isNotEmpty) {
     try {
       await Supabase.instance.client.auth.setSession(refreshToken);
       debugPrint(

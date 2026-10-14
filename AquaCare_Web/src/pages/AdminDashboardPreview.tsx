@@ -21,6 +21,34 @@ type DashboardData = {
   recentOrders: { id: number; status: string; createdAt: string }[]
 }
 
+// FE preview only. Keep the API loader below for when the admin backend returns.
+const PREVIEW_ONLY = true
+const demoDashboard = (): DashboardData => {
+  const today = new Date()
+  const series = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - 29 + index)
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return { date: day, amount: [950000, 0, 3700000, 1800000, 2400000, 0, 3700000][index % 7] }
+  })
+  return {
+    generatedAt: today.toISOString(),
+    revenue: {
+      currentMonth: 12845000, previousMonth: 10450000, changePercent: 22.9,
+      deliveredMonth: 4, averageOrder: 3211250, last7Days: 12550000,
+      series7: series.slice(-7), series30: series,
+    },
+    orders: { pending: 5, packing: 3, shipping: 2, deliveredMonth: 4 },
+    devices: { assigned: 12 },
+    staff: { total: 6 },
+    recentOrders: [
+      { id: 27, status: 'delivered', createdAt: today.toISOString() },
+      { id: 26, status: 'shipping', createdAt: today.toISOString() },
+      { id: 25, status: 'pending', createdAt: today.toISOString() },
+    ],
+  }
+}
+
 const API_URL = (
   import.meta.env.DEV
     ? 'http://localhost:5000'
@@ -43,11 +71,12 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
   supabase: SupabaseClient
 }) {
   const [range, setRange] = useState<'7d' | '30d'>('7d')
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<DashboardData | null>(() => PREVIEW_ONLY ? demoDashboard() : null)
+  const [loading, setLoading] = useState(!PREVIEW_ONLY)
   const [error, setError] = useState<string | null>(null)
 
   const loadDashboard = useCallback(async () => {
+    if (PREVIEW_ONLY) return
     setLoading(true)
     setError(null)
     try {
@@ -71,7 +100,7 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
     }
   }, [supabase])
 
-  useEffect(() => { void loadDashboard() }, [loadDashboard])
+  useEffect(() => { if (!PREVIEW_ONLY) void loadDashboard() }, [loadDashboard])
 
   if (!data) {
     return <div className="admin-preview__state" role="status">
@@ -95,10 +124,14 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
           <h2>Một góc nhìn cho toàn bộ AquaCare</h2>
           <p>Theo dõi kinh doanh, đơn hàng và hoạt động vận hành.</p>
         </div>
-        <button className="admin-preview__refresh" onClick={() => void loadDashboard()} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'spinning' : ''} />
-          {loading ? 'Đang cập nhật' : `Cập nhật ${timeLabel(data.generatedAt)}`}
-        </button>
+        {PREVIEW_ONLY ? (
+          <span className="admin-preview__refresh">Dữ liệu minh họa · Chưa kết nối backend</span>
+        ) : (
+          <button className="admin-preview__refresh" onClick={() => void loadDashboard()} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'spinning' : ''} />
+            {loading ? 'Đang cập nhật' : `Cập nhật ${timeLabel(data.generatedAt)}`}
+          </button>
+        )}
       </div>
       {error && <div className="admin-preview__error" role="alert">{error} <button onClick={() => void loadDashboard()}>Thử lại</button></div>}
 
@@ -189,7 +222,7 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
 
       <div className="admin-preview__bottom-grid">
         <section className="admin-preview__panel">
-          <div className="admin-preview__panel-heading"><div><h3>Đơn hàng gần đây</h3><p>Cập nhật từ hệ thống</p></div></div>
+          <div className="admin-preview__panel-heading"><div><h3>Đơn hàng gần đây</h3><p>{PREVIEW_ONLY ? 'Ví dụ hiển thị' : 'Cập nhật từ hệ thống'}</p></div></div>
           <div className="admin-preview__activity">
             {data.recentOrders.length === 0 && <p className="admin-preview__empty">Chưa có đơn hàng.</p>}
             {data.recentOrders.map(order => <button key={order.id} onClick={() => onNavigate('orders')}>

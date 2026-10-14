@@ -21,8 +21,8 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  // Dashboard admin còn beta; giữ code để bật lại sau buổi demo.
-  static const bool _adminDashboardEnabled = false;
+  // Chỉ bật giao diện xem trước; API dashboard trong backend vẫn tắt.
+  static const bool _adminDashboardEnabled = true;
   bool _isDark = true;
   bool _isLoading = true;
   int _activeTab = _adminDashboardEnabled
