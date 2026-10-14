@@ -10,6 +10,7 @@ import '../models/subscription_plan_model.dart';
 import '../services/supabase_service.dart';
 import '../widgets/floating_role_nav.dart';
 import 'login_screen.dart';
+import 'admin_dashboard_preview.dart';
 export 'staff_screen.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -20,10 +21,13 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
+  // Dashboard admin còn beta; giữ code để bật lại sau buổi demo.
+  static const bool _adminDashboardEnabled = false;
   bool _isDark = true;
   bool _isLoading = true;
-  int _activeTab =
-      0; // 0: Species, 1: Devices, 2: Staff, 3: Orders, 4: Subscriptions
+  int _activeTab = _adminDashboardEnabled
+      ? -1
+      : 0; // -1: Dashboard, 0: Species, 1: Devices, 2: Staff, 3: Orders, 4: Subscriptions
 
   // User Profile State
   String _adminName = 'Admin AquaCare';
@@ -1023,7 +1027,15 @@ class _AdminScreenState extends State<AdminScreen> {
 
                 // ── Main Content Area ──
                 Expanded(
-                  child: _activeTab == 0
+                  child: _adminDashboardEnabled && _activeTab == -1
+                      ? AdminDashboardPreview(
+                          isDark: _isDark,
+                          onNavigate: (tab) {
+                            setState(() => _activeTab = tab);
+                            _fetchData();
+                          },
+                        )
+                      : _activeTab == 0
                       ? _buildSpeciesTab(
                           primary,
                           textPrimary,
@@ -1071,8 +1083,17 @@ class _AdminScreenState extends State<AdminScreen> {
               bottom: 0,
               child: FloatingRoleNav(
                 isDark: _isDark,
-                selectedIndex: _activeTab,
+                selectedIndex: _activeTab + (_adminDashboardEnabled ? 1 : 0),
                 items: [
+                  if (_adminDashboardEnabled)
+                    FloatingRoleNavItem(
+                      label: 'Tổng quan',
+                      symbol: 'board',
+                      onTap: () {
+                        setState(() => _activeTab = -1);
+                        _fetchData();
+                      },
+                    ),
                   FloatingRoleNavItem(
                     label: 'Loài cá',
                     symbol: 'fish',

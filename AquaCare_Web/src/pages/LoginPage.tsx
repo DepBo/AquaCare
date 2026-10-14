@@ -11,7 +11,7 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 )
 
-export default function LoginPage() {
+export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (userId: string, role: string) => void }) {
   const navigate = useNavigate()
   const [showPass, setShowPass] = useState(false)
   const [email, setEmail] = useState('')
@@ -27,14 +27,16 @@ export default function LoginPage() {
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error || !session) return
 
-      // Kiểm tra nếu đã lưu rồi thì không làm lại
-      if (localStorage.getItem('cs_auth') === 'true') return
+      // An existing login should not bounce between /login and a protected page
+      // while role lookup is temporarily unavailable.
+      if (localStorage.getItem('cs_auth') === 'true' && !window.location.hash.includes('access_token=')) return
 
       const user = session.user
       const meta = user.user_metadata
 
       // Đồng bộ vào public.users qua backend (nếu cần) hoặc lấy role từ DB
       let role = 'user'
+      let roleVerified = false
       try {
         const { data: dbUser, error: dbError } = await supabase
           .from('users')
@@ -44,6 +46,7 @@ export default function LoginPage() {
           
         if (dbUser?.role) {
           role = dbUser.role
+          roleVerified = true
         } else if (dbError && dbError.code === 'PGRST116') {
           // Fallback: Nếu user có trong auth nhưng chưa có trong public.users
           const { data: newUser } = await supabase
@@ -59,6 +62,7 @@ export default function LoginPage() {
             .single()
           if (newUser?.role) {
             role = newUser.role
+            roleVerified = true
           }
         }
       } catch (err) { console.error('Error syncing user:', err) }
@@ -74,13 +78,15 @@ export default function LoginPage() {
         role,
       }))
 
+      if (roleVerified) onAuthenticated?.(user.id, role)
+
       if (role === 'admin') navigate('/admin')
       else if (role.startsWith('staff')) navigate('/staff')
       else navigate('/dashboard')
     }
 
     handleOAuthCallback()
-  }, [])
+  }, [navigate, onAuthenticated])
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true)
@@ -113,20 +119,23 @@ export default function LoginPage() {
 
       localStorage.setItem('cs_auth', 'true')
       localStorage.setItem('access_token', data.access_token)
+      let sessionReady = false
       if (data.refresh_token) {
         localStorage.setItem('refresh_token', data.refresh_token)
         // Thiết lập Supabase session để các query có RLS hoạt động
         try {
-          await supabase.auth.setSession({
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token: data.access_token,
             refresh_token: data.refresh_token
           })
+          sessionReady = !sessionError
         } catch (e) {
           console.log('Could not set supabase session:', e)
         }
       }
       localStorage.setItem('user_info', JSON.stringify(data.user_info))
       localStorage.setItem('cs_role', data.user_info.role)
+      if (sessionReady) onAuthenticated?.(data.user_info.id, data.user_info.role)
 
       if (data.user_info.role === 'admin') navigate('/admin')
       else if (data.user_info.role.startsWith('staff')) navigate('/staff')
