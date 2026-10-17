@@ -1033,7 +1033,10 @@ class _StaffScreenState extends State<StaffScreen> {
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
-          16, 16, 16, 96 + MediaQuery.paddingOf(context).bottom,
+          16,
+          16,
+          16,
+          96 + MediaQuery.paddingOf(context).bottom,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1525,7 +1528,10 @@ class _StaffScreenState extends State<StaffScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 0, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      0,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: filtered.length,
                     itemBuilder: (ctx, idx) {
@@ -1573,14 +1579,18 @@ class _StaffScreenState extends State<StaffScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected
-                    ? accentColor
-                    : (_isDark ? Colors.white70 : Colors.black87),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                softWrap: true,
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? accentColor
+                      : (_isDark ? Colors.white70 : Colors.black87),
+                ),
               ),
             ),
             const SizedBox(width: 6),
@@ -2107,7 +2117,10 @@ class _StaffScreenState extends State<StaffScreen> {
             )
           : ListView.builder(
               padding: EdgeInsets.fromLTRB(
-                16, 16, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                16,
+                16,
+                16,
+                96 + MediaQuery.paddingOf(context).bottom,
               ),
               itemCount: unansweredRequests.length,
               itemBuilder: (ctx, idx) {
@@ -2324,7 +2337,10 @@ class _StaffScreenState extends State<StaffScreen> {
             )
           : ListView(
               padding: EdgeInsets.fromLTRB(
-                16, 16, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                16,
+                16,
+                16,
+                96 + MediaQuery.paddingOf(context).bottom,
               ),
               children: [
                 // Completed Tasks Section

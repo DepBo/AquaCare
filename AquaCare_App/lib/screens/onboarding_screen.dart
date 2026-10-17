@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.destination});
@@ -108,13 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             children: [
               const Positioned.fill(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFEAF2F7), Color(0xFFF4F8FA)],
-                    ),
-                  ),
+                  decoration: BoxDecoration(gradient: _onboardingGradient),
                 ),
               ),
               for (var column = 0; column < 4; column++)
@@ -272,35 +267,51 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           SizedBox(
             width: double.infinity,
             height: compact ? 52 : 58,
-            child: FilledButton(
-              onPressed: _opening ? null : _getStarted,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF4DA72C),
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF4DA72C),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 0,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: _getStartedGradient,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF9DD8BA)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x243C9773),
+                    blurRadius: 12,
+                    offset: Offset(0, 5),
+                  ),
+                ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'Get Started',
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
+              child: FilledButton(
+                onPressed: _opening ? null : _getStarted,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF174637),
+                  disabledBackgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Get Started',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                            color: const Color(0xFF174637),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 9),
-                  SvgPicture.string(_arrowSvg, width: 20, height: 20),
-                ],
+                    const SizedBox(width: 9),
+                    SvgPicture.string(_arrowSvg, width: 20, height: 20),
+                  ],
+                ),
               ),
             ),
           ),
@@ -363,4 +374,18 @@ const _controlsSvg =
 const _alertsSvg =
     '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#E9FFF7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9z"/><path d="M10 21h4"/></svg>''';
 const _arrowSvg =
-    '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16m-7-7 7 7-7 7"/></svg>''';
+    '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#174637" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16m-7-7 7 7-7 7"/></svg>''';
+
+const _onboardingGradient = LinearGradient(
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+  colors: [Color(0xFFB6E9CF), Color(0xFFE8FAEF), Color(0xFFFFFFFF)],
+  stops: [0.0, 0.52, 1.0],
+);
+
+const _getStartedGradient = LinearGradient(
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+  colors: [Color(0xFFA5DCBB), Color(0xFFDEF5E7), Color(0xFFFFFFFF)],
+  stops: [0.0, 0.52, 1.0],
+);
