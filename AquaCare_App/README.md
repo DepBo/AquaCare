@@ -14,6 +14,11 @@ flutter run
 Before launching the app, make sure the required local environment values are
 available in `.env`. Keep secrets out of version control.
 
+## Development
+
+See the [development guide](docs/DEVELOPMENT.md) for common validation commands
+and an overview of the application structure.
+
 A few resources to get you started if this is your first Flutter project:
 
 - [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
