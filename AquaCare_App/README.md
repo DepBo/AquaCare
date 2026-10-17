@@ -1,10 +1,23 @@
-# aquacare_app
+# AquaCare
 
-A new Flutter project.
+A Flutter application for monitoring and managing aquaculture operations.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+From the `AquaCare_App` directory, install dependencies and run the app:
+
+```sh
+flutter pub get
+flutter run
+```
+
+Before launching the app, make sure the required local environment values are
+available in `.env`. Keep secrets out of version control.
+
+## Development
+
+See the [development guide](docs/DEVELOPMENT.md) for common validation commands
+and an overview of the application structure.
 
 A few resources to get you started if this is your first Flutter project:
 

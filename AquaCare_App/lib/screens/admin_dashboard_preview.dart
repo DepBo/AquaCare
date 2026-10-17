@@ -20,8 +20,8 @@ class AdminDashboardPreview extends StatefulWidget {
 }
 
 class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
-  // FE preview only. Keep the API loader below for a later backend release.
-  static const bool _previewOnly = true;
+  // Load the admin dashboard from the authenticated backend API.
+  static const bool _previewOnly = false;
   static const _productionEndpoint =
       'https://aquacare-p78r.onrender.com/api/admin/dashboard';
   static const _debugEndpointOverride =
@@ -29,9 +29,6 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
   Uri get _endpoint {
     if (kDebugMode && _debugEndpointOverride.isNotEmpty) {
       return Uri.parse(_debugEndpointOverride);
-    }
-    if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
-      return Uri.parse('http://10.0.2.2:5000/api/admin/dashboard');
     }
     return Uri.parse(_productionEndpoint);
   }
@@ -107,6 +104,9 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
       ).timeout(const Duration(seconds: 60));
       if (response.statusCode == 401 || response.statusCode == 403) {
         throw Exception('Không thể xác thực quyền admin. Vui lòng đăng nhập lại.');
+      }
+      if (response.statusCode == 404) {
+        throw Exception('API tổng quan admin chưa được triển khai trên backend.');
       }
       if (response.statusCode != 200) {
         throw Exception('Không tải được dữ liệu tổng quan (HTTP ${response.statusCode}).');

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import DeviceControlPanel from '../components/DeviceControlPanel'
 import { clearVerifiedRole } from '../authRoleCache'
@@ -41,6 +41,7 @@ interface Pond {
   volume?: number
   species_id?: number
   species_name?: string
+  fish_species?: FishSpecies | null
   mac_address?: string
   last_calib_ph?: string
   calib_ph_status?: string
@@ -1250,6 +1251,7 @@ export default function DashboardPage() {
             volume: t.water_volume_liter,
             species_id: t.species_id,
             species_name: t.fish_species?.species_name,
+            fish_species: t.fish_species,
             mac_address: t.devices?.[0]?.mac_address || '',
             last_calib_ph: t.devices?.[0]?.last_calib_ph || null,
             calib_ph_status: t.devices?.[0]?.calib_ph_status || 'ready'
@@ -1561,7 +1563,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!sensorData.ph.length) return
     const newAlerts: AlertItem[] = []
-    const selectedSpecies = fishSpecies.find(species => species.id === ponds.find(pond => pond.id === activeDevice)?.species_id)
+    const pond = ponds.find(item => item.id === activeDevice)
+    const selectedSpecies = pond?.fish_species ?? fishSpecies.find(species => species.id === pond?.species_id)
     const speciesThresholds = getSpeciesThresholds(selectedSpecies)
     SENSOR_CFG.forEach(cfg => {
       const latest = sensorData[cfg.key].at(-1)?.value ?? 0
@@ -1628,6 +1631,7 @@ export default function DashboardPage() {
           volume: t.water_volume_liter,
           species_id: t.species_id,
           species_name: t.fish_species?.species_name,
+          fish_species: t.fish_species,
           mac_address: mac
         }
         setPonds(prev => [...prev, newPond])
@@ -1677,6 +1681,7 @@ export default function DashboardPage() {
           volume: data[0].water_volume_liter,
           species_id: data[0].species_id,
           species_name: data[0].fish_species?.species_name,
+          fish_species: data[0].fish_species,
           mac_address: mac
         }
         setPonds(prev => prev.map(p => p.id === editDialog.id ? updatedPond : p))
@@ -1727,14 +1732,22 @@ export default function DashboardPage() {
     SENSOR_CFG.map(cfg => [cfg.key, sensorData[cfg.key].at(-1)?.value ?? 0])
   ) as Record<keyof SensorData, number>
 
-  const selectedCfg = SENSOR_CFG.find(c => c.key === selectedSensor)!
+  const activePond = ponds.find(p => p.id === activeDevice)
+  const speciesThresholds = useMemo(
+    () => getSpeciesThresholds(activePond?.fish_species ?? fishSpecies.find(species => species.id === activePond?.species_id)),
+    [fishSpecies, activePond?.fish_species, activePond?.species_id]
+  )
+  const selectedCfg = useMemo(() => {
+    const cfg = SENSOR_CFG.find(c => c.key === selectedSensor)!
+    if (cfg.key === 'waterLevel') return cfg
+    const limits = speciesThresholds[cfg.key]
+    return { ...cfg, good: [...limits.good], warn: [...limits.warn] }
+  }, [selectedSensor, speciesThresholds])
   const selectedHistory = sensorData[selectedSensor]
 
   const hasDanger = alerts.some(a => a.level === 'danger')
   const alertGlobalColor = alerts.length === 0 ? '#00A896' : (hasDanger ? '#FF6B6B' : '#FFB347')
   const alertGlobalBg = alerts.length === 0 ? 'rgba(0,229,160,0.1)' : (hasDanger ? 'rgba(255,107,107,0.12)' : 'rgba(255,179,71,0.12)')
-
-  const activePond = ponds.find(p => p.id === activeDevice)
 
   const PIE_COLORS = ['#00A896', '#FF8C42', '#C77DFF', '#4DA6FF', '#FF6B6B'];
   const alertDistData = alertStats;
@@ -2091,7 +2104,7 @@ export default function DashboardPage() {
               {activeTab === 'overview' && <CustomerOverview
                 pondName={activePond?.name}
                 userName={currentUserInfo?.full_name || currentUserInfo?.name}
-                species={fishSpecies.find(species => species.id === activePond?.species_id)}
+                species={activePond?.fish_species ?? fishSpecies.find(species => species.id === activePond?.species_id)}
                 sensorData={sensorData}
                 hourlySensorData={hourlySensorData}
                 alertsCount={alerts.length}
@@ -2456,8 +2469,9 @@ export default function DashboardPage() {
                           // Bổ sung Gợi ý xử lý
                           const cfg = SENSOR_CFG.find(c => c.key === a.key);
                           if (cfg) {
-                            const isHigh = a.val > cfg.good[1];
-                            const isLow = a.val < cfg.good[0];
+                            const good = cfg.key === 'waterLevel' ? cfg.good : speciesThresholds[cfg.key].good;
+                            const isHigh = a.val > good[1];
+                            const isLow = a.val < good[0];
 
                             if (a.key === 'temp') {
                               if (isHigh) desc += "\nGợi ý: Bạn có thể bật quạt tản nhiệt/chiller hoặc thả đá lạnh (bọc túi nilon) để làm mát hồ cá từ từ.";
