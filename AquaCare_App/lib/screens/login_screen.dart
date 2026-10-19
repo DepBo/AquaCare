@@ -292,9 +292,16 @@ class _LoginScreenState extends State<LoginScreen>
             final screenHeight = constraints.maxHeight;
             final compact = screenHeight < 790;
             final tight = screenHeight < 600;
-            final heroHeight = compact
+            final baseHeroHeight = compact
                 ? (screenHeight - 475).clamp(45.0, 150.0)
                 : (screenHeight - 640).clamp(150.0, 360.0);
+            // Use spare height to reveal more of the pond and lower the form.
+            // Compact phones keep their original spacing so all actions fit.
+            final extraHeroHeight = ((screenHeight - 600) * 0.17).clamp(
+              0.0,
+              45.0,
+            );
+            final heroHeight = baseHeroHeight + extraHeroHeight;
             return SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: Stack(
@@ -328,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen>
                             compact ? 24 : 28,
                             tight ? 10 : (compact ? 16 : 28),
                             compact ? 24 : 28,
-                            tight ? 4 : (compact ? 8 : 20),
+                            tight ? 4 : 8,
                           ),
                           child: FadeTransition(
                             opacity: _fadeAnim,

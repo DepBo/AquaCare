@@ -24,8 +24,8 @@ import StaffPage from './pages/StaffPage'
 import { clearVerifiedRole, getVerifiedRole, rememberVerifiedRole } from './authRoleCache'
 
 const authClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 )
 
 type ProtectedRole = 'admin' | 'staff' | 'customer'
@@ -230,4 +230,3 @@ function App() {
 }
 
 export default App
-

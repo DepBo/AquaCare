@@ -3,15 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../screens/dashboard_screen.dart'; // To import SensorData
+import '../utils/species_thresholds.dart';
 
 class SensorHistoryDrillDown extends StatefulWidget {
   final String activePondId;
   final SensorData sensor;
+  final Map<String, dynamic>? species;
 
   const SensorHistoryDrillDown({
     super.key,
     required this.activePondId,
     required this.sensor,
+    this.species,
   });
 
   @override
@@ -49,7 +52,8 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
   void didUpdateWidget(covariant SensorHistoryDrillDown oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.activePondId != widget.activePondId ||
-        oldWidget.sensor.name != widget.sensor.name) {
+        oldWidget.sensor.name != widget.sensor.name ||
+        oldWidget.species != widget.species) {
       _expandedHours.clear();
       _dataL2.clear();
       _displayCount = 10;
@@ -73,34 +77,13 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
   }
 
   Map<String, dynamic> _getSensorConfig(String sensorName) {
-    if (sensorName == 'Nhiệt độ') {
-      return {
-        'good': [24, 28],
-        'warn': [22, 30],
-      };
-    }
-    if (sensorName == 'pH') {
-      return {
-        'good': [6.5, 7.5],
-        'warn': [6.0, 8.0],
-      };
-    }
-    if (sensorName == 'TDS') {
-      return {
-        'good': [150, 300],
-        'warn': [100, 400],
-      };
-    }
     if (sensorName == 'Mực nước') {
       return {
         'good': [1, 1],
         'warn': [1, 1],
       };
     }
-    return {
-      'good': [0, 100],
-      'warn': [0, 100],
-    };
+    return sensorThresholds(sensorName, widget.species);
   }
 
   Color _getStatusColor(num val, Map<String, dynamic> config, String name) {

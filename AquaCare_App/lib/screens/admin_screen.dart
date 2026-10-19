@@ -218,8 +218,9 @@ class _AdminScreenState extends State<AdminScreen> {
             .toList();
         setState(() {
           _ordersList = ordersList;
-          _pendingOrdersCount =
-              ordersList.where((o) => o.status == 'pending').length;
+          _pendingOrdersCount = ordersList
+              .where((o) => o.status == 'pending')
+              .length;
           _filterOrders();
           _isLoading = false;
         });
@@ -1243,7 +1244,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         Icon(
                           Icons.set_meal_outlined,
                           size: 48,
-                          color: textSecondary.withOpacity(0.5),
+                          color: textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -1259,7 +1260,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      4,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: _filteredSpeciesList.length,
                     itemBuilder: (ctx, index) {
@@ -1497,12 +1501,16 @@ class _AdminScreenState extends State<AdminScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Tổng: ${_filteredDevicesList.length} thiết bị',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: textSecondary,
+                Expanded(
+                  child: Text(
+                    'Tổng: ${_filteredDevicesList.length} thiết bị',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
                   ),
                 ),
                 Row(
@@ -1551,7 +1559,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         Icon(
                           Icons.inventory_2_outlined,
                           size: 48,
-                          color: textSecondary.withOpacity(0.5),
+                          color: textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -1567,7 +1575,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      4,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: currentPageDevices.length,
                     itemBuilder: (ctx, index) {
@@ -1742,18 +1753,14 @@ class _AdminScreenState extends State<AdminScreen> {
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tổng: ${_filteredStaffList.length} nhân viên',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: textSecondary,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Tổng: ${_filteredStaffList.length} nhân viên',
+              softWrap: true,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textSecondary,
+              ),
             ),
           ),
 
@@ -1768,7 +1775,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         Icon(
                           Icons.badge_outlined,
                           size: 48,
-                          color: textSecondary.withOpacity(0.5),
+                          color: textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -1784,7 +1791,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      4,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: _filteredStaffList.length,
                     itemBuilder: (ctx, index) {
@@ -1825,14 +1835,17 @@ class _AdminScreenState extends State<AdminScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Quản lý đơn hàng (${_filteredOrdersList.length}/${_ordersList.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
+                    Expanded(
+                      child: Text(
+                        'Quản lý đơn hàng (${_filteredOrdersList.length}/${_ordersList.length})',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
+                    if (pendingCount > 0) const SizedBox(width: 8),
                     if (pendingCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1971,7 +1984,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 6, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      6,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: _filteredOrdersList.length,
                     itemBuilder: (ctx, idx) {
@@ -2441,8 +2457,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       'Tổng: ${_filteredSubscriptionsList.length} gói cước',
@@ -2452,6 +2468,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         color: textSecondary,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
@@ -2462,6 +2479,7 @@ class _AdminScreenState extends State<AdminScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _subFilterType,
+                          isExpanded: true,
                           dropdownColor: _isDark
                               ? const Color(0xFF1F1F1F)
                               : Colors.white,
@@ -2520,7 +2538,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.fromLTRB(
-                      16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom,
+                      16,
+                      4,
+                      16,
+                      96 + MediaQuery.paddingOf(context).bottom,
                     ),
                     itemCount: _filteredSubscriptionsList.length,
                     itemBuilder: (ctx, idx) {
@@ -2938,7 +2959,7 @@ class _DeviceCard extends StatelessWidget {
                           ? const Color(0x330284C7)
                           : const Color(0xFFE0F2FE),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: primary.withOpacity(0.3)),
+                      border: Border.all(color: primary.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -3548,14 +3569,17 @@ class _SpeciesFormSheetState extends State<_SpeciesFormSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.species == null
-                          ? 'Thêm loài cá mới'
-                          : 'Chỉnh sửa loài cá',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
+                    Expanded(
+                      child: Text(
+                        widget.species == null
+                            ? 'Thêm loài cá mới'
+                            : 'Chỉnh sửa loài cá',
+                        softWrap: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -3895,14 +3919,17 @@ class _DeviceFormSheetState extends State<_DeviceFormSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.device == null
-                          ? 'Thêm thiết bị vào kho'
-                          : 'Chỉnh sửa thiết bị',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
+                    Expanded(
+                      child: Text(
+                        widget.device == null
+                            ? 'Thêm thiết bị vào kho'
+                            : 'Chỉnh sửa thiết bị',
+                        softWrap: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -4165,12 +4192,15 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      isEdit ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên mới',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
+                    Expanded(
+                      child: Text(
+                        isEdit ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên mới',
+                        softWrap: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -4657,14 +4687,17 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.plan == null
-                          ? 'Thêm gói cước mới'
-                          : 'Sửa gói cước',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
+                    Expanded(
+                      child: Text(
+                        widget.plan == null
+                            ? 'Thêm gói cước mới'
+                            : 'Sửa gói cước',
+                        softWrap: true,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -4702,42 +4735,47 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildLabel('Loại gói', textPrimary),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: inputBg,
+                          Material(
+                            color: inputBg,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: border),
+                              side: BorderSide(color: border),
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedPlanType,
-                                isExpanded: true,
-                                dropdownColor: isDark
-                                    ? const Color(0xFF1F1F1F)
-                                    : Colors.white,
-                                style: GoogleFonts.inter(
-                                  color: textPrimary,
-                                  fontSize: 13,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedPlanType,
+                                  isExpanded: true,
+                                  dropdownColor: isDark
+                                      ? const Color(0xFF1F1F1F)
+                                      : Colors.white,
+                                  style: GoogleFonts.inter(
+                                    color: textPrimary,
+                                    fontSize: 13,
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'free',
+                                      child: Text('Miễn phí'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'premium',
+                                      child: Text('Cao cấp (Premium)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'enterprise',
+                                      child: Text('Doanh nghiệp'),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() => _selectedPlanType = v);
+                                    }
+                                  },
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'free',
-                                    child: Text('Miễn phí'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'premium',
-                                    child: Text('Cao cấp (Premium)'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'enterprise',
-                                    child: Text('Doanh nghiệp'),
-                                  ),
-                                ],
-                                onChanged: (v) {
-                                  if (v != null)
-                                    setState(() => _selectedPlanType = v);
-                                },
                               ),
                             ),
                           ),
@@ -4844,17 +4882,23 @@ class _SubscriptionFormSheetState extends State<_SubscriptionFormSheet> {
                 ),
                 const SizedBox(height: 14),
 
-                CheckboxListTile(
-                  title: Text(
-                    'Setup Thiết bị thông minh',
-                    style: GoogleFonts.inter(fontSize: 13, color: textPrimary),
+                Material(
+                  color: modalBg,
+                  child: CheckboxListTile(
+                    title: Text(
+                      'Setup Thiết bị thông minh',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: textPrimary,
+                      ),
+                    ),
+                    value: _smartDeviceSetup,
+                    activeColor: const Color(0xFF0284C7),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (v) =>
+                        setState(() => _smartDeviceSetup = v ?? false),
                   ),
-                  value: _smartDeviceSetup,
-                  activeColor: const Color(0xFF0284C7),
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (v) =>
-                      setState(() => _smartDeviceSetup = v ?? false),
                 ),
                 const SizedBox(height: 20),
 

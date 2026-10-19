@@ -21,8 +21,8 @@ type DashboardData = {
   recentOrders: { id: number; status: string; createdAt: string }[]
 }
 
-// FE preview only. Keep the API loader below for when the admin backend returns.
-const PREVIEW_ONLY = true
+// Load the admin dashboard from the authenticated backend API.
+const PREVIEW_ONLY = false
 const demoDashboard = (): DashboardData => {
   const today = new Date()
   const series = Array.from({ length: 30 }, (_, index) => {
@@ -49,11 +49,7 @@ const demoDashboard = (): DashboardData => {
   }
 }
 
-const API_URL = (
-  import.meta.env.DEV
-    ? 'http://localhost:5000'
-    : import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
-).replace(/\/+$/, '')
+const API_URL = (import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com').replace(/\/+$/, '')
 const money = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)} ₫`
 const dateLabel = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh',
@@ -89,6 +85,9 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
           throw new Error('Không thể xác thực quyền admin. Vui lòng đăng nhập lại.')
+        }
+        if (response.status === 404) {
+          throw new Error('API tổng quan admin chưa được triển khai trên backend.')
         }
         throw new Error(`Không tải được dữ liệu tổng quan (HTTP ${response.status}). Vui lòng thử lại.`)
       }

@@ -7,8 +7,8 @@ const { getSpeciesThresholds } = require('./config/species_thresholds');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-// Dashboard admin còn beta; giữ router để bật lại sau buổi demo.
-const ADMIN_DASHBOARD_ENABLED = false;
+// Dashboard admin dùng dữ liệu thật qua API có kiểm tra phiên và vai trò admin.
+const ADMIN_DASHBOARD_ENABLED = true;
 
 // Middlewares – CORS phải được khai báo ĐẦU TIÊN, trước mọi route
 const allowedOrigins = [

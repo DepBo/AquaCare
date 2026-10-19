@@ -8,9 +8,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
 import '../services/supabase_service.dart';
+import '../utils/species_thresholds.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'alerts_screen.dart';
 import '../widgets/alerts_pie_chart.dart';
+import '../widgets/tank_overview_hero.dart';
 import 'control_screen.dart';
 import '../widgets/sensor_history_drill_down.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,6 +59,8 @@ class _AquaSvg extends StatelessWidget {
     'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     'settings':
         '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+    'pencil':
+        '<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/><path d="m15 5 4 4"/>',
     'trash': '<path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/>',
     'alert': '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
   };
@@ -84,6 +88,7 @@ class Pond {
   String name;
   String? volume;
   int? speciesId;
+  Map<String, dynamic>? speciesData;
   String? macAddress;
   String? lastCalibPh;
 
@@ -92,6 +97,7 @@ class Pond {
     required this.name,
     this.volume,
     this.speciesId,
+    this.speciesData,
     this.macAddress,
     this.lastCalibPh,
   });
@@ -120,20 +126,11 @@ class SensorData {
   });
 }
 
-String sensorStatus(String name, double? value) {
-  if (value == null || !value.isFinite) return 'Chưa có dữ liệu';
-  if (name == 'Mực nước') return value == 1 ? 'Ổn định' : 'Cạn nước';
-  final bounds = switch (name) {
-    'pH' => [6.5, 7.5, 6.0, 8.0],
-    'Nhiệt độ' => [24.0, 28.0, 22.0, 30.0],
-    'TDS' => [150.0, 300.0, 100.0, 400.0],
-    _ => null,
-  };
-  if (bounds == null) return 'Chưa có dữ liệu';
-  if (value >= bounds[0] && value <= bounds[1]) return 'Tốt';
-  if (value >= bounds[2] && value <= bounds[3]) return 'Cảnh báo';
-  return 'Nguy hiểm';
-}
+String sensorStatus(
+  String name,
+  double? value, {
+  Map<String, dynamic>? species,
+}) => statusForReading(name, value, species: species);
 
 Color sensorStatusColor(String status) => switch (status) {
   'Tốt' || 'Ổn định' => CustomerColors.accentText,
@@ -145,7 +142,10 @@ Color sensorStatusColor(String status) => switch (status) {
 };
 
 /// Supabase sends the newest reading first. Missing readings stay unknown.
-List<SensorData> sensorsFromTelemetry(List<Map<String, dynamic>> logs) {
+List<SensorData> sensorsFromTelemetry(
+  List<Map<String, dynamic>> logs, {
+  Map<String, dynamic>? species,
+}) {
   const configs = [
     (
       name: 'pH',
@@ -193,7 +193,7 @@ List<SensorData> sensorsFromTelemetry(List<Map<String, dynamic>> logs) {
       value: latest ?? 0,
       color: config.color,
       icon: config.icon,
-      status: sensorStatus(config.name, latest),
+      status: sensorStatus(config.name, latest, species: species),
       history: logs.reversed.map(reading).whereType<double>().toList(),
       hasData: latest != null,
     );
@@ -314,17 +314,12 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
-    with TickerProviderStateMixin {
+class _DashboardScreenState extends State<DashboardScreen> {
   static const _onboardingPreferenceKey = 'hide_onboarding_v2';
 
   int _selectedTab = 0;
   late Timer _clockTimer;
-  late Timer _pulseTimer;
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
   String _currentTime = '';
-  bool _liveDot = true;
   bool _isLoading = false;
   int _selectedSensorIndex = 0;
   bool _hideOnboarding = false;
@@ -363,6 +358,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  Map<String, dynamic>? get _activeSpecies {
+    if (_activePond.speciesData != null) return _activePond.speciesData;
+    final speciesId = _activePond.speciesId;
+    if (speciesId == null) return null;
+    for (final species in _fishSpecies) {
+      if (species['id'] == speciesId) return species;
+    }
+    return null;
+  }
+
   List<SensorData> _currentSensors = sensorsFromTelemetry([]);
 
   final List<String> _tabTitles = [
@@ -380,19 +385,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     debugPrint('🚀 DashboardScreen đã khởi tạo');
     _updateTime();
     _clockTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateTime());
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _pulseTimer = Timer.periodic(Duration(milliseconds: 600), (_) {
-      if (mounted) setState(() => _liveDot = !_liveDot);
-    });
 
     _loadPonds();
     _loadOnboardingPref();
@@ -605,6 +597,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               name: json['tank_name'],
               volume: json['water_volume_liter']?.toString(),
               speciesId: json['species_id'],
+              speciesData: json['fish_species'] is Map
+                  ? Map<String, dynamic>.from(json['fish_species'] as Map)
+                  : null,
               macAddress: mac,
               lastCalibPh: lastCalib,
             );
@@ -943,8 +938,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     _clockTimer.cancel();
-    _pulseTimer.cancel();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -1014,6 +1007,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                         snapshot.hasError
                                             ? []
                                             : (snapshot.data ?? []),
+                                        species: _activeSpecies,
                                       );
 
                                       return _buildTabContent();
@@ -1184,12 +1178,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   SizedBox(width: 12),
-                  Text(
-                    'Khám phá tính năng',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: CustomerColors.text,
+                  Expanded(
+                    child: Text(
+                      'Khám phá tính năng',
+                      softWrap: true,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CustomerColors.text,
+                      ),
                     ),
                   ),
                 ],
@@ -1246,12 +1243,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   SizedBox(width: 12),
-                  Text(
-                    'Bắt đầu sử dụng',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: CustomerColors.text,
+                  Expanded(
+                    child: Text(
+                      'Bắt đầu sử dụng',
+                      softWrap: true,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CustomerColors.text,
+                      ),
                     ),
                   ),
                 ],
@@ -1319,12 +1319,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
                 SizedBox(width: 10),
-                Text(
-                  'Không hiển thị lại',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: headingColor,
+                Flexible(
+                  child: Text(
+                    'Không hiển thị lại',
+                    softWrap: true,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: headingColor,
+                    ),
                   ),
                 ),
               ],
@@ -1406,6 +1409,104 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ───────────────── TOP BAR ──────────────────────────────
   Widget _buildTopBar() {
+    final compact = MediaQuery.sizeOf(context).width < 360;
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: () => CustomerTheme.toggle(),
+          icon: _AquaSvg(
+            CustomerColors.dark ? 'sun' : 'moon',
+            size: 19,
+            color: CustomerColors.secondaryText,
+          ),
+          tooltip: CustomerColors.dark
+              ? 'Chuyển sang giao diện sáng'
+              : 'Chuyển sang giao diện tối',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
+        IconButton(
+          onPressed: _handleLogout,
+          icon: _AquaSvg(
+            'logout',
+            size: 19,
+            color: CustomerColors.secondaryText,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          tooltip: 'Đăng xuất',
+          splashRadius: 18,
+        ),
+        const SizedBox(width: 6),
+        // Avatar người dùng (nằm bên phải nút logout)
+        GestureDetector(
+          onTap: _pickAndUploadAvatar,
+          child: Stack(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: CustomerColors.accentText.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                  gradient: _userInfo?['avatar_url'] != null
+                      ? null
+                      : const LinearGradient(
+                          colors: [Color(0xFF1B4F72), Color(0xFF00A896)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  image: _userInfo?['avatar_url'] != null
+                      ? DecorationImage(
+                          image: NetworkImage(_userInfo!['avatar_url']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _userInfo?['avatar_url'] == null
+                    ? Center(
+                        child: Text(
+                          getInitialsAvatar(
+                            _userInfo?['full_name'] ?? _userInfo?['name'],
+                          ),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: CustomerColors.text,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+              if (_isUploadingAvatar)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          color: CustomerColors.text,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 16, 12),
       decoration: BoxDecoration(
@@ -1423,12 +1524,19 @@ class _DashboardScreenState extends State<DashboardScreen>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Logo AquaCare (thế chỗ avatar cũ)
-              Image.asset(
-                'assets/images/logo.png',
-                height: 34,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 10),
+              if (MediaQuery.sizeOf(context).width >= 300) ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.sizeOf(context).width < 360 ? 60 : 110,
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    height: 34,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
 
               Expanded(
                 child: Column(
@@ -1460,167 +1568,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
 
-              // Live + Theme + Logout + Avatar
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) => Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color:
-                            (_isLoading
-                                    ? CustomerColors.waterText
-                                    : CustomerColors.accentText)
-                                .withValues(alpha: _pulseAnimation.value),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                (_isLoading
-                                        ? CustomerColors.waterText
-                                        : CustomerColors.accentText)
-                                    .withValues(
-                                      alpha: _pulseAnimation.value * 0.6,
-                                    ),
-                            blurRadius: 5,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    MediaQuery.sizeOf(context).width < 430
-                        ? ''
-                        : _isLoading
-                            ? 'Sync'
-                            : _currentSensors.every((sensor) => sensor.hasData)
-                                ? 'Live'
-                                : 'Chờ dữ liệu',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: _isLoading
-                          ? CustomerColors.waterText
-                          : CustomerColors.accentText,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    onPressed: () => CustomerTheme.toggle(),
-                    icon: _AquaSvg(
-                      CustomerColors.dark ? 'sun' : 'moon',
-                      size: 19,
-                      color: CustomerColors.secondaryText,
-                    ),
-                    tooltip: CustomerColors.dark
-                        ? 'Chuyển sang giao diện sáng'
-                        : 'Chuyển sang giao diện tối',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 28,
-                      minHeight: 28,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _handleLogout,
-                    icon: _AquaSvg(
-                      'logout',
-                      size: 19,
-                      color: CustomerColors.secondaryText,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 28,
-                      minHeight: 28,
-                    ),
-                    tooltip: 'Đăng xuất',
-                    splashRadius: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  // Avatar người dùng (nằm bên phải nút logout)
-                  GestureDetector(
-                    onTap: _pickAndUploadAvatar,
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: CustomerColors.accentText.withValues(
-                                alpha: 0.5,
-                              ),
-                              width: 1.5,
-                            ),
-                            gradient: _userInfo?['avatar_url'] != null
-                                ? null
-                                : const LinearGradient(
-                                    colors: [
-                                      Color(0xFF1B4F72),
-                                      Color(0xFF00A896),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                            image: _userInfo?['avatar_url'] != null
-                                ? DecorationImage(
-                                    image: NetworkImage(
-                                      _userInfo!['avatar_url'],
-                                    ),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: _userInfo?['avatar_url'] == null
-                              ? Center(
-                                  child: Text(
-                                    getInitialsAvatar(
-                                      _userInfo?['full_name'] ??
-                                          _userInfo?['name'],
-                                    ),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: CustomerColors.text,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        if (_isUploadingAvatar)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    color: CustomerColors.text,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              if (!compact) actions,
             ],
           ),
 
+          if (compact) ...[
+            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerRight, child: actions),
+          ],
           SizedBox(height: 16),
 
           // ── Pond Selector Row ──────────────────────────────
@@ -1628,43 +1583,62 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               Expanded(child: _buildPondSelector()),
               SizedBox(width: 8),
-              // Add pond button
-              GestureDetector(
-                onTap: _showAddPondDialog,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: CustomerColors.border,
-                      style: BorderStyle.solid,
+              if (_selectedTab == 0) ...[
+                _buildPondAction(
+                  label: 'Cấu hình bể',
+                  icon: 'pencil',
+                  color: const Color(0xFF4DA6FF),
+                  onPressed: _activePond.id.isEmpty
+                      ? null
+                      : () => _showPondSettingsDialog(_activePond),
+                ),
+                const SizedBox(width: 8),
+                _buildPondAction(
+                  label: 'Xóa bể',
+                  icon: 'trash',
+                  color: const Color(0xFFDD6471),
+                  onPressed: _activePond.id.isEmpty
+                      ? null
+                      : () => _showDeletePondDialog(_activePond),
+                ),
+              ] else
+                // Add pond button
+                GestureDetector(
+                  onTap: _showAddPondDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 12,
                     ),
-                    color: CustomerColors.card,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _AquaSvg(
-                        'plus',
-                        size: 13,
-                        color: CustomerColors.accentText,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: CustomerColors.border,
+                        style: BorderStyle.solid,
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Thêm bể',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                      color: CustomerColors.card,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _AquaSvg(
+                          'plus',
+                          size: 13,
                           color: CustomerColors.accentText,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 4),
+                        Text(
+                          'Thêm bể',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: CustomerColors.accentText,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
@@ -1903,7 +1877,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return IndexedStack(
       index: _selectedTab,
       children: [
-        _buildOverviewTab(),
+        TickerMode(enabled: _selectedTab == 0, child: _buildOverviewTab()),
         _buildSensorsTab(),
         ControlScreen(tankId: _activePondId),
         // _buildCalibrationTab(), // Tạm ẩn; giữ nguyên mã bên dưới để dùng lại.
@@ -2000,142 +1974,62 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildSummaryBanner() {
-    final hasData = _currentSensors.every((sensor) => sensor.hasData);
-    final healthy =
-        hasData &&
-        _currentSensors.every(
-          (sensor) => sensor.status == 'Tốt' || sensor.status == 'Ổn định',
-        );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: SizedBox(
-        height: 216,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/overview_aquarium.png',
-              fit: BoxFit.cover,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.08),
-                    Colors.black.withValues(alpha: 0.84),
-                  ],
-                  stops: [0.25, 1],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF42C99C),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      _isLoading
-                          ? 'Đang đồng bộ'
-                          : hasData
-                          ? 'Trực tuyến'
-                          : 'Chưa có dữ liệu',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 18,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: healthy ? Color(0xFF279F80) : Color(0xFF2E87B0),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: _AquaSvg(
-                      !hasData
-                          ? 'clock'
-                          : healthy
-                          ? 'check'
-                          : 'alert',
-                      size: 25,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          !hasData
-                              ? 'Đang chờ dữ liệu'
-                              : healthy
-                              ? 'Bể đang ổn định'
-                              : 'Bể cần chú ý',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                        SizedBox(height: 5),
-                        Text(
-                          !hasData
-                              ? 'Chưa có đủ dữ liệu cảm biến'
-                              : healthy
-                              ? 'Các cảm biến đang hoạt động bình thường'
-                              : 'Hãy kiểm tra chỉ số và cảnh báo',
-                          style: GoogleFonts.inter(
-                            color: Color(0xFFE1E9ED),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _buildPondAction({
+    required String label,
+    required String icon,
+    required Color color,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Material(
+        color: CustomerColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: CustomerColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IconButton(
+          tooltip: label,
+          onPressed: onPressed,
+          icon: _AquaSvg(
+            icon,
+            size: 20,
+            color: onPressed == null ? CustomerColors.mutedText : color,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSummaryBanner() {
+    final level = tankShieldLevel(
+      _currentSensors.map((sensor) => sensor.status),
+    );
+    final (title, subtitle) = switch (level) {
+      TankShieldLevel.safe => (
+        'Hồ cá đang ổn định',
+        'Cả 4 chỉ số trong ngưỡng tốt',
+      ),
+      TankShieldLevel.warning => (
+        'Hồ cá cần theo dõi',
+        'Kiểm tra các chỉ số chưa đạt mức tốt',
+      ),
+      TankShieldLevel.danger => (
+        'Hồ cá đang nguy hiểm',
+        'Có chỉ số vượt ngưỡng hoặc mực nước cạn',
+      ),
+      TankShieldLevel.waiting => (
+        'Đang chờ dữ liệu',
+        'Chưa có dữ liệu cảm biến',
+      ),
+    };
+    return TankOverviewHero(
+      title: title,
+      subtitle: subtitle,
+      shieldLevel: level,
+      onAddTank: _showAddPondDialog,
     );
   }
 
@@ -2336,6 +2230,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: SensorHistoryDrillDown(
               activePondId: _activePondId,
               sensor: _currentSensors[_selectedSensorIndex],
+              species: _activeSpecies,
             ),
           ),
         ),
@@ -2561,6 +2456,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   name: _ponds[pIndex].name,
                   volume: _ponds[pIndex].volume,
                   speciesId: _ponds[pIndex].speciesId,
+                  speciesData: _ponds[pIndex].speciesData,
                   macAddress: _ponds[pIndex].macAddress,
                   lastCalibPh: now,
                 );
@@ -2983,11 +2879,7 @@ class _PondMenuItem extends StatelessWidget {
           // Action buttons
           IconButton(
             onPressed: onSettings,
-            icon: _AquaSvg(
-              'settings',
-              size: 15,
-              color: CustomerColors.mutedText,
-            ),
+            icon: _AquaSvg('pencil', size: 15, color: CustomerColors.mutedText),
             tooltip: 'Cấu hình',
             splashRadius: 16,
             padding: const EdgeInsets.all(6),
@@ -3848,10 +3740,14 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(fontSize: 14, color: CustomerColors.text),
+        Expanded(
+          child: Text(
+            label,
+            softWrap: true,
+            style: GoogleFonts.inter(fontSize: 14, color: CustomerColors.text),
+          ),
         ),
+        const SizedBox(width: 8),
         Switch(
           value: value,
           onChanged: onChanged,
@@ -3883,264 +3779,287 @@ class _PondSettingsDialogState extends State<PondSettingsDialog> {
             width: 400,
             padding: const EdgeInsets.all(24),
             child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cấu hình bể cá',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: CustomerColors.text,
-              ),
-            ),
-            SizedBox(height: 20),
-            // Tabs
-            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _tabIndex = 0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _tabIndex == 0
-                                ? Color(0xFF4DA6FF)
-                                : Colors.transparent,
-                            width: 2,
+                Text(
+                  'Cấu hình bể cá',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: CustomerColors.text,
+                  ),
+                ),
+                SizedBox(height: 20),
+                // Tabs
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _tabIndex = 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: _tabIndex == 0
+                                    ? Color(0xFF4DA6FF)
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Thông tin chung',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: _tabIndex == 0
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: _tabIndex == 0
+                                  ? Color(0xFF4DA6FF)
+                                  : CustomerColors.mutedText,
+                            ),
                           ),
                         ),
                       ),
-                      child: Text(
-                        'Thông tin chung',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: _tabIndex == 0
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: _tabIndex == 0
-                              ? Color(0xFF4DA6FF)
-                              : CustomerColors.mutedText,
-                        ),
-                      ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _tabIndex = 1),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _tabIndex == 1
-                                ? Color(0xFF00A896)
-                                : Colors.transparent,
-                            width: 2,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _tabIndex = 1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: _tabIndex == 1
+                                    ? Color(0xFF00A896)
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Cài đặt cảnh báo',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: _tabIndex == 1
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: _tabIndex == 1
+                                  ? CustomerColors.accentText
+                                  : CustomerColors.mutedText,
+                            ),
                           ),
                         ),
                       ),
-                      child: Text(
-                        'Cài đặt cảnh báo',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: _tabIndex == 1
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: _tabIndex == 1
-                              ? CustomerColors.accentText
-                              : CustomerColors.mutedText,
-                        ),
-                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: 20),
+                SizedBox(height: 20),
 
-            // Tab Content
-            if (_tabIndex == 0) ...[
-              _buildTextField(
-                'TÊN BỂ CÁ',
-                _nameCtrl,
-                hint: 'VD: Bể Rồng Phòng Khách',
-              ),
-              _buildTextField(
-                'THỂ TÍCH (LÍT)',
-                _volumeCtrl,
-                type: TextInputType.number,
-                hint: 'VD: 250',
-              ),
-              Builder(
-                builder: (_) {
-                  // Validate _speciesId exists in the list to prevent DropdownButton crash
-                  final speciesIds = widget.fishSpeciesList
-                      .map((s) => s['id'] as int)
-                      .toList();
-                  final safeSpeciesId =
-                      (_speciesId != null && speciesIds.contains(_speciesId))
-                      ? _speciesId
-                      : null;
-                  return _buildDropdown<int>(
-                    'LOÀI CÁ',
-                    safeSpeciesId,
+                // Tab Content
+                if (_tabIndex == 0) ...[
+                  _buildTextField(
+                    'TÊN BỂ CÁ',
+                    _nameCtrl,
+                    hint: 'VD: Bể Rồng Phòng Khách',
+                  ),
+                  _buildTextField(
+                    'THỂ TÍCH (LÍT)',
+                    _volumeCtrl,
+                    type: TextInputType.number,
+                    hint: 'VD: 250',
+                  ),
+                  Builder(
+                    builder: (_) {
+                      // Validate _speciesId exists in the list to prevent DropdownButton crash
+                      final speciesIds = widget.fishSpeciesList
+                          .map((s) => s['id'] as int)
+                          .toList();
+                      final safeSpeciesId =
+                          (_speciesId != null &&
+                              speciesIds.contains(_speciesId))
+                          ? _speciesId
+                          : null;
+                      return _buildDropdown<int>(
+                        'LOÀI CÁ',
+                        safeSpeciesId,
+                        [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('Không xác định'),
+                          ),
+                          ...widget.fishSpeciesList.map(
+                            (s) => DropdownMenuItem(
+                              value: s['id'] as int,
+                              child: Text(s['species_name'] as String),
+                            ),
+                          ),
+                        ],
+                        (val) => setState(() => _speciesId = val),
+                      );
+                    },
+                  ),
+                  _buildTextField(
+                    'MÃ THIẾT BỊ (MAC)',
+                    _macCtrl,
+                    hint: 'AA:BB:CC:DD:EE:FF',
+                  ),
+                ] else ...[
+                  Text(
+                    'KÊNH NHẬN THÔNG BÁO',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: CustomerColors.secondaryText,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _buildSwitch(
+                    'Thông báo qua Email',
+                    _email,
+                    (v) => setState(() => _email = v),
+                  ),
+                  _buildSwitch(
+                    'Thông báo qua trình duyệt web',
+                    _web,
+                    (v) => setState(() => _web = v),
+                  ),
+                  _buildSwitch(
+                    'Thông báo trên App',
+                    _app,
+                    (v) => setState(() => _app = v),
+                  ),
+                  SizedBox(height: 16),
+                  _buildDropdown<int>(
+                    'THỜI GIAN NHẮC LẠI (COOLDOWN)',
+                    _cooldown,
+                    [
+                      DropdownMenuItem(value: 0, child: Text('Không nhắc lại')),
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text('Nhắc nhở liên tục (1 phút)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 15,
+                        child: Text('Nhắc lại sau 15 phút'),
+                      ),
+                      DropdownMenuItem(
+                        value: 30,
+                        child: Text('Nhắc lại sau 30 phút'),
+                      ),
+                      DropdownMenuItem(
+                        value: 60,
+                        child: Text('Nhắc lại sau 1 giờ'),
+                      ),
+                    ],
+                    (val) => setState(() => _cooldown = val!),
+                  ),
+                  _buildDropdown<String>(
+                    'BỘ LỌC MỨC ĐỘ',
+                    _severity,
                     [
                       DropdownMenuItem(
-                        value: null,
-                        child: Text('Không xác định'),
+                        value: 'both',
+                        child: Text('Nhận tất cả cảnh báo'),
                       ),
-                      ...widget.fishSpeciesList.map(
-                        (s) => DropdownMenuItem(
-                          value: s['id'] as int,
-                          child: Text(s['species_name'] as String),
+                      DropdownMenuItem(
+                        value: 'critical_only',
+                        child: Text('Chỉ nhận cảnh báo Nguy hiểm'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'warning_only',
+                        child: Text('Chỉ nhận cảnh báo Cảnh báo'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'none',
+                        child: Text('Tắt thông báo'),
+                      ),
+                    ],
+                    (val) => setState(() => _severity = val!),
+                  ),
+                ],
+
+                if (_errorMsg.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      _errorMsg,
+                      style: GoogleFonts.inter(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+
+                LayoutBuilder(
+                  builder: (context, constraints) => Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth,
+                        ),
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Hủy',
+                            style: GoogleFonts.inter(
+                              color: CustomerColors.secondaryText,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth,
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveSettings,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF00A896),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: CustomerColors.text,
+                                  ),
+                                )
+                              : Text(
+                                  'Lưu thay đổi',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    color: CustomerColors.text,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
-                    (val) => setState(() => _speciesId = val),
-                  );
-                },
-              ),
-              _buildTextField(
-                'MÃ THIẾT BỊ (MAC)',
-                _macCtrl,
-                hint: 'AA:BB:CC:DD:EE:FF',
-              ),
-            ] else ...[
-              Text(
-                'KÊNH NHẬN THÔNG BÁO',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: CustomerColors.secondaryText,
-                ),
-              ),
-              SizedBox(height: 8),
-              _buildSwitch(
-                'Thông báo qua Email',
-                _email,
-                (v) => setState(() => _email = v),
-              ),
-              _buildSwitch(
-                'Thông báo qua trình duyệt web',
-                _web,
-                (v) => setState(() => _web = v),
-              ),
-              _buildSwitch(
-                'Thông báo trên App',
-                _app,
-                (v) => setState(() => _app = v),
-              ),
-              SizedBox(height: 16),
-              _buildDropdown<int>(
-                'THỜI GIAN NHẮC LẠI (COOLDOWN)',
-                _cooldown,
-                [
-                  DropdownMenuItem(value: 0, child: Text('Không nhắc lại')),
-                  DropdownMenuItem(
-                    value: 1,
-                    child: Text('Nhắc nhở liên tục (1 phút)'),
                   ),
-                  DropdownMenuItem(
-                    value: 15,
-                    child: Text('Nhắc lại sau 15 phút'),
-                  ),
-                  DropdownMenuItem(
-                    value: 30,
-                    child: Text('Nhắc lại sau 30 phút'),
-                  ),
-                  DropdownMenuItem(
-                    value: 60,
-                    child: Text('Nhắc lại sau 1 giờ'),
-                  ),
-                ],
-                (val) => setState(() => _cooldown = val!),
-              ),
-              _buildDropdown<String>('BỘ LỌC MỨC ĐỘ', _severity, [
-                DropdownMenuItem(
-                  value: 'both',
-                  child: Text('Nhận tất cả cảnh báo'),
-                ),
-                DropdownMenuItem(
-                  value: 'critical_only',
-                  child: Text('Chỉ nhận cảnh báo Nguy hiểm'),
-                ),
-                DropdownMenuItem(
-                  value: 'warning_only',
-                  child: Text('Chỉ nhận cảnh báo Cảnh báo'),
-                ),
-                DropdownMenuItem(value: 'none', child: Text('Tắt thông báo')),
-              ], (val) => setState(() => _severity = val!)),
-            ],
-
-            if (_errorMsg.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  _errorMsg,
-                  style: GoogleFonts.inter(
-                    color: Colors.redAccent,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Hủy',
-                    style: GoogleFonts.inter(
-                      color: CustomerColors.secondaryText,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _saveSettings,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF00A896),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: CustomerColors.text,
-                          ),
-                        )
-                      : Text(
-                          'Lưu thay đổi',
-                          style: GoogleFonts.inter(
-                            color: CustomerColors.text,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
               ],
             ),
-            ],
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
