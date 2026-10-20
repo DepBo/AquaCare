@@ -124,3 +124,7 @@ AquaCare_App/CHANGELOG.md
 # KiCad temporary files
 *.kicad_prl
 *.lck
+
+# KiCad temporary files
+*.kicad_prl
+*.lck
