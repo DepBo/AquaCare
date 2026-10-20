@@ -19,13 +19,13 @@
   justify-content: center;
   flex-wrap: wrap;
   min-width: 0;
-  gap: 2px;
+  gap: 3px;
 }
 
 .admin-header__nav-item {
   box-sizing: border-box;
   height: 58px;
-  padding: 0 9px;
+  padding: 0 10px;
 }
 
 .admin-header__actions {

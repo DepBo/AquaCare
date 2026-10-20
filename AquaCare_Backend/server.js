@@ -7,8 +7,8 @@ const { getSpeciesThresholds } = require('./config/species_thresholds');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-// Dashboard admin còn beta; giữ router để bật lại sau buổi demo.
-const ADMIN_DASHBOARD_ENABLED = false;
+// Dashboard admin dùng dữ liệu thật qua API có kiểm tra phiên và vai trò admin.
+const ADMIN_DASHBOARD_ENABLED = true;
 
 // Middlewares – CORS phải được khai báo ĐẦU TIÊN, trước mọi route
 const allowedOrigins = [
@@ -245,9 +245,12 @@ async function checkAndInsertAlerts(device, state) {
         console.log(`🔔 KÍCH HOẠT THÔNG BÁO CHO BỂ [${device.tank_id}]`);
         console.log(`Nội dung: ${aggregatedMsg}`);
         
+        let emailDelivered = !config.notify_via_email;
         if (config.notify_via_email && tankData && tankData.users && tankData.users.email) {
           console.log(`[Email] -> Đang tiến hành gửi email tới ${tankData.users.email}...`);
-          await sendAlertEmail(tankData.users.email, tankData.tank_name, aggregatedMsg);
+          emailDelivered = await sendAlertEmail(tankData.users.email, tankData.tank_name, aggregatedMsg);
+        } else if (config.notify_via_email) {
+          console.error(`[Email] -> Bể ${device.tank_id} đã bật email nhưng không tìm thấy địa chỉ nhận.`);
         }
         if (config.notify_via_web_push) {
           if (tankData && tankData.users && tankData.users.web_fcm_token) {
@@ -267,13 +270,17 @@ async function checkAndInsertAlerts(device, state) {
         }
         console.log(`========================================\n`);
 
-        // Cập nhật mốc thời gian mới bằng định dạng ISOString chuẩn
+        if (!emailDelivered) {
+          console.error(`[Email] -> Email của bể ${device.tank_id} chưa gửi thành công; kiểm tra cấu hình và log trước lần cảnh báo tiếp theo.`);
+        }
+
+        // Cooldown chung vẫn giới hạn các kênh khác, tránh gửi Web Push liên tục khi email lỗi.
         const currentMilli = new Date().toISOString();
         const { error: updateTankErr } = await supabase
           .from('tanks')
           .update({ last_alert_sent_at: currentMilli })
           .eq('id', device.tank_id);
-          
+
         if (updateTankErr) {
           console.error('❌ Lỗi cập nhật mốc thời gian last_alert_sent_at trên bảng tanks:', updateTankErr.message);
         }

@@ -11,14 +11,15 @@ import { InnerMoonToggle } from '../components/InnerMoonToggle'
 import { clearVerifiedRole } from '../authRoleCache'
 import AdminDashboardPreview from './AdminDashboardPreview'
 import './AdminHeader.css'
+import './AdminPage.css'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
-// Dashboard admin còn beta; giữ toàn bộ component để bật lại sau buổi demo.
-const ADMIN_DASHBOARD_ENABLED = false
+// Chỉ bật giao diện xem trước; API dashboard trong backend vẫn tắt.
+const ADMIN_DASHBOARD_ENABLED = true
 
 const getInitialsAvatar = (name: string) => {
   if (!name) return 'A'
@@ -29,43 +30,58 @@ const getInitialsAvatar = (name: string) => {
   return words[0][0].toUpperCase()
 }
 
-// ─── Minimalist Theme Setup (Single Accent Blue, Uncluttered & Clean) ─────────────────────────────────
+// ─── AquaCare Theme Setup ────────────────────────────────────────────────────
 const ThemeStyles = ({ theme }: { theme: 'dark' | 'light' }) => {
   const isDark = theme === 'dark'
   return (
     <style dangerouslySetInnerHTML={{
       __html: `
       :root[data-theme="${theme}"] {
-        --ap-bg-main: ${isDark ? '#141414' : '#f8fafc'};
-        --ap-bg-topbar: ${isDark ? '#1f1f1f' : '#ffffff'};
-        --ap-bg-card: ${isDark ? '#1f1f1f' : '#ffffff'};
-        --ap-bg-modal: ${isDark ? '#222225' : '#ffffff'};
-        --ap-bg-subtle: ${isDark ? '#28282b' : '#f1f5f9'};
+        --ap-bg-main: ${isDark ? '#101b20' : '#f2f7f7'};
+        --ap-bg-topbar: ${isDark ? '#17252b' : '#ffffff'};
+        --ap-bg-card: ${isDark ? '#17252b' : '#ffffff'};
+        --ap-bg-modal: ${isDark ? '#1b2b31' : '#ffffff'};
+        --ap-bg-subtle: ${isDark ? '#203238' : '#f3f8f8'};
         
-        --ap-text-primary: ${isDark ? '#f4f4f5' : '#0f172a'};
-        --ap-text-secondary: ${isDark ? '#a1a1aa' : '#334155'};
-        --ap-text-muted: ${isDark ? '#71717a' : '#475569'};
+        --ap-text-primary: ${isDark ? '#edf7f6' : '#18343b'};
+        --ap-text-secondary: ${isDark ? '#b4c9ca' : '#526b70'};
+        --ap-text-muted: ${isDark ? '#91a8aa' : '#71878b'};
         
-        --ap-border: ${isDark ? '#333333' : '#cbd5e1'};
-        --ap-border-hover: ${isDark ? '#444444' : '#94a3b8'};
+        --ap-border: ${isDark ? '#30464b' : '#dce8e8'};
+        --ap-border-hover: ${isDark ? '#456167' : '#b8cece'};
         
-        --ap-hover-bg: ${isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'};
+        --ap-hover-bg: ${isDark ? 'rgba(255,255,255,0.06)' : '#f1f8f7'};
         --ap-hover-danger: ${isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2'};
         
-        --ap-input-bg: ${isDark ? '#181818' : '#ffffff'};
-        --ap-input-border: ${isDark ? '#3b3b3e' : '#94a3b8'};
+        --ap-input-bg: ${isDark ? '#122126' : '#ffffff'};
+        --ap-input-border: ${isDark ? '#3a555b' : '#cbdcdd'};
         
-        --ap-shadow: ${isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.06)'};
-        --ap-shadow-sm: ${isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.04)'};
+        --ap-shadow: ${isDark ? '0 14px 36px rgba(0,0,0,0.25)' : '0 12px 30px rgba(27,79,85,0.07)'};
+        --ap-shadow-sm: ${isDark ? '0 3px 12px rgba(0,0,0,0.2)' : '0 3px 12px rgba(27,79,85,0.045)'};
         
-        --ap-table-header: ${isDark ? '#27272a' : '#f1f5f9'};
+        --ap-table-header: ${isDark ? '#203238' : '#f4f8f8'};
         
-        --ap-primary: #0284c7;
-        --ap-primary-hover: #0369a1;
-        --ap-primary-bg: ${isDark ? 'rgba(2,132,199,0.2)' : '#e0f2fe'};
+        --ap-primary: #078f8b;
+        --ap-primary-hover: #067570;
+        --ap-primary-bg: ${isDark ? 'rgba(7,143,139,0.2)' : '#e1f5f2'};
         
         --ap-modal-overlay: ${isDark ? 'rgba(0,0,0,0.75)' : 'rgba(15,23,42,0.4)'};
-        --ap-btn-cancel: ${isDark ? '#2a2a2d' : '#e2e8f0'};
+        --ap-btn-cancel: ${isDark ? '#26383e' : '#eef4f4'};
+        --ap-status-warning: ${isDark ? '#f2bf65' : '#a66308'};
+        --ap-status-warning-bg: ${isDark ? 'rgba(228,164,54,0.15)' : '#fff5df'};
+        --ap-status-warning-border: ${isDark ? 'rgba(228,164,54,0.3)' : '#f4dfb3'};
+        --ap-status-info: ${isDark ? '#65cad3' : '#087c8e'};
+        --ap-status-info-bg: ${isDark ? 'rgba(39,165,180,0.15)' : '#e6f7f8'};
+        --ap-status-info-border: ${isDark ? 'rgba(39,165,180,0.3)' : '#c4e9e9'};
+        --ap-status-success: ${isDark ? '#73d9a8' : '#16805e'};
+        --ap-status-success-bg: ${isDark ? 'rgba(44,168,112,0.15)' : '#e8f7ef'};
+        --ap-status-success-border: ${isDark ? 'rgba(44,168,112,0.3)' : '#ccebd9'};
+        --ap-status-danger: ${isDark ? '#ff9383' : '#bd3f3f'};
+        --ap-status-danger-bg: ${isDark ? 'rgba(220,88,70,0.15)' : '#fff0ed'};
+        --ap-status-danger-border: ${isDark ? 'rgba(220,88,70,0.3)' : '#f4d3cd'};
+        --ap-plan-enterprise: ${isDark ? '#c0a4f5' : '#7653b6'};
+        --ap-plan-enterprise-bg: ${isDark ? 'rgba(129,92,185,0.18)' : '#f1ebfb'};
+        --ap-plan-enterprise-border: ${isDark ? 'rgba(153,119,204,0.32)' : '#e1d5f4'};
       }
       select option {
         background: var(--ap-bg-card);
@@ -184,12 +200,12 @@ function Dialog({
   width = 440
 }: any) {
   return (
-    <div style={{
+    <div className="admin-dialog-overlay" style={{
       position: 'fixed', inset: 0, zIndex: 1000,
       background: 'var(--ap-modal-overlay)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{
+      <div className="admin-dialog" style={{
         background: 'var(--ap-bg-modal)',
         border: '1px solid var(--ap-border)',
         borderRadius: 12, padding: '24px 28px', width, maxWidth: '92vw',
@@ -698,7 +714,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--ap-bg-main)', fontFamily: F, color: 'var(--ap-text-primary)', display: 'flex', flexDirection: 'column' }}>
+    <div className="admin-page" style={{ minHeight: '100vh', background: 'var(--ap-bg-main)', fontFamily: F, color: 'var(--ap-text-primary)', display: 'flex', flexDirection: 'column' }}>
       <ThemeStyles theme={theme} />
 
       {/* ── Top Header / Minimalist Navigation Tier ── */}
@@ -729,6 +745,7 @@ export default function AdminPage() {
                   key={item.id}
                   onClick={() => setActiveTab(item.id as any)}
                   className="admin-header__nav-item"
+                  aria-current={isActive ? 'page' : undefined}
                   aria-label={item.title}
                   title={item.title}
                   style={{
@@ -817,10 +834,10 @@ export default function AdminPage() {
       </header>
 
       {/* ── Main Content Container ── */}
-      <main style={{ flex: 1, maxWidth: 1320, width: '100%', margin: '0 auto', padding: '24px 24px 40px', boxSizing: 'border-box' }}>
+      <main className="admin-page__main" style={{ flex: 1, maxWidth: 1320, width: '100%', margin: '0 auto', padding: '30px 28px 48px', boxSizing: 'border-box' }}>
 
         {/* Page Header Bar (Clean Single-Level) */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+        <div className="admin-page__heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--ap-text-primary)' }}>
               {activeTab === 'dashboard' && 'Tổng quan quản trị'}
@@ -905,7 +922,7 @@ export default function AdminPage() {
             s.species_name.toLowerCase().includes(speciesSearch.toLowerCase().trim())
           );
           return (
-          <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+          <div className="admin-data-card" style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách loài cá ({filteredSpecies.length})</span>
               <input
@@ -985,7 +1002,7 @@ export default function AdminPage() {
           const paginatedDevices = filteredDevices.slice(devicePage * 12, (devicePage + 1) * 12);
           
           return (
-          <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+          <div className="admin-data-card admin-data-card--devices" style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
             <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-border)', flexWrap: 'wrap', gap: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Kho thiết bị ({filteredDevices.length})</span>
 
@@ -1124,7 +1141,7 @@ export default function AdminPage() {
                         <td style={{ padding: '12px 20px', fontWeight: 600, fontFamily: 'monospace', color: 'var(--ap-text-primary)' }}>{d.mac_address}</td>
                         <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{d.firmware_version}</td>
                         <td style={{ padding: '12px 20px' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: statusColor }}>
+                          <span className={`admin-status ${d.tank_id ? 'admin-status--warning' : isBought ? 'admin-status--info' : 'admin-status--success'}`} style={{ fontSize: 12, fontWeight: 600, color: statusColor }}>
                             {status}
                           </span>
                         </td>
@@ -1181,7 +1198,7 @@ export default function AdminPage() {
           });
 
           return (
-            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+            <div className="admin-data-card admin-data-card--staff" style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách nhân viên ({filteredStaff.length}/{staff.length})</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1249,8 +1266,10 @@ export default function AdminPage() {
                         <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--ap-text-primary)' }}>{s.full_name}</td>
                         <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.email}</td>
                         <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{s.phone || '-'}</td>
-                        <td style={{ padding: '12px 20px', color: 'var(--ap-primary)', fontWeight: 600 }}>
+                        <td style={{ padding: '12px 20px' }}>
+                          <span className="admin-role-badge">
                           {STAFF_ROLE_LABELS[s.role as StaffRole] || 'Staff'}
+                          </span>
                         </td>
                         <td style={{ padding: '12px 20px', color: 'var(--ap-text-muted)', fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString('vi-VN')}</td>
                         <td style={{ padding: '12px 20px', textAlign: 'right' }}>
@@ -1285,12 +1304,12 @@ export default function AdminPage() {
           });
 
           return (
-            <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+            <div className="admin-data-card admin-data-card--orders" style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Danh sách đơn hàng ({filteredOrders.length}/{orders.length})</span>
                   {pendingOrdersCount > 0 && (
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '3px 10px', borderRadius: 100 }}>
+                    <span className="admin-pending-count" style={{ fontSize: 13, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '3px 10px', borderRadius: 100 }}>
                       {pendingOrdersCount} đơn chờ duyệt
                     </span>
                   )}
@@ -1374,7 +1393,7 @@ export default function AdminPage() {
                           {order.paymentMethod}
                         </td>
                         <td style={{ padding: '14px 20px' }}>
-                          <span style={{ color: ORDER_STATUS_META[order.status]?.color || 'var(--ap-text-secondary)', fontSize: 13, fontWeight: 700 }}>
+                          <span className={`admin-status admin-status--${order.status}`} style={{ color: ORDER_STATUS_META[order.status]?.color || 'var(--ap-text-secondary)', fontSize: 13, fontWeight: 700 }}>
                             {ORDER_STATUS_META[order.status]?.label || order.status}
                           </span>
                         </td>
@@ -1421,7 +1440,7 @@ export default function AdminPage() {
 
         {/* TAB SUBSCRIPTIONS */}
         {activeTab === 'subscriptions' && (
-          <div style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
+          <div className="admin-data-card admin-data-card--subscriptions" style={{ background: 'var(--ap-bg-card)', borderRadius: 8, border: '1px solid var(--ap-border)', overflow: 'hidden', boxShadow: 'var(--ap-shadow)' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--ap-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ap-text-primary)' }}>Gói cước dịch vụ ({subscriptionPlans.length})</span>
             </div>
@@ -1443,12 +1462,22 @@ export default function AdminPage() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td style={{ padding: '14px 20px', color: 'var(--ap-text-primary)', fontWeight: 600 }}>{plan.name}</td>
-                      <td style={{ padding: '14px 20px', color: 'var(--ap-text-secondary)' }}>{plan.plan_type}</td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <span className={`admin-plan-badge admin-plan-badge--${plan.plan_type}`}>
+                          {plan.plan_type === 'free' ? 'Miễn phí' : plan.plan_type === 'enterprise' ? 'Doanh nghiệp' : 'Cao cấp'}
+                        </span>
+                      </td>
                       <td style={{ padding: '14px 20px', color: 'var(--ap-primary)', fontWeight: 700 }}>
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(plan.price)}
                       </td>
                       <td style={{ padding: '14px 20px', color: 'var(--ap-text-secondary)', fontSize: 12 }}>
-                        Bể tối đa: {plan.max_tanks} • Lưu lịch sử: {plan.history_days} ngày • Setup Thiết bị: {plan.smart_device_setup ? 'Có' : 'Không'}
+                        <div className="admin-plan-benefits">
+                          <span><strong>{plan.max_tanks}</strong> bể tối đa</span>
+                          <span><strong>{plan.history_days}</strong> ngày lưu lịch sử</span>
+                          <span className={plan.smart_device_setup ? 'is-included' : 'is-excluded'}>
+                            Setup thiết bị: <strong>{plan.smart_device_setup ? 'Có' : 'Không'}</strong>
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))}
