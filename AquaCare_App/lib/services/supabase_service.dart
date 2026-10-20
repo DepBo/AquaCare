@@ -70,6 +70,7 @@ class SupabaseService {
         .single();
 
     if (availableDevice == null) return created;
+    // Attach after creation; the cleanup below compensates if attachment fails.
     try {
       final attached = await client
           .from('devices')

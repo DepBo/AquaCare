@@ -19,11 +19,13 @@ import 'customer_theme.dart';
 // Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+// A root navigator key lets auth deep links replace the stack without a local context.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load service configuration before initializing Firebase and Supabase clients.
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp();
@@ -52,6 +54,7 @@ void main() async {
   final role = prefs.getString('role');
   Widget initialScreen = const LoginScreen();
 
+  // Treat the cached role only as a routing hint after session restoration succeeds.
   if (refreshToken != null && refreshToken.isNotEmpty) {
     try {
       await Supabase.instance.client.auth.setSession(refreshToken);
@@ -101,6 +104,7 @@ class _AquaCareAppState extends State<AquaCareApp> {
           return;
         }
 
+        // Supabase may emit repeated recovery events; open only one reset screen.
         _openingRecovery = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           navigatorKey.currentState?.pushAndRemoveUntil(
