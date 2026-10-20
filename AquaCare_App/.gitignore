@@ -43,6 +43,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# KiCad temporary files
-*.kicad_prl
-*.lck
+
+
+
+
+
+
+
