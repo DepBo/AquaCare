@@ -10,8 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboard_screen.dart';
 import 'admin_screen.dart';
+import '../config/api_config.dart';
 
-const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
+final String apiUrl = '${ApiConfig.baseUrl}/api/auth';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});

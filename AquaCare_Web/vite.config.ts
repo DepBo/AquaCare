@@ -7,7 +7,7 @@ const pubspec = readFileSync(new URL('../AquaCare_App/pubspec.yaml', import.meta
 const appVersion = pubspec.match(/^version:\s*([^\s+#]+)/m)?.[1]
 if (!appVersion) throw new Error('Không tìm thấy version trong AquaCare_App/pubspec.yaml')
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __AQUACARE_APP_VERSION__: JSON.stringify(appVersion),
   },
@@ -16,4 +16,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-})
+  server: command === 'serve' ? {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+      },
+    },
+  } : undefined,
+}))

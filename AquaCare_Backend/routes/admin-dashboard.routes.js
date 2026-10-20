@@ -20,6 +20,70 @@ function monthBoundaries(now) {
   };
 }
 
+function yearBoundaries(year) {
+  return {
+    start: new Date(Date.UTC(year, 0, 1) - VIETNAM_OFFSET_MS),
+    end: new Date(Date.UTC(year + 1, 0, 1) - VIETNAM_OFFSET_MS),
+  };
+}
+
+function buildAnnualData({ year, deliveredOrders, availableYears, now = new Date() }) {
+  const totals = Array(12).fill(0);
+  const byVersion = Array.from({ length: 12 }, () => ({ V1: 0, V2: 0, V3: 0, V4: 0 }));
+  for (const order of deliveredOrders) {
+    const monthKey = vnDateKey(order.created_at);
+    if (!monthKey.startsWith(`${year}-`)) continue;
+    const monthIndex = Number(monthKey.slice(5, 7)) - 1;
+    const orderTotal = Number(order.total_price);
+    if (!Number.isFinite(orderTotal) || orderTotal < 0) continue;
+    totals[monthIndex] += orderTotal;
+
+    const items = Array.isArray(order.order_items) ? order.order_items : [];
+    const pricedItems = items.map(item => ({
+      version: /^v[1-4]$/i.test(String(item.product_id || '')) ? String(item.product_id).toUpperCase() : null,
+      subtotal: Number(item.product_price) * Number(item.quantity),
+    })).filter(item => Number.isFinite(item.subtotal) && item.subtotal > 0);
+    const subtotal = pricedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    if (subtotal <= 0) continue;
+    let allocated = 0;
+    pricedItems.forEach((item, index) => {
+      const amount = index === pricedItems.length - 1
+        ? orderTotal - allocated
+        : Math.floor(orderTotal * item.subtotal / subtotal);
+      allocated += amount;
+      if (item.version) byVersion[monthIndex][item.version] += amount;
+    });
+  }
+  const currentMonthKey = vnDateKey(now);
+  const currentYear = Number(currentMonthKey.slice(0, 4));
+  const currentMonth = Number(currentMonthKey.slice(5, 7));
+  const observed = totals.map((revenue, index) => year === currentYear && index + 1 > currentMonth ? null : revenue);
+  const months = observed.map((revenue, index) => ({
+    month: index + 1,
+    revenue,
+    growthPercent: index > 0 && revenue !== null && observed[index - 1] !== null && observed[index - 1] > 0
+      ? Math.round((revenue / observed[index - 1] - 1) * 10000) / 100
+      : null,
+    movingAverage: index >= 2 && revenue !== null && observed[index - 1] !== null && observed[index - 2] !== null
+      ? Math.round((observed[index - 2] + observed[index - 1] + revenue) / 3) : null,
+  }));
+  const growth = months.map(month => month.growthPercent).filter(value => value !== null);
+  const peakRevenue = Math.max(...observed.filter(value => value !== null));
+  return {
+    year,
+    availableYears,
+    basis: 'delivered_orders_by_created_at_vietnam',
+    months,
+    byVersion: byVersion.map((versions, index) => ({ month: index + 1, versions })),
+    highlights: {
+      peakMonthlyRevenue: peakRevenue,
+      peakMonth: peakRevenue > 0 ? observed.indexOf(peakRevenue) + 1 : null,
+      maxGrowthPercent: growth.some(value => value > 0) ? Math.max(...growth) : null,
+      maxDeclinePercent: growth.some(value => value < 0) ? Math.min(...growth) : null,
+    },
+  };
+}
+
 function makeSeries(amountByDay, now, days) {
   const localMidnight = Date.UTC(
     new Date(now.getTime() + VIETNAM_OFFSET_MS).getUTCFullYear(),
@@ -113,6 +177,42 @@ async function fetchDeliveredOrders(supabase, from, until) {
   }
 }
 
+async function fetchAnnualOrders(supabase, year) {
+  const { start: from, end: until } = yearBoundaries(year);
+  const orders = [];
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const { data } = await checked(
+      supabase.from('orders')
+        .select('id,total_price,created_at,order_items(product_id,product_price,quantity)')
+        .eq('status', 'delivered')
+        .gte('created_at', from.toISOString())
+        .lt('created_at', until.toISOString())
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(start, start + PAGE_SIZE - 1),
+      'annual delivered orders',
+    );
+    orders.push(...data);
+    if (data.length < PAGE_SIZE) return orders;
+  }
+}
+
+async function loadAnnualDashboard(supabase, year, now = new Date()) {
+  const currentYear = Number(vnDateKey(now).slice(0, 4));
+  const [orders, earliest] = await Promise.all([
+    fetchAnnualOrders(supabase, year),
+    checked(supabase.from('orders').select('created_at').eq('status', 'delivered')
+      .order('created_at', { ascending: true }).limit(1), 'earliest delivered order'),
+  ]);
+  const earliestYear = earliest.data?.length
+    ? Number(vnDateKey(earliest.data[0].created_at).slice(0, 4))
+    : currentYear;
+  const firstYear = Math.max(2000, Math.min(currentYear - 2, earliestYear));
+  const availableYears = Array.from({ length: currentYear - firstYear + 1 }, (_, index) => currentYear - index);
+  if (!availableYears.includes(year)) availableYears.push(year);
+  return buildAnnualData({ year, deliveredOrders: orders, availableYears, now });
+}
+
 async function loadDashboard(supabase, now = new Date()) {
   const { previousStart, nextStart } = monthBoundaries(now);
   const [deliveredOrders, pending, packing, shipping, assignedDevices, staff, recentOrders] =
@@ -140,9 +240,9 @@ async function loadDashboard(supabase, now = new Date()) {
   });
 }
 
-function createAdminDashboardRouter({ supabase, dashboardLoader = loadDashboard }) {
+function createAdminDashboardRouter({ supabase, dashboardLoader = loadDashboard, annualLoader = loadAnnualDashboard }) {
   const router = express.Router();
-  router.get('/', async (req, res) => {
+  const requireAdmin = async (req, res, next) => {
     const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || '');
     if (!match) return res.status(401).json({ error: 'Authentication required' });
 
@@ -158,7 +258,14 @@ function createAdminDashboardRouter({ supabase, dashboardLoader = loadDashboard 
       if (profile?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
-
+      return next();
+    } catch (error) {
+      console.error('[ADMIN DASHBOARD AUTH]', error);
+      return res.status(500).json({ error: 'Failed to authorize admin dashboard' });
+    }
+  };
+  router.get('/', requireAdmin, async (req, res) => {
+    try {
       const dashboard = await dashboardLoader(supabase);
       res.set('Cache-Control', 'private, no-store');
       return res.json(dashboard);
@@ -167,7 +274,22 @@ function createAdminDashboardRouter({ supabase, dashboardLoader = loadDashboard 
       return res.status(500).json({ error: 'Failed to load admin dashboard' });
     }
   });
+  router.get('/annual', requireAdmin, async (req, res) => {
+    const currentYear = Number(vnDateKey(new Date()).slice(0, 4));
+    const rawYear = req.query.year === undefined ? String(currentYear) : req.query.year;
+    if (typeof rawYear !== 'string' || !/^\d{4}$/.test(rawYear) || Number(rawYear) < 2000 || Number(rawYear) > currentYear) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+    try {
+      const annual = await annualLoader(supabase, Number(rawYear));
+      res.set('Cache-Control', 'private, no-store');
+      return res.json(annual);
+    } catch (error) {
+      console.error('[ADMIN DASHBOARD ANNUAL]', error);
+      return res.status(500).json({ error: 'Failed to load annual dashboard' });
+    }
+  });
   return router;
 }
 
-module.exports = { createAdminDashboardRouter, loadDashboard, buildDashboardData, monthBoundaries };
+module.exports = { createAdminDashboardRouter, loadDashboard, loadAnnualDashboard, buildDashboardData, buildAnnualData, monthBoundaries, yearBoundaries };

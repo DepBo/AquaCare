@@ -92,3 +92,36 @@
 @media (prefers-reduced-motion: reduce) { .admin-preview *, .admin-preview *::before, .admin-preview *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 @media (max-width: 950px) { .admin-preview__top-grid, .admin-preview__middle-grid, .admin-preview__bottom-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .admin-preview__intro { align-items: start; flex-direction: column; } .admin-preview__metric-grid { gap: 9px; } .admin-preview__metric { padding: 14px; } .admin-preview__revenue { min-height: 320px; } .admin-preview__panel { padding: 17px; } .admin-preview__activity time { display: none; } }
+.admin-preview__monthly .admin-preview__panel-heading { align-items: center; flex-wrap: wrap; }
+.admin-preview__sample { border-radius: 999px; padding: 7px 11px; background: var(--ap-bg-subtle); color: var(--ap-text-muted); font-size: 11px; font-weight: 700; }
+.admin-preview__year-filter { display: flex; align-items: center; gap: 7px; color: var(--ap-text-muted); font-size: 12px; font-weight: 700; }
+.admin-preview__year-filter select { min-width: 84px; padding: 8px 10px; border: 1px solid var(--ap-border); border-radius: 9px; background: var(--ap-bg-card); color: var(--ap-text-primary); font: inherit; }
+.admin-preview__monthly-chart-scroll { width: 100%; overflow-x: auto; }
+.admin-preview__monthly-chart { width: 100%; min-width: 690px; height: 280px; margin: 18px 0 22px; }
+.admin-preview__monthly-table-scroll { width: 100%; overflow-x: auto; border: 1px solid var(--ap-border); border-radius: 12px; }
+.admin-preview__monthly-table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: 12px; }
+.admin-preview__monthly-table th, .admin-preview__monthly-table td { padding: 12px 15px; border-bottom: 1px solid var(--ap-border); text-align: right; white-space: nowrap; }
+.admin-preview__monthly-table th:first-child, .admin-preview__monthly-table td:first-child { text-align: left; }
+.admin-preview__monthly-table thead { background: var(--ap-bg-subtle); color: var(--ap-text-secondary); }
+.admin-preview__monthly-table tbody th { font-weight: 700; }
+.admin-preview__monthly-table tbody tr:last-child th, .admin-preview__monthly-table tbody tr:last-child td { border-bottom: 0; }
+.admin-preview__monthly-table tfoot { background: var(--ap-bg-subtle); font-weight: 800; }
+.admin-preview__monthly-table .positive { color: #078f71; font-weight: 700; }
+.admin-preview__monthly-table .negative { color: #d25757; font-weight: 700; }
+@media (max-width: 600px) { .admin-preview__monthly-chart { height: 240px; } }
+.admin-preview__versions .admin-preview__panel-heading { align-items: center; flex-wrap: wrap; }
+.admin-preview__version-filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-preview__version-filters label { display: flex; align-items: center; gap: 7px; color: var(--ap-text-muted); font-size: 12px; font-weight: 700; }
+.admin-preview__version-filters select { min-width: 84px; padding: 8px 10px; border: 1px solid var(--ap-border); border-radius: 9px; background: var(--ap-bg-card); color: var(--ap-text-primary); font: inherit; }
+.admin-preview__version-note { margin: 14px 0; color: var(--ap-text-muted); font-size: 11px; }
+.admin-preview__version-table { min-width: 510px; }
+.admin-preview__version-table tbody tr.highest { background: rgba(36, 174, 133, .15); }
+.admin-preview__version-table tbody tr.lowest { background: rgba(210, 87, 87, .08); }
+.admin-preview__version-tag { display: inline-block; margin-left: 9px; font-size: 10px; font-weight: 700; color: var(--ap-text-secondary); }
+.admin-preview__insights-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.admin-preview__highlights-table { min-width: 420px; }
+.admin-preview__highlights-table tbody th { white-space: normal; }
+@media (max-width: 1050px) { .admin-preview__insights-grid { grid-template-columns: 1fr; } }
+.admin-preview__annual-state { display: grid; justify-items: start; gap: 8px; color: var(--ap-text-primary); }
+.admin-preview__annual-state p { margin: 0; color: var(--ap-text-muted); }
+.admin-preview__annual-state button { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--ap-primary); font-weight: 700; }

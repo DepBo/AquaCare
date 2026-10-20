@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/api_config.dart';
 
 class SupabaseService {
   SupabaseService._privateConstructor() : client = Supabase.instance.client;
@@ -558,13 +559,14 @@ class SupabaseService {
       int pin = 0;
       if (relayType == 'pump') {
         pin = 3;
-      } else if (relayType == 'aerator')
+      } else if (relayType == 'aerator') {
         pin = 2;
-      else if (relayType == 'light')
+      } else if (relayType == 'light') {
         pin = 1;
+      }
 
       final url = Uri.parse(
-        'https://aquacare-p78r.onrender.com/api/device/relay',
+        '${ApiConfig.baseUrl}/api/device/relay',
       );
       final response = await http.post(
         url,
@@ -596,7 +598,7 @@ class SupabaseService {
   Future<void> sendDeviceCommand(String tankId, String command) async {
     try {
       final url = Uri.parse(
-        'https://aquacare-p78r.onrender.com/api/device/command',
+        '${ApiConfig.baseUrl}/api/device/command',
       );
       final response = await http.post(
         url,

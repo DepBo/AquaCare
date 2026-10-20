@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'admin_screen.dart';
+import '../config/api_config.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -12,8 +13,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// const String apiUrl = 'http://172.20.10.8:5000/api/auth';
-const String apiUrl = 'https://aquacare-p78r.onrender.com/api/auth';
+final String apiUrl = '${ApiConfig.baseUrl}/api/auth';
 const String passwordRecoveryRedirect = 'aquacare://reset-password';
 
 class LoginScreen extends StatefulWidget {

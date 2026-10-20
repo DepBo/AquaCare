@@ -15,6 +15,8 @@ const allowedOrigins = [
   'http://localhost:5173',          // Dev local (Vite default)
   'http://localhost:3000',          // Dev local (alt port)
   'https://aquacare-p78r.onrender.com', // Backend Render (self)
+  'https://aquacare.id.vn',        // Production custom domain
+  'https://www.aquacare.id.vn',    // Optional www domain
   /\.vercel\.app$/,                 // Mọi subdomain Vercel
   /\.netlify\.app$/,                // Mọi subdomain Netlify
   /\.github\.io$/,                  // GitHub Pages
