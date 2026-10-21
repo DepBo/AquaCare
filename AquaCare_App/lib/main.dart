@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/app_version_gate.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
@@ -159,6 +160,8 @@ class _AquaCareAppState extends State<AquaCareApp> {
           surface: const Color(0xFF0F1A30),
         ),
       ),
+      builder: (context, child) =>
+          AppVersionGate(destination: child ?? const SizedBox.shrink()),
       home: SplashScreen(
         destination: OnboardingScreen(destination: widget.initialScreen),
       ),

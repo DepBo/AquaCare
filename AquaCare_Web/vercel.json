@@ -1,4 +1,7 @@
 {
+  "headers": [
+    { "source": "/app-version.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] }
+  ],
   "rewrites": [
     { "source": "/login", "destination": "/index.html" },
     { "source": "/signup", "destination": "/index.html" },
