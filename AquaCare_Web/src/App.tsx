@@ -21,6 +21,7 @@ import CartPage from './pages/CartPage'
 import { CartProvider } from './contexts/CartContext'
 import AdminPage from './pages/AdminPage'
 import StaffPage from './pages/StaffPage'
+import NotFoundPage from './pages/NotFoundPage'
 import { clearVerifiedRole, getVerifiedRole, rememberVerifiedRole } from './authRoleCache'
 
 const authClient = createClient(
@@ -213,6 +214,7 @@ function AppRoutes() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<RoleRoute role="admin"><AdminPage /></RoleRoute>} />
         <Route path="/staff" element={<RoleRoute role="staff"><StaffPage /></RoleRoute>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </PageTransition>
   )

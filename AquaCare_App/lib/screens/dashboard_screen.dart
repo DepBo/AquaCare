@@ -24,6 +24,16 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 
 // All symbols used by the customer overview are vector SVGs, not font icons.
+// Keeping icon paths local avoids a network request during dashboard rendering.
+// Each entry uses the same 24-by-24 coordinate system for predictable sizing.
+// The widget applies color through a filter so callers control visual state.
+// Width and height share one value to preserve the original icon proportions.
+// Stroke attributes live on the wrapper SVG and remain consistent across paths.
+// The fallback check mark keeps an unknown icon name safe and visible.
+// Semantic labels expose the requested icon name to accessibility services.
+// This component intentionally owns no gesture or navigation behavior.
+// Callers remain responsible for tooltips and surrounding touch targets.
+// New dashboard icons should be added to the path map with a unique key.
 class _AquaSvg extends StatelessWidget {
   final String name;
   final double size;

@@ -64,6 +64,7 @@ class FCMService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('🔔 Đã nhận thông báo khi đang mở app: ${message.messageId}');
       
+      // Notify the active alerts view so it can refresh its own data source.
       if (onAlertReceived != null) {
         onAlertReceived!();
       }
@@ -72,7 +73,7 @@ class FCMService {
         final title = message.notification?.title ?? 'Thông báo';
         final body = message.notification?.body ?? '';
 
-        // Hiển thị SnackBar thông qua GlobalKey
+        // Foreground notifications need in-app feedback, so use the root messenger.
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Column(
