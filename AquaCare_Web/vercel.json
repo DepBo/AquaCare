@@ -1,5 +1,15 @@
 {
+  "headers": [
+    { "source": "/app-version.json", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/signup", "destination": "/index.html" },
+    { "source": "/forgot-password", "destination": "/index.html" },
+    { "source": "/reset-password", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/cart", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/staff", "destination": "/index.html" }
   ]
 }

@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import './LoginPage.css'
+import { API_URL } from '../config/api'
 
 const F = "'Inter', sans-serif"
-const API_URL = import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',

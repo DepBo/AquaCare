@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/api_config.dart';
+import '../widgets/admin_revenue_panels.dart';
 
 class AdminDashboardPreview extends StatefulWidget {
   const AdminDashboardPreview({
@@ -20,22 +22,27 @@ class AdminDashboardPreview extends StatefulWidget {
 }
 
 class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
+
   // Load the admin dashboard from the authenticated backend API.
   static const bool _previewOnly = false;
-  static const _productionEndpoint =
-      'https://aquacare-p78r.onrender.com/api/admin/dashboard';
   static const _debugEndpointOverride =
       String.fromEnvironment('ADMIN_DASHBOARD_API_URL');
   Uri get _endpoint {
     if (kDebugMode && _debugEndpointOverride.isNotEmpty) {
       return Uri.parse(_debugEndpointOverride);
     }
-    return Uri.parse(_productionEndpoint);
+    return Uri.parse('${ApiConfig.baseUrl}/api/admin/dashboard');
   }
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _annualData;
   String? _error;
+  String? _annualError;
   bool _loading = true;
+  bool _annualLoading = true;
+  int _annualRequestId = 0;
   bool _show30Days = false;
+  late int _versionRevenueMonth;
+  late int _versionRevenueYear;
 
   Color get _text =>
       widget.isDark ? const Color(0xFFF4F4F5) : const Color(0xFF0F172A);
@@ -48,12 +55,72 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
   @override
   void initState() {
     super.initState();
+    final vietnamNow = DateTime.now().toUtc().add(const Duration(hours: 7));
+    _versionRevenueYear = vietnamNow.year;
+    _versionRevenueMonth = vietnamNow.month - 1;
     if (_previewOnly) {
       _data = _demoDashboard();
       _loading = false;
     } else {
       _load();
     }
+    _loadAnnual();
+  }
+
+  Future<void> _loadAnnual() async {
+    final requestId = ++_annualRequestId;
+    final year = _versionRevenueYear;
+    setState(() { _annualLoading = true; _annualError = null; });
+    try {
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      if (token == null) throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      final url = _endpoint.replace(path: '${_endpoint.path}/annual', queryParameters: {'year': '$year'});
+      final response = await http.get(url, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode != 200) {
+        throw Exception('Không tải được doanh thu năm $year (HTTP ${response.statusCode}).');
+      }
+      final value = jsonDecode(response.body);
+      if (value is! Map<String, dynamic> || value['year'] != year) {
+        throw Exception('Dữ liệu doanh thu theo năm không hợp lệ.');
+      }
+      if (mounted && _annualRequestId == requestId) setState(() => _annualData = value);
+    } catch (error) {
+      if (mounted && _annualRequestId == requestId) {
+        setState(() => _annualError = error.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted && _annualRequestId == requestId) setState(() => _annualLoading = false);
+    }
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([_load(), _loadAnnual()]);
+  }
+
+  void _selectRevenueYear(int year) {
+    if (year == _versionRevenueYear) return;
+    final vietnamNow = DateTime.now().toUtc().add(const Duration(hours: 7));
+    setState(() {
+      _versionRevenueYear = year;
+      if (year == vietnamNow.year && _versionRevenueMonth >= vietnamNow.month) {
+        _versionRevenueMonth = vietnamNow.month - 1;
+      }
+      _annualData = null;
+    });
+    _loadAnnual();
+  }
+
+  List<int> get _availableRevenueYears {
+    final raw = _annualData?['availableYears'];
+    return raw is List ? raw.whereType<num>().map((value) => value.toInt()).toList() : [_versionRevenueYear];
+  }
+
+  List<int> get _availableRevenueMonths {
+    final raw = _annualData?['months'];
+    if (raw is! List) return [_versionRevenueMonth];
+    return raw.map(_map).where((month) => month['revenue'] != null)
+        .map((month) => _number(month['month']) - 1).toList();
   }
 
   Map<String, dynamic> _demoDashboard() {
@@ -198,7 +265,7 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
     final devices = _map(data['devices']);
     final staff = _map(data['staff']);
     return RefreshIndicator(
-      onRefresh: _previewOnly ? () async {} : _load,
+      onRefresh: _previewOnly ? () async {} : _refreshAll,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),
@@ -218,7 +285,7 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
                   style: _style(12, const Color(0xFF0284C7), FontWeight.w700))
             else
               TextButton.icon(
-                onPressed: _loading ? null : _load,
+                onPressed: _loading || _annualLoading ? null : _refreshAll,
                 icon: Icon(_loading ? Icons.hourglass_top_rounded : Icons.refresh_rounded,
                     size: 17),
                 label: Text(_loading ? 'Đang cập nhật' : 'Cập nhật dữ liệu'),
@@ -251,6 +318,30 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
             ]),
             const SizedBox(height: 20),
             _salesChart(revenue),
+            const SizedBox(height: 14),
+            if (_annualData != null && !_annualLoading && _annualError == null) ...[
+              _monthlyRevenuePreview(),
+              const SizedBox(height: 14),
+              LayoutBuilder(builder: (context, constraints) {
+              if (constraints.maxWidth >= 820) {
+                return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: _versionRevenuePreview()),
+                  const SizedBox(width: 14),
+                  Expanded(child: _highlightsPreview()),
+                ]);
+              }
+              return Column(children: [
+                _versionRevenuePreview(),
+                const SizedBox(height: 14),
+                _highlightsPreview(),
+              ]);
+              }),
+            ] else _surface(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_annualLoading ? 'Đang tải doanh thu theo năm...' : (_annualError ?? 'Không tải được doanh thu theo năm'),
+                  style: _style(13, _muted)),
+              if (!_annualLoading) TextButton.icon(onPressed: _loadAnnual,
+                  icon: const Icon(Icons.refresh_rounded), label: const Text('Thử lại')),
+            ])),
             const SizedBox(height: 14),
             _orderProgress(orders),
             const SizedBox(height: 14),
@@ -463,6 +554,37 @@ class _AdminDashboardPreviewState extends State<AdminDashboardPreview> {
       ],
     ));
   }
+
+  Widget _monthlyRevenuePreview() => RevenueTrendPanel(
+    dark: widget.isDark,
+    months: (_annualData?['months'] as List).map(_map).toList(),
+    year: _versionRevenueYear,
+    years: _availableRevenueYears,
+    onYearChanged: _selectRevenueYear,
+    money: _money,
+  );
+
+  Widget _versionRevenuePreview() {
+    final byMonth = (_annualData?['byVersion'] as List).map(_map).toList();
+    return VersionRevenuePanel(
+      dark: widget.isDark,
+      versions: _map(byMonth[_versionRevenueMonth]['versions']),
+      month: _versionRevenueMonth,
+      year: _versionRevenueYear,
+      months: _availableRevenueMonths,
+      years: _availableRevenueYears,
+      onMonthChanged: (month) => setState(() => _versionRevenueMonth = month),
+      onYearChanged: _selectRevenueYear,
+      money: _money,
+    );
+  }
+
+  Widget _highlightsPreview() => RevenueHighlightsPanel(
+    dark: widget.isDark,
+    year: _versionRevenueYear,
+    highlights: _map(_annualData?['highlights']),
+    money: _money,
+  );
 
   Widget _orderProgress(Map<String, dynamic> orders) => _surface(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/app_version_gate.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
@@ -19,11 +20,13 @@ import 'customer_theme.dart';
 // Global key để có thể show SnackBar từ bất kỳ đâu (như từ trong file service)
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+// A root navigator key lets auth deep links replace the stack without a local context.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load service configuration before initializing Firebase and Supabase clients.
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp();
@@ -67,6 +70,7 @@ void main() async {
     await prefs.remove('user_info');
   }
 
+  // Treat the cached role only as a routing hint after session restoration succeeds.
   if (prefs.getBool('remember_login') != false &&
       refreshToken != null &&
       refreshToken.isNotEmpty) {
@@ -118,6 +122,7 @@ class _AquaCareAppState extends State<AquaCareApp> {
           return;
         }
 
+        // Supabase may emit repeated recovery events; open only one reset screen.
         _openingRecovery = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           navigatorKey.currentState?.pushAndRemoveUntil(
@@ -155,6 +160,8 @@ class _AquaCareAppState extends State<AquaCareApp> {
           surface: const Color(0xFF0F1A30),
         ),
       ),
+      builder: (context, child) =>
+          AppVersionGate(destination: child ?? const SizedBox.shrink()),
       home: SplashScreen(
         destination: OnboardingScreen(destination: widget.initialScreen),
       ),

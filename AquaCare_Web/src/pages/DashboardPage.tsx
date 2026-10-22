@@ -14,6 +14,7 @@ import {
 import { createClient } from '@supabase/supabase-js'
 import { requestNotificationPermission, messaging } from '../config/firebase'
 import { onMessage } from 'firebase/messaging'
+import { API_URL } from '../config/api'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
@@ -21,7 +22,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const F = "'Inter', sans-serif"
-const API_URL = import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com'
 
 // ── Kiểu dữ liệu ────────────────────────────────────────────
 interface SensorReading { time: string; value: number }

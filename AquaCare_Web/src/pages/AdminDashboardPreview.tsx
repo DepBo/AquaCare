@@ -5,6 +5,10 @@ import {
   RefreshCw, ShoppingBag, TrendingUp, Users,
 } from 'lucide-react'
 import './AdminDashboardPreview.css'
+import MonthlyRevenuePreview from './MonthlyRevenuePreview'
+import VersionRevenuePreview from './VersionRevenuePreview'
+import type { AnnualDashboardData } from './adminAnnualData'
+import { API_URL } from '../config/api'
 
 type AdminSection = 'orders' | 'devices' | 'staff' | 'subscriptions'
 type RevenuePoint = { date: string; amount: number }
@@ -49,7 +53,6 @@ const demoDashboard = (): DashboardData => {
   }
 }
 
-const API_URL = (import.meta.env.VITE_API_URL || 'https://aquacare-p78r.onrender.com').replace(/\/+$/, '')
 const money = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)} ₫`
 const dateLabel = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh',
@@ -67,6 +70,10 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
   supabase: SupabaseClient
 }) {
   const [range, setRange] = useState<'7d' | '30d'>('7d')
+  const [revenueYear, setRevenueYear] = useState(() => Number(new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())))
+  const [annualData, setAnnualData] = useState<AnnualDashboardData | null>(null)
+  const [annualLoading, setAnnualLoading] = useState(true)
+  const [annualError, setAnnualError] = useState<string | null>(null)
   const [data, setData] = useState<DashboardData | null>(() => PREVIEW_ONLY ? demoDashboard() : null)
   const [loading, setLoading] = useState(!PREVIEW_ONLY)
   const [error, setError] = useState<string | null>(null)
@@ -101,6 +108,31 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
 
   useEffect(() => { if (!PREVIEW_ONLY) void loadDashboard() }, [loadDashboard])
 
+  const loadAnnual = useCallback(async (signal?: AbortSignal) => {
+    setAnnualLoading(true)
+    setAnnualError(null)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token || localStorage.getItem('access_token')
+      if (!token) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      const response = await fetch(`${API_URL}/api/admin/dashboard/annual?year=${revenueYear}`, {
+        headers: { Authorization: `Bearer ${token}` }, signal,
+      })
+      if (!response.ok) throw new Error(`Không tải được doanh thu theo năm (HTTP ${response.status}).`)
+      const annual = await response.json() as AnnualDashboardData
+      if (!signal?.aborted) setAnnualData(annual)
+    } catch (cause) {
+      if (!signal?.aborted) setAnnualError(cause instanceof Error ? cause.message : 'Không tải được doanh thu theo năm.')
+    } finally {
+      if (!signal?.aborted) setAnnualLoading(false)
+    }
+  }, [revenueYear, supabase])
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadAnnual(controller.signal)
+    return () => controller.abort()
+  }, [loadAnnual])
+
   if (!data) {
     return <div className="admin-preview__state" role="status">
       <strong>{loading ? 'Đang tải tổng quan...' : 'Chưa thể hiển thị tổng quan'}</strong>
@@ -126,7 +158,7 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
         {PREVIEW_ONLY ? (
           <span className="admin-preview__refresh">Dữ liệu minh họa · Chưa kết nối backend</span>
         ) : (
-          <button className="admin-preview__refresh" onClick={() => void loadDashboard()} disabled={loading}>
+          <button className="admin-preview__refresh" onClick={() => { void loadDashboard(); void loadAnnual() }} disabled={loading || annualLoading}>
             <RefreshCw size={14} className={loading ? 'spinning' : ''} />
             {loading ? 'Đang cập nhật' : `Cập nhật ${timeLabel(data.generatedAt)}`}
           </button>
@@ -218,6 +250,15 @@ export default function AdminDashboardPreview({ onNavigate, supabase }: {
           <button className="admin-preview__text-link" onClick={() => onNavigate('orders')}>Xem đơn hàng <ArrowRight size={15} /></button>
         </section>
       </div>
+
+      {annualData?.year === revenueYear && !annualLoading && !annualError ? <>
+        <MonthlyRevenuePreview data={annualData} onYearChange={setRevenueYear} />
+        <VersionRevenuePreview data={annualData} onYearChange={setRevenueYear} />
+      </> : <section className="admin-preview__panel admin-preview__annual-state" role="status">
+        <strong>{annualLoading ? `Đang tải doanh thu năm ${revenueYear}...` : 'Không tải được doanh thu theo năm'}</strong>
+        {annualError && <p>{annualError}</p>}
+        {!annualLoading && <button onClick={() => void loadAnnual()}><RefreshCw size={15} /> Thử lại</button>}
+      </section>}
 
       <div className="admin-preview__bottom-grid">
         <section className="admin-preview__panel">
