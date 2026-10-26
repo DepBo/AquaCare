@@ -1,6 +1,6 @@
 {
-    "name": "aquacare_app",
-    "short_name": "aquacare_app",
+    "name": "AquaCare",
+    "short_name": "AquaCare",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
