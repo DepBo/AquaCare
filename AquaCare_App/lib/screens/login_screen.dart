@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'admin_screen.dart';
@@ -32,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _loading = false;
   bool _rememberMe = true;
   bool _googleLoading = false;
+  String? _installedVersion;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -46,6 +48,21 @@ class _LoginScreenState extends State<LoginScreen>
 
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _loadRememberPreference();
+    _loadInstalledVersion();
+  }
+
+  Future<void> _loadInstalledVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(
+        () => _installedVersion = info.buildNumber.isEmpty
+            ? info.version
+            : '${info.version} (${info.buildNumber})',
+      );
+    } catch (_) {
+      // The login screen remains usable if package metadata is unavailable.
+    }
   }
 
   Future<void> _loadRememberPreference() async {
@@ -562,6 +579,19 @@ class _LoginScreenState extends State<LoginScreen>
                                     ),
                                   ),
                                 ),
+                                if (_installedVersion != null) ...[
+                                  SizedBox(height: tight ? 4 : 10),
+                                  Center(
+                                    child: Text(
+                                      'AquaCare · Phiên bản $_installedVersion',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: compact ? 10 : 11,
+                                        color: const Color(0xFF8995A4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
