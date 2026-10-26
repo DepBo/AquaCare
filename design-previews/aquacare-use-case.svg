@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1790" viewBox="0 0 1800 1790"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="triangle" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.3"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.assoc{stroke:#94a3b8;stroke-width:1.6;fill:none}.relation{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.general{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#triangle)}</style><rect width="1800" height="1790" fill="white"/><rect x="300" y="105" width="1220" height="1480" rx="6" fill="#fbfdfd" stroke="#64748b" stroke-width="2"/>
+<text x="900" y="48" text-anchor="middle" font-size="32" fill="#16354a">AQUACARE · USE CASE DIAGRAM</text>
+<text x="900" y="80" text-anchor="middle" font-size="20" fill="#16354a">Tổng quan chức năng thực tế · Web, Mobile &amp; Backend</text>
+<text x="910" y="140" text-anchor="middle" font-size="22" fill="#16354a">HỆ THỐNG AQUACARE</text>
+<path d="M102 585 H30 V180 H102" class="general"/>
+<path d="M102 1040 H48 V198 H102" class="general"/>
+<path d="M102 1400 H66 V216 H102" class="general"/>
+<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="130" cy="148" r="14"/><path d="M130,162v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>
+<text x="130" y="264" text-anchor="middle" font-size="21" fill="#16354a">Người dùng hệ thống</text>
+<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="130" cy="553" r="14"/><path d="M130,567v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>
+<text x="130" y="669" text-anchor="middle" font-size="21" fill="#16354a">Khách hàng</text>
+<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="130" cy="1008" r="14"/><path d="M130,1022v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>
+<text x="130" y="1124" text-anchor="middle" font-size="21" fill="#16354a">Nhân viên</text>
+<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="130" cy="1368" r="14"/><path d="M130,1382v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>
+<text x="130" y="1484" text-anchor="middle" font-size="21" fill="#16354a">Quản trị viên</text>
+<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="1680" cy="508" r="14"/><path d="M1680,522v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>
+<text x="1680" y="624" text-anchor="middle" font-size="21" fill="#16354a">Thiết bị IoT</text>
+<path d="M158 180 L375 200" class="assoc"/>
+<path d="M158 585 L375 320" class="assoc"/>
+<path d="M158 585 L375 430" class="assoc"/>
+<path d="M158 585 L375 540" class="assoc"/>
+<path d="M158 585 L375 650" class="assoc"/>
+<path d="M158 585 L375 760" class="assoc"/>
+<path d="M158 585 L375 870" class="assoc"/>
+<path d="M158 1040 L375 1010" class="assoc"/>
+<path d="M158 1040 L375 1130" class="assoc"/>
+<path d="M158 1400 L375 1290" class="assoc"/>
+<path d="M158 1400 L375 1400" class="assoc"/>
+<path d="M158 1400 L375 1510" class="assoc"/>
+<path d="M1395 540 H1652" class="assoc"/>
+<ellipse cx="580" cy="200" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="207" text-anchor="middle" font-size="22" fill="#16354a">Đăng nhập</text>
+<ellipse cx="580" cy="320" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="314" text-anchor="middle" font-size="22" fill="#16354a">Quản lý bể và</text>
+<text x="580" y="340" text-anchor="middle" font-size="22" fill="#16354a">cấu hình cảnh báo</text>
+<ellipse cx="580" cy="430" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="424" text-anchor="middle" font-size="22" fill="#16354a">Theo dõi chỉ số,</text>
+<text x="580" y="450" text-anchor="middle" font-size="22" fill="#16354a">lịch sử và cảnh báo</text>
+<ellipse cx="580" cy="540" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="547" text-anchor="middle" font-size="22" fill="#16354a">Bật / tắt thiết bị</text>
+<ellipse cx="1190" cy="540" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="1190" y="547" text-anchor="middle" font-size="22" fill="#16354a">Gửi lệnh tới thiết bị</text>
+<ellipse cx="580" cy="650" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="657" text-anchor="middle" font-size="22" fill="#16354a">Quản lý lịch bật / tắt</text>
+<ellipse cx="580" cy="760" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="767" text-anchor="middle" font-size="22" fill="#16354a">Đặt và theo dõi đơn hàng</text>
+<ellipse cx="580" cy="870" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="877" text-anchor="middle" font-size="22" fill="#16354a">Gửi yêu cầu hỗ trợ</text>
+<ellipse cx="580" cy="1010" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="1004" text-anchor="middle" font-size="22" fill="#16354a">Thực hiện công việc</text>
+<text x="580" y="1030" text-anchor="middle" font-size="22" fill="#16354a">được phân công</text>
+<ellipse cx="580" cy="1130" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="1137" text-anchor="middle" font-size="22" fill="#16354a">Xử lý yêu cầu hỗ trợ</text>
+<ellipse cx="1190" cy="1130" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="1190" y="1137" text-anchor="middle" font-size="22" fill="#16354a">Tạo công việc bảo trì</text>
+<ellipse cx="580" cy="1290" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="1297" text-anchor="middle" font-size="22" fill="#16354a">Xem thống kê, doanh thu</text>
+<ellipse cx="580" cy="1400" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="1407" text-anchor="middle" font-size="22" fill="#16354a">Duyệt đơn hàng</text>
+<ellipse cx="1190" cy="1400" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="1190" y="1407" text-anchor="middle" font-size="22" fill="#16354a">Tạo công việc đóng gói</text>
+<ellipse cx="580" cy="1510" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+<text x="580" y="1504" text-anchor="middle" font-size="22" fill="#16354a">Quản lý danh mục</text>
+<text x="580" y="1530" text-anchor="middle" font-size="22" fill="#16354a">và nhân viên</text>
+<path d="M785 540 H985" class="relation"/>
+<text x="885" y="522" text-anchor="middle" font-size="19" fill="#16354a">&lt;&lt;include&gt;&gt;</text>
+<path d="M985 1130 H785" class="relation"/>
+<text x="885" y="1112" text-anchor="middle" font-size="19" fill="#16354a">&lt;&lt;extend&gt;&gt;</text>
+<text x="1190" y="1200" text-anchor="middle" font-size="19" fill="#16354a">[Khi cần bảo trì trực tiếp]</text>
+<path d="M785 1400 H985" class="relation"/>
+<text x="885" y="1382" text-anchor="middle" font-size="19" fill="#16354a">&lt;&lt;include&gt;&gt;</text>
+<text x="1190" y="995" text-anchor="middle" font-size="20" fill="#16354a">Công việc theo quyền:</text>
+<text x="1190" y="1024" text-anchor="middle" font-size="19" fill="#16354a">kho, giao hàng / lắp đặt, hỗ trợ, bảo trì.</text>
+<text x="1190" y="1496" text-anchor="middle" font-size="19" fill="#16354a">Danh mục gồm: loài cá và ngưỡng,</text>
+<text x="1190" y="1525" text-anchor="middle" font-size="19" fill="#16354a">thiết bị / kho, gói cước.</text>
+<text x="900" y="1630" text-anchor="middle" font-size="23" fill="#16354a">Quan hệ UML</text>
+<path d="M180 1670 H275" class="assoc"/>
+<text x="290" y="1677" text-anchor="start" font-size="19" fill="#16354a">Liên kết actor – use case</text>
+<path d="M680 1670 H775" class="relation"/>
+<text x="790" y="1677" text-anchor="start" font-size="19" fill="#16354a">include / extend</text>
+<path d="M1200 1670 H1295" class="general"/>
+<text x="1310" y="1677" text-anchor="start" font-size="19" fill="#16354a">Generalization (kế thừa)</text>
+<text x="900" y="1720" text-anchor="middle" font-size="19" fill="#16354a">Khách hàng, nhân viên và quản trị viên kế thừa chức năng đăng nhập từ actor chung.</text>
+<text x="900" y="1750" text-anchor="middle" font-size="18" fill="#16354a">Sơ đồ tổng quan: các chức năng nhỏ như đăng ký, quên mật khẩu và hồ sơ được lược bớt.</text>
+</svg>

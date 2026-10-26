@@ -1,0 +1,30 @@
+
+> crabsense@0.0.0 build
+> tsc && vite build && node scripts/create-404.mjs
+
+vite v8.0.13 building client environment for production...
+[2K
+transforming...✓ 2401 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   165.51 kB │ gzip:   1.92 kB
+dist/assets/index-azI2leoP.css     74.99 kB │ gzip:  15.02 kB
+dist/assets/index---icnxP8.js   1,315.32 kB │ gzip: 347.12 kB
+
+[PLUGIN_TIMINGS] Your build spent significant time in plugins. Here is a breakdown:
+  - vite:css-post (51%)
+  - vite:css (19%)
+  - rolldown:vite-resolve (18%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.55s
+npm notice
+npm notice New major version of npm available! 11.13.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

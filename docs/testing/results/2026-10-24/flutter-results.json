@@ -1,0 +1,446 @@
+[
+  {
+    "name": "minimum build blocks only older installations",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/app_version_gate_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "old build cannot reach app content",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/app_version_gate_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "current build opens app",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/app_version_gate_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "returning to app enforces a newly raised minimum build",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/app_version_gate_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "failed check blocks app until retry succeeds",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/app_version_gate_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 280.0 dark=false at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 280.0 dark=true at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "Koi temperature uses the species range and backend warning margin",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/species_thresholds_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "other sensors use their species thresholds too",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/species_thresholds_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "missing species preserves backend defaults",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/species_thresholds_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 320.0 dark=false at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "auth actions are visible without scrolling at Size(320.0, 480.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "shield uses the same priority as the web overview",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "shield images are bundled with the mobile app",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all nine pond photos are included in the Flutter asset bundle",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 320.0 dark=true at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "auth actions are visible without scrolling at Size(320.0, 568.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 390.0 dark=false at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "auth actions are visible without scrolling at Size(360.0, 640.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 390.0 dark=true at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "auth actions are visible without scrolling at Size(393.0, 852.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "add tank button follows light and dark theme",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 600.0 dark=false at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "pond notification settings fit Size(280.0, 640.0) with larger text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 280.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 280.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 280.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "auth actions are visible without scrolling at Size(430.0, 932.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 320.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "pond notification settings fit Size(320.0, 700.0) with larger text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 320.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "revenue panels fit width 600.0 dark=true at large text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 320.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 360.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "splash finishes before opening the existing destination",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 360.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 360.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "pond notification settings fit Size(360.0, 780.0) with larger text",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "missing months and empty revenue render without invented values",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/admin_revenue_panels_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 390.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 390.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "login and register keep their controls on a compact phone",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/auth_ui_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 390.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 430.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 430.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 430.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 600.0 and text scale 1.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 600.0 and text scale 1.5",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "hero fits width 600.0 and text scale 2.0",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "Get Started opens the existing destination",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "onboarding fits a compact phone screen",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer theme is restored after switching to light mode",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "overview sensor card renders its SVG at phone width",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "aquarium hero image is bundled",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "sensor status follows web thresholds and missing data stays unknown",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "slideshow cycles nine photos and disposes its timer",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/tank_overview_hero_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "tank creation persists a numeric ID and deletion is owner scoped",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "tank creation saves details and attaches an available device",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "mobile relay schedules write to device_schedules",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "floating role navigation fits a narrow phone and keeps badges",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all admin tabs fit Size(280.0, 640.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "forgot password action opens the recovery request form",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/widget_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all staff tabs fit Size(280.0, 640.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all admin tabs fit Size(320.0, 700.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all staff tabs fit Size(320.0, 700.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all admin tabs fit Size(360.0, 780.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all staff tabs fit Size(360.0, 780.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all admin tabs fit Size(430.0, 900.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "all staff tabs fit Size(430.0, 900.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer alert and control screens fit a narrow phone",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer dashboard fits Size(280.0, 640.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer dashboard fits Size(320.0, 700.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer dashboard fits Size(360.0, 780.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  },
+  {
+    "name": "customer dashboard fits Size(430.0, 900.0)",
+    "source": "C:/Users/Acer/Downloads/AquaCare/AquaCare_App/test/responsive_layout_test.dart",
+    "result": "success",
+    "skipped": false
+  }
+]

@@ -1,0 +1,32 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+title AquaCare — Tra cứu, mua hàng và liên hệ
+actor "Người truy cập web" as A0
+actor "Khách hàng đăng nhập" as A1
+rectangle "AquaCare" {
+usecase "Xem giới thiệu, thiết bị\nvà gói cước" as U1
+usecase "Quản lý giỏ hàng" as U2
+usecase "Đặt hàng" as U3
+usecase "Cung cấp thông tin nhận hàng\nvà chọn COD / chuyển khoản" as U4
+usecase "Gửi yêu cầu hỗ trợ" as U5
+usecase "Tra cứu phản hồi hỗ trợ" as U6
+usecase "Tải APK từ landing page" as U7
+usecase "Xem lịch sử, chi tiết\nvà trạng thái đơn hàng" as U8
+}
+A0 -- U1
+A0 -- U2
+A0 -- U3
+U3 ..> U4 : <<include>>
+A0 -- U5
+A0 -- U6
+A0 -- U7
+A1 -- U8
+legend bottom
+Người truy cập web có thể là khách chưa đăng nhập hoặc người đã có tài khoản.
+CartPage lưu user_id = null khi đặt hàng không có phiên đăng nhập.
+Chưa mô hình hóa cổng thanh toán / đối soát tự động: QR chuyển khoản hiện dùng dữ liệu mẫu.
+Xem gói cước không đồng nghĩa đã có luồng mua / gia hạn gói tự động.
+endlegend
+@enduml

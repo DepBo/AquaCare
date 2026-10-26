@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1805" viewBox="0 0 1760 1805"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="tri" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.2"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.edge{stroke:#7b8b9f;stroke-width:1.6;fill:none}.rel{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.gen{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#tri)}</style><rect width="100%" height="100%" fill="white"/>
+<text x="880" y="45" text-anchor="middle" font-size="30" fill="#18364a">AQUACARE · Nhân viên — kho, giao hàng, hỗ trợ, bảo trì</text>
+<text x="880" y="82" text-anchor="middle" font-size="19" fill="#18364a">Phân quyền theo ROLE_TAB_MAP và loại công việc; các nhóm kế thừa actor Nhân viên.</text>
+<rect x="295" y="115" width="1170" height="1465" rx="6" fill="#fcfefe" stroke="#64748b" stroke-width="2"/>
+<text x="880" y="145" text-anchor="middle" font-size="20" fill="#18364a">HỆ THỐNG AQUACARE</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="202.5" r="13"/><path d="M140 215.5v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="311.5" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên</text>
+<path class="edge" d="M165 232.5 L360 232.5"/>
+<ellipse cx="570" cy="232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="227" text-anchor="middle" font-size="22" fill="#18364a">Xem lịch sử công việc</text>
+<text x="570" y="252" text-anchor="middle" font-size="22" fill="#18364a">theo quyền</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="527.5" r="13"/><path d="M140 540.5v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="636.5" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên kho</text>
+<path class="edge" d="M165 557.5 L360 397.5"/>
+<ellipse cx="570" cy="397.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="392" text-anchor="middle" font-size="22" fill="#18364a">Xem công việc đóng gói</text>
+<text x="570" y="417" text-anchor="middle" font-size="22" fill="#18364a">và chi tiết đơn hàng</text>
+<path class="edge" d="M165 557.5 L360 620"/>
+<ellipse cx="570" cy="620" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="627" text-anchor="middle" font-size="22" fill="#18364a">Xác nhận hoàn tất đóng gói</text>
+<ellipse cx="1160" cy="540" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="534.5" text-anchor="middle" font-size="22" fill="#18364a">Kiểm tra và gán MAC</text>
+<text x="1160" y="559.5" text-anchor="middle" font-size="22" fill="#18364a">cho từng thiết bị trong đơn</text>
+<path class="rel" d="M780 620 L950 540"/>
+<text x="865" y="567" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;include&gt;&gt;</text>
+<ellipse cx="1160" cy="700" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="694.5" text-anchor="middle" font-size="22" fill="#18364a">Tạo công việc</text>
+<text x="1160" y="719.5" text-anchor="middle" font-size="22" fill="#18364a">giao hàng / lắp đặt</text>
+<path class="rel" d="M780 620 L950 700"/>
+<text x="865" y="647" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;include&gt;&gt;</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="915" r="13"/><path d="M140 928v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="1024" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên giao hàng</text>
+<path class="edge" d="M165 945 L360 882.5"/>
+<ellipse cx="570" cy="882.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="877" text-anchor="middle" font-size="22" fill="#18364a">Xem và nhận công việc</text>
+<text x="570" y="902" text-anchor="middle" font-size="22" fill="#18364a">giao hàng / lắp đặt</text>
+<path class="edge" d="M165 945 L360 1007.5"/>
+<ellipse cx="570" cy="1007.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1002" text-anchor="middle" font-size="22" fill="#18364a">Xác nhận hoàn tất</text>
+<text x="570" y="1027" text-anchor="middle" font-size="22" fill="#18364a">giao hàng / lắp đặt</text>
+<ellipse cx="1160" cy="1007.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="1002" text-anchor="middle" font-size="22" fill="#18364a">Cập nhật đơn hàng</text>
+<text x="1160" y="1027" text-anchor="middle" font-size="22" fill="#18364a">sang Đã giao</text>
+<path class="rel" d="M780 1007.5 L950 1007.5"/>
+<text x="865" y="994.5" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;include&gt;&gt;</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="1142.5" r="13"/><path d="M140 1155.5v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="1251.5" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên hỗ trợ</text>
+<path class="edge" d="M165 1172.5 L360 1172.5"/>
+<ellipse cx="570" cy="1172.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1167" text-anchor="middle" font-size="22" fill="#18364a">Xem yêu cầu và</text>
+<text x="570" y="1192" text-anchor="middle" font-size="22" fill="#18364a">phản hồi khách hàng</text>
+<ellipse cx="1160" cy="1172.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="1179.5" text-anchor="middle" font-size="22" fill="#18364a">Tạo công việc bảo trì</text>
+<path class="rel" d="M950 1172.5 L780 1172.5"/>
+<text x="865" y="1159.5" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;extend&gt;&gt;</text>
+<text x="1160" y="1238.5" text-anchor="middle" font-size="17" fill="#18364a">[cần bảo trì trực tiếp]</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="1370" r="13"/><path d="M140 1383v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="1479" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên bảo trì</text>
+<path class="edge" d="M165 1400 L360 1337.5"/>
+<ellipse cx="570" cy="1337.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1332" text-anchor="middle" font-size="22" fill="#18364a">Xem và nhận</text>
+<text x="570" y="1357" text-anchor="middle" font-size="22" fill="#18364a">công việc bảo trì</text>
+<path class="edge" d="M165 1400 L360 1462.5"/>
+<ellipse cx="570" cy="1462.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1457" text-anchor="middle" font-size="22" fill="#18364a">Cập nhật hoàn tất</text>
+<text x="570" y="1482" text-anchor="middle" font-size="22" fill="#18364a">công việc bảo trì</text>
+<text x="330" y="1610" text-anchor="start" font-size="21" fill="#18364a">Ghi chú phạm vi và điều kiện</text>
+<text x="330" y="1642" text-anchor="start" font-size="18" fill="#18364a">• Kho kiểm tra MAC tồn tại, không trùng, chưa bán / gắn bể và đúng phiên bản sản phẩm.</text>
+<text x="330" y="1670" text-anchor="start" font-size="18" fill="#18364a">• Hoàn tất đóng gói lưu MAC, đánh dấu thiết bị đã xuất và tạo việc giao / lắp đặt.</text>
+<text x="330" y="1698" text-anchor="start" font-size="18" fill="#18364a">• Giao hàng và bảo trì nhận việc bằng cập nhật trạng thái, gán assigned_to cho người nhận.</text>
+<text x="330" y="1726" text-anchor="start" font-size="18" fill="#18364a">• Vai trò legacy staff có các tab tổng hợp; bốn vai trò staff_* chỉ có tab được cấp.</text>
+<text x="330" y="1754" text-anchor="start" font-size="18" fill="#18364a">• Không giả định nhân viên kho / hỗ trợ được dùng bảng nhận việc của giao hàng và bảo trì.</text>
+</svg>

@@ -1,0 +1,45 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+title AquaCare — Khách hàng — bể nuôi và điều khiển
+actor "Khách hàng" as A0
+actor "Thiết bị IoT" as A1
+rectangle "AquaCare" {
+usecase "Xem danh sách / chọn bể" as U1
+usecase "Thêm bể" as U2
+usecase "Gắn thiết bị vào bể" as U3
+usecase "Sửa thông tin bể" as U4
+usecase "Xóa bể" as U5
+usecase "Cấu hình nhận cảnh báo" as U6
+usecase "Xem chỉ số và trạng thái bể" as U7
+usecase "Xem biểu đồ / lịch sử\ndữ liệu cảm biến" as U8
+usecase "Xem lịch sử và\nphân bố cảnh báo" as U9
+usecase "Bật / tắt thiết bị" as U10
+usecase "Gửi lệnh điều khiển\nqua MQTT" as U11
+usecase "Tạo / sửa lịch bật tắt" as U12
+usecase "Hủy lịch bật tắt" as U13
+usecase "Bật / tắt trạng thái\nhoạt động thiết bị" as U14
+}
+A0 -- U1
+A0 -- U2
+U3 ..> U2 : <<extend>>\n[có nhập MAC thiết bị]
+A0 -- U4
+A0 -- U5
+A0 -- U6
+A0 -- U7
+A0 -- U8
+A0 -- U9
+A0 -- U10
+U10 ..> U11 : <<include>>
+A1 -- U11
+A0 -- U12
+A0 -- U13
+A0 -- U14
+legend bottom
+Gắn thiết bị là phần mở rộng tùy chọn của thêm bể; cũng có thể thực hiện khi sửa bể.
+MAC phải tồn tại và chưa gắn vào bể khác; chỉ chọn loài và dùng ngưỡng đã cấu hình.
+Tạo lịch chỉ lưu lịch; việc phát lệnh khi đến giờ được mô tả ở sơ đồ tự động hóa.
+Không đưa hiệu chuẩn pH vào luồng công khai: tab web hiện bị ẩn.
+endlegend
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+title AquaCare — Tài khoản và truy cập
+actor "Khách truy cập" as A0
+actor "Người dùng hệ thống" as A1
+actor "Google OAuth" as A2
+rectangle "AquaCare" {
+usecase "Đăng ký tài khoản\nkhách hàng" as U1
+usecase "Đăng ký qua Google" as U2
+usecase "Đăng nhập" as U3
+usecase "Đăng nhập bằng\nemail và mật khẩu" as U4
+usecase "Đăng nhập qua Google" as U5
+usecase "Yêu cầu khôi phục\nmật khẩu" as U6
+usecase "Gửi liên kết khôi phục\nqua email" as U7
+usecase "Đặt mật khẩu mới" as U8
+usecase "Đăng xuất" as U9
+}
+A0 -- U1
+A0 -- U2
+A1 -- U3
+U4 --|> U3
+U5 --|> U3
+A2 -- U5
+A1 -- U6
+U6 ..> U7 : <<include>>
+A1 -- U8
+A1 -- U9
+legend bottom
+Mũi tên tam giác: cách đăng nhập cụ thể kế thừa use case Đăng nhập.
+Đăng nhập là điều kiện trước của nghiệp vụ được bảo vệ, không phải include của mọi thao tác.
+Yêu cầu khôi phục và đặt mật khẩu mới là hai lần tương tác; không nối include giữa chúng.
+endlegend
+@enduml

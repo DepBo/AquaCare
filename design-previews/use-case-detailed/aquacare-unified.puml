@@ -1,0 +1,211 @@
+@startuml
+left to right direction
+skinparam shadowing false
+title AquaCare — toàn bộ use case trong một boundary
+actor "Người dùng hệ thống" as A0
+actor "Khách truy cập" as A1
+actor "Người truy cập web" as A2
+actor "Khách hàng" as A3
+actor "Nhân viên" as A4
+actor "Quản trị viên" as A5
+actor "Google OAuth" as A6
+actor "Thiết bị IoT" as A7
+actor "Nhân viên kho" as A8
+actor "Nhân viên giao hàng" as A9
+actor "Nhân viên hỗ trợ" as A10
+actor "Nhân viên bảo trì" as A11
+actor "Dịch vụ email" as A12
+actor "Firebase FCM" as A13
+rectangle "AquaCare" {
+usecase "Đăng ký tài khoản\nkhách hàng" as U0
+usecase "Đăng ký qua Google" as U1
+usecase "Đăng nhập" as U2
+usecase "Đăng nhập bằng\nemail và mật khẩu" as U3
+usecase "Đăng nhập qua Google" as U4
+usecase "Yêu cầu khôi phục\nmật khẩu" as U5
+usecase "Gửi liên kết khôi phục\nqua email" as U6
+usecase "Đặt mật khẩu mới" as U7
+usecase "Đăng xuất" as U8
+usecase "Xem giới thiệu, thiết bị\nvà gói cước" as U9
+usecase "Quản lý giỏ hàng" as U10
+usecase "Đặt hàng" as U11
+usecase "Cung cấp thông tin nhận hàng\nvà chọn COD / chuyển khoản" as U12
+usecase "Gửi yêu cầu hỗ trợ" as U13
+usecase "Tra cứu phản hồi hỗ trợ" as U14
+usecase "Tải APK từ landing page" as U15
+usecase "Xem lịch sử, chi tiết\nvà trạng thái đơn hàng" as U16
+usecase "Xem danh sách / chọn bể" as U17
+usecase "Thêm bể" as U18
+usecase "Gắn thiết bị vào bể" as U19
+usecase "Sửa thông tin bể" as U20
+usecase "Xóa bể" as U21
+usecase "Cấu hình nhận cảnh báo" as U22
+usecase "Xem chỉ số và trạng thái bể" as U23
+usecase "Xem biểu đồ / lịch sử\ndữ liệu cảm biến" as U24
+usecase "Xem lịch sử và\nphân bố cảnh báo" as U25
+usecase "Bật / tắt thiết bị" as U26
+usecase "Gửi lệnh điều khiển\nqua MQTT" as U27
+usecase "Tạo / sửa lịch bật tắt" as U28
+usecase "Hủy lịch bật tắt" as U29
+usecase "Bật / tắt trạng thái\nhoạt động thiết bị" as U30
+usecase "Xem lịch sử công việc\ntheo quyền" as U31
+usecase "Xem công việc đóng gói\nvà chi tiết đơn hàng" as U32
+usecase "Xác nhận hoàn tất đóng gói" as U33
+usecase "Kiểm tra và gán MAC\ncho từng thiết bị trong đơn" as U34
+usecase "Tạo công việc\ngiao hàng / lắp đặt" as U35
+usecase "Xem và nhận công việc\ngiao hàng / lắp đặt" as U36
+usecase "Xác nhận hoàn tất\ngiao hàng / lắp đặt" as U37
+usecase "Cập nhật đơn hàng\nsang Đã giao" as U38
+usecase "Xem yêu cầu và\nphản hồi khách hàng" as U39
+usecase "Tạo công việc bảo trì" as U40
+usecase "Xem và nhận\ncông việc bảo trì" as U41
+usecase "Cập nhật hoàn tất\ncông việc bảo trì" as U42
+usecase "Xem tổng quan vận hành" as U43
+usecase "Xem doanh thu theo năm" as U44
+usecase "Xem doanh thu theo\nphiên bản thiết bị" as U45
+usecase "Tra cứu loài cá và\nngưỡng môi trường" as U46
+usecase "Thêm / sửa / xóa loài cá" as U47
+usecase "Tra cứu thiết bị / kho\nvà thông tin người mua" as U48
+usecase "Thêm / sửa / xóa thiết bị" as U49
+usecase "Tra cứu nhân viên" as U50
+usecase "Thêm / sửa / xóa\nhồ sơ nhân viên" as U51
+usecase "Tra cứu đơn hàng\nvà xem chi tiết" as U52
+usecase "Duyệt đơn hàng" as U53
+usecase "Tạo công việc đóng gói" as U54
+usecase "Xem và thêm gói cước" as U55
+usecase "Sửa / xóa gói cước" as U56
+usecase "Tiếp nhận dữ liệu\ncảm biến" as U57
+usecase "Lưu dữ liệu cảm biến" as U58
+usecase "Đánh giá ngưỡng loài\nvà trạng thái mực nước" as U59
+usecase "Ghi nhận cảnh báo\nvào lịch sử" as U60
+usecase "Gửi thông báo cảnh báo" as U61
+usecase "Gửi email cảnh báo" as U62
+usecase "Gửi thông báo web / app" as U63
+usecase "Thực hiện lệnh theo lịch" as U64
+usecase "Gửi lệnh qua MQTT" as U65
+usecase "Cập nhật trạng thái\nvà ghi log AUTO" as U66
+note right of U1
+Luồng OAuth có thể tạo hồ sơ khi chưa có tài khoản.
+end note
+note right of U7
+Điều kiện: có phiên / liên kết khôi phục hợp lệ.
+end note
+note right of U10
+Thêm sản phẩm, đổi số lượng, xóa sản phẩm.
+end note
+note right of U14
+Theo tài khoản; khách chưa đăng nhập tra cứu theo email.
+end note
+note right of U20
+Tên, thể tích, loài cá; có thể đổi hoặc tháo thiết bị.
+end note
+note right of U22
+Email, web push, app push; lọc mức độ và thời gian nhắc lại.
+end note
+note right of U23
+pH, nhiệt độ, TDS và mực nước.
+end note
+note right of U28
+Bơm, đèn, sục khí; lịch một lần hoặc hằng ngày.
+end note
+note right of U30
+Cờ is_active của thiết bị; khác thao tác bật / tắt relay.
+end note
+note left of U44
+12 tháng, tăng trưởng tháng, trung bình động 3 tháng và điểm nổi bật.
+end note
+note left of U45
+Lọc tháng / năm; cao nhất và thấp nhất được đánh dấu.
+end note
+note left of U47
+Các ngưỡng pH, nhiệt độ, TDS được lưu cùng cấu hình loài.
+end note
+note left of U49
+Có nhập nhiều MAC cùng lúc; kiểm tra trùng MAC.
+end note
+note left of U51
+Tạo tài khoản, cập nhật họ tên / điện thoại / vai trò; xóa hồ sơ users.
+end note
+note left of U56
+Đã có trên Mobile; Web hiện chỉ xem và thêm.
+end note
+}
+A1 -- U0
+A1 -- U1
+A0 -- U2
+U3 --|> U2
+U4 --|> U2
+A6 -- U4
+A0 -- U5
+U5 ..> U6 : <<include>>
+A0 -- U7
+A0 -- U8
+A2 -- U9
+A2 -- U10
+A2 -- U11
+U11 ..> U12 : <<include>>
+A2 -- U13
+A2 -- U14
+A2 -- U15
+A3 -- U16
+A3 -- U17
+A3 -- U18
+U19 ..> U18 : <<extend>>\n[có nhập MAC thiết bị]
+A3 -- U20
+A3 -- U21
+A3 -- U22
+A3 -- U23
+A3 -- U24
+A3 -- U25
+A3 -- U26
+U26 ..> U27 : <<include>>
+A7 -- U27
+A3 -- U28
+A3 -- U29
+A3 -- U30
+A4 -- U31
+A8 -- U32
+A8 -- U33
+U33 ..> U34 : <<include>>
+U33 ..> U35 : <<include>>
+A9 -- U36
+A9 -- U37
+U37 ..> U38 : <<include>>
+A10 -- U39
+U40 ..> U39 : <<extend>>\n[cần bảo trì trực tiếp]
+A11 -- U41
+A11 -- U42
+A5 -- U43
+A5 -- U44
+A5 -- U45
+A5 -- U46
+A5 -- U47
+A5 -- U48
+A5 -- U49
+A5 -- U50
+A5 -- U51
+A5 -- U52
+A5 -- U53
+U53 ..> U54 : <<include>>
+A5 -- U55
+A5 -- U56
+A7 -- U57
+A7 -- U64
+U57 ..> U58 : <<include>>
+U57 ..> U59 : <<include>>
+U60 ..> U59 : <<extend>>\n[bất thường]
+U61 ..> U60 : <<extend>>\n[đúng bộ lọc, hết cooldown]
+U62 ..> U61 : <<extend>>\n[bật email, có địa chỉ]
+U63 ..> U61 : <<extend>>\n[bật kênh, có token]
+U64 ..> U65 : <<include>>
+U64 ..> U66 : <<include>>
+A12 -- U62
+A13 -- U63
+A3 --|> A0
+A4 --|> A0
+A5 --|> A0
+A8 --|> A4
+A9 --|> A4
+A10 --|> A4
+A11 --|> A4
+@enduml

@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: annual dashboard groups Vietnam months and allocates delivered revenue to device versions
+ok 1 - annual dashboard groups Vietnam months and allocates delivered revenue to device versions
+  ---
+  duration_ms: 8.7939
+  type: 'test'
+  ...
+# Subtest: annual dashboard shows empty current year without inventing a peak or decline
+ok 2 - annual dashboard shows empty current year without inventing a peak or decline
+  ---
+  duration_ms: 0.9319
+  type: 'test'
+  ...
+# Subtest: dashboard groups delivered order value by Vietnam calendar date
+ok 3 - dashboard groups delivered order value by Vietnam calendar date
+  ---
+  duration_ms: 2.0193
+  type: 'test'
+  ...
+# Subtest: dashboard API requires a valid admin session before reading aggregates
+ok 4 - dashboard API requires a valid admin session before reading aggregates
+  ---
+  duration_ms: 155.7893
+  type: 'test'
+  ...
+# Subtest: annual API validates the year and requires admin access
+ok 5 - annual API validates the year and requires admin access
+  ---
+  duration_ms: 40.8873
+  type: 'test'
+  ...
+# 📧 [Brevo] Đã nhận email cảnh báo gửi tới owner@example.com (ID: test-message)
+# ❌ [Alert Email] Lỗi khi gửi email: Brevo HTTP 401: Invalid API key
+# Subtest: gửi cảnh báo qua Brevo HTTP khi có API key
+ok 6 - gửi cảnh báo qua Brevo HTTP khi có API key
+  ---
+  duration_ms: 2.4266
+  type: 'test'
+  ...
+# Subtest: báo thất bại khi Brevo từ chối email
+ok 7 - báo thất bại khi Brevo từ chối email
+  ---
+  duration_ms: 0.9646
+  type: 'test'
+  ...
+# Subtest: one-time ON runs once and only logs the actual command
+ok 8 - one-time ON runs once and only logs the actual command
+  ---
+  duration_ms: 163.3787
+  type: 'test'
+  ...
+# Subtest: daily schedule runs on a new day, not twice in one minute
+ok 9 - daily schedule runs on a new day, not twice in one minute
+  ---
+  duration_ms: 1.8208
+  type: 'test'
+  ...
+# Subtest: one-time OFF across midnight uses following date
+ok 10 - one-time OFF across midnight uses following date
+  ---
+  duration_ms: 4.1937
+  type: 'test'
+  ...
+# Subtest: one-time schedule tolerates a one-minute delay but does not replay old events
+ok 11 - one-time schedule tolerates a one-minute delay but does not replay old events
+  ---
+  duration_ms: 0.4297
+  type: 'test'
+  ...
+# Subtest: retries database update without republishing or double logging
+ok 12 - retries database update without republishing or double logging
+  ---
+  duration_ms: 1.5416
+  type: 'test'
+  ...
+# Subtest: inactive devices and disconnected MQTT do not run schedules
+ok 13 - inactive devices and disconnected MQTT do not run schedules
+  ---
+  duration_ms: 0.6437
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5374.1541

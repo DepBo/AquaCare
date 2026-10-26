@@ -1,0 +1,57 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam usecaseBackgroundColor #F0FDFA
+skinparam usecaseBorderColor #0F766E
+actor "Người dùng hệ thống" as User
+actor "Khách hàng" as Customer
+actor "Nhân viên" as Staff
+actor "Quản trị viên" as Admin
+actor "Thiết bị IoT" as IoT
+Customer --|> User
+Staff --|> User
+Admin --|> User
+rectangle "AquaCare — Web, Mobile & Backend" {
+  usecase "Đăng nhập" as Login
+  usecase "Quản lý bể và\ncấu hình cảnh báo" as Tanks
+  usecase "Theo dõi chỉ số,\nlịch sử và cảnh báo" as Monitor
+  usecase "Bật / tắt thiết bị" as Control
+  usecase "Gửi lệnh tới thiết bị" as Send
+  usecase "Quản lý lịch bật / tắt" as Schedule
+  usecase "Đặt và theo dõi đơn hàng" as Order
+  usecase "Gửi yêu cầu hỗ trợ" as Request
+  usecase "Thực hiện công việc\nđược phân công" as Work
+  usecase "Xử lý yêu cầu hỗ trợ" as Support
+  usecase "Tạo công việc bảo trì" as Maintenance
+  usecase "Xem thống kê, doanh thu" as Reports
+  usecase "Duyệt đơn hàng" as Approve
+  usecase "Tạo công việc đóng gói" as Packing
+  usecase "Quản lý danh mục\nvà nhân viên" as Manage
+}
+User -- Login
+Customer -- Tanks
+Customer -- Monitor
+Customer -- Control
+Customer -- Schedule
+Customer -- Order
+Customer -- Request
+Staff -- Work
+Staff -- Support
+Admin -- Reports
+Admin -- Approve
+Admin -- Manage
+IoT -- Send
+Control ..> Send : <<include>>
+Approve ..> Packing : <<include>>
+Maintenance ..> Support : <<extend>>\n[cần bảo trì trực tiếp]
+note bottom of Manage
+  Danh mục: loài cá và ngưỡng,
+  thiết bị / kho, gói cước.
+end note
+note bottom of Work
+  Theo quyền: kho, giao hàng / lắp đặt,
+  hỗ trợ hoặc bảo trì.
+end note
+@enduml

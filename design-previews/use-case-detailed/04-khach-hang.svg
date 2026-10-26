@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1922" viewBox="0 0 1760 1922"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="tri" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.2"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.edge{stroke:#7b8b9f;stroke-width:1.6;fill:none}.rel{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.gen{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#tri)}</style><rect width="100%" height="100%" fill="white"/>
+<text x="880" y="45" text-anchor="middle" font-size="30" fill="#18364a">AQUACARE · Khách hàng — bể nuôi và điều khiển</text>
+<text x="880" y="82" text-anchor="middle" font-size="19" fill="#18364a">Chức năng trên Web và Mobile; bể và thiết bị phải thuộc phạm vi tài khoản.</text>
+<rect x="295" y="115" width="1170" height="1610" rx="6" fill="#fcfefe" stroke="#64748b" stroke-width="2"/>
+<text x="880" y="145" text-anchor="middle" font-size="20" fill="#18364a">HỆ THỐNG AQUACARE</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="890" r="13"/><path d="M140 903v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="999" text-anchor="middle" font-size="20" fill="#18364a">Khách hàng</text>
+<path class="edge" d="M165 920 L360 232.5"/>
+<ellipse cx="570" cy="232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="239.5" text-anchor="middle" font-size="22" fill="#18364a">Xem danh sách / chọn bể</text>
+<path class="edge" d="M165 920 L360 357.5"/>
+<ellipse cx="570" cy="357.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="364.5" text-anchor="middle" font-size="22" fill="#18364a">Thêm bể</text>
+<ellipse cx="1160" cy="357.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="364.5" text-anchor="middle" font-size="22" fill="#18364a">Gắn thiết bị vào bể</text>
+<path class="rel" d="M950 357.5 L780 357.5"/>
+<text x="865" y="344.5" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;extend&gt;&gt;</text>
+<text x="1160" y="423.5" text-anchor="middle" font-size="17" fill="#18364a">[có nhập MAC thiết bị]</text>
+<path class="edge" d="M165 920 L360 482.5"/>
+<ellipse cx="570" cy="482.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="489.5" text-anchor="middle" font-size="22" fill="#18364a">Sửa thông tin bể</text>
+<text x="1140" y="489.5" text-anchor="middle" font-size="17" fill="#18364a">Tên, thể tích, loài cá; có thể đổi hoặc tháo thiết bị.</text>
+<path class="edge" d="M165 920 L360 607.5"/>
+<ellipse cx="570" cy="607.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="614.5" text-anchor="middle" font-size="22" fill="#18364a">Xóa bể</text>
+<path class="edge" d="M165 920 L360 732.5"/>
+<ellipse cx="570" cy="732.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="739.5" text-anchor="middle" font-size="22" fill="#18364a">Cấu hình nhận cảnh báo</text>
+<text x="1140" y="739.5" text-anchor="middle" font-size="17" fill="#18364a">Email, web push, app push; lọc mức độ và thời gian nhắc lại.</text>
+<path class="edge" d="M165 920 L360 857.5"/>
+<ellipse cx="570" cy="857.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="864.5" text-anchor="middle" font-size="22" fill="#18364a">Xem chỉ số và trạng thái bể</text>
+<text x="1140" y="864.5" text-anchor="middle" font-size="17" fill="#18364a">pH, nhiệt độ, TDS và mực nước.</text>
+<path class="edge" d="M165 920 L360 982.5"/>
+<ellipse cx="570" cy="982.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="977" text-anchor="middle" font-size="22" fill="#18364a">Xem biểu đồ / lịch sử</text>
+<text x="570" y="1002" text-anchor="middle" font-size="22" fill="#18364a">dữ liệu cảm biến</text>
+<path class="edge" d="M165 920 L360 1107.5"/>
+<ellipse cx="570" cy="1107.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1102" text-anchor="middle" font-size="22" fill="#18364a">Xem lịch sử và</text>
+<text x="570" y="1127" text-anchor="middle" font-size="22" fill="#18364a">phân bố cảnh báo</text>
+<path class="edge" d="M165 920 L360 1232.5"/>
+<ellipse cx="570" cy="1232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1239.5" text-anchor="middle" font-size="22" fill="#18364a">Bật / tắt thiết bị</text>
+<ellipse cx="1160" cy="1232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="1227" text-anchor="middle" font-size="22" fill="#18364a">Gửi lệnh điều khiển</text>
+<text x="1160" y="1252" text-anchor="middle" font-size="22" fill="#18364a">qua MQTT</text>
+<path class="rel" d="M780 1232.5 L950 1232.5"/>
+<text x="865" y="1219.5" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;include&gt;&gt;</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="1615" cy="1202.5" r="13"/><path d="M1615 1215.5v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="1615" y="1311.5" text-anchor="middle" font-size="20" fill="#18364a">Thiết bị IoT</text>
+<path class="edge" d="M1370 1232.5 H1590"/>
+<path class="edge" d="M165 920 L360 1357.5"/>
+<ellipse cx="570" cy="1357.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1364.5" text-anchor="middle" font-size="22" fill="#18364a">Tạo / sửa lịch bật tắt</text>
+<text x="1140" y="1364.5" text-anchor="middle" font-size="17" fill="#18364a">Bơm, đèn, sục khí; lịch một lần hoặc hằng ngày.</text>
+<path class="edge" d="M165 920 L360 1482.5"/>
+<ellipse cx="570" cy="1482.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1489.5" text-anchor="middle" font-size="22" fill="#18364a">Hủy lịch bật tắt</text>
+<path class="edge" d="M165 920 L360 1607.5"/>
+<ellipse cx="570" cy="1607.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1602" text-anchor="middle" font-size="22" fill="#18364a">Bật / tắt trạng thái</text>
+<text x="570" y="1627" text-anchor="middle" font-size="22" fill="#18364a">hoạt động thiết bị</text>
+<text x="1140" y="1614.5" text-anchor="middle" font-size="17" fill="#18364a">Cờ is_active của thiết bị; khác thao tác bật / tắt relay.</text>
+<text x="330" y="1755" text-anchor="start" font-size="21" fill="#18364a">Ghi chú phạm vi và điều kiện</text>
+<text x="330" y="1787" text-anchor="start" font-size="18" fill="#18364a">• Gắn thiết bị là phần mở rộng tùy chọn của thêm bể; cũng có thể thực hiện khi sửa bể.</text>
+<text x="330" y="1815" text-anchor="start" font-size="18" fill="#18364a">• MAC phải tồn tại và chưa gắn vào bể khác; chỉ chọn loài và dùng ngưỡng đã cấu hình.</text>
+<text x="330" y="1843" text-anchor="start" font-size="18" fill="#18364a">• Tạo lịch chỉ lưu lịch; việc phát lệnh khi đến giờ được mô tả ở sơ đồ tự động hóa.</text>
+<text x="330" y="1871" text-anchor="start" font-size="18" fill="#18364a">• Không đưa hiệu chuẩn pH vào luồng công khai: tab web hiện bị ẩn.</text>
+</svg>

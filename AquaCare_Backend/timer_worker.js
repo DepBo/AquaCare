@@ -77,7 +77,7 @@ function createScheduleChecker({ supabase, mqttClient, now = () => new Date(), l
           const needsCommand = device[relay.field] !== due.state;
           if (needsCommand && !progress.published) {
             await publishCommand(mqttClient, `iras-rag/command/${device.mac_address}`, {
-              pin: relay.pin, cmd: due.state ? 'ON' : 'OFF',
+              pin: relay.pin, cmd: due.state ? 'OFF' : 'ON', // Active-low relay
             });
             processed.set(key, { published: true });
           }

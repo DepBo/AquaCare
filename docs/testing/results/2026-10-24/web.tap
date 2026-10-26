@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: uses the selected on time for duration presets
+ok 1 - uses the selected on time for duration presets
+  ---
+  duration_ms: 6.4946
+  type: 'test'
+  ...
+# Subtest: fills an empty on time from the user clock
+ok 2 - fills an empty on time from the user clock
+  ---
+  duration_ms: 2.6276
+  type: 'test'
+  ...
+# Subtest: wraps the off time past midnight
+ok 3 - wraps the off time past midnight
+  ---
+  duration_ms: 0.3439
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 484.061

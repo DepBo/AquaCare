@@ -77,7 +77,7 @@ app.post('/api/device/relay', async (req, res) => {
     const mac = device.mac_address;
 
     // 1. Lập tức bắn lệnh MQTT để phần cứng nhận liền (0 delay)
-    const command = { pin: pin, cmd: state ? "ON" : "OFF" };
+    const command = { pin: pin, cmd: state ? "OFF" : "ON" }; // Active-low relay
     const topic = `iras-rag/command/${mac}`;
     mqttClient.publish(topic, JSON.stringify(command));
     console.log(`[MQTT CONTROL] Đã gửi lệnh Relay tới ${mac}:`, command);

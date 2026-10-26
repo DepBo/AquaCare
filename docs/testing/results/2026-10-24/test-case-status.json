@@ -1,0 +1,1771 @@
+[
+  {
+    "id": "AUTH-01",
+    "platform": "P1 W/M/B",
+    "steps": "Email chưa tồn tại → nhập đầy đủ họ tên/email/điện thoại/mật khẩu hợp lệ → đăng ký → kiểm tra Auth và users",
+    "expected": "Có một tài khoản và hồ sơ khớp ID; vai trò khách; thông báo đúng trạng thái xác nhận email của môi trường",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-02",
+    "platform": "P1 W/M/B",
+    "steps": "Lần lượt bỏ trống từng trường; email sai định dạng; mật khẩu dưới mức tối thiểu → gửi",
+    "expected": "Từ chối, chỉ rõ trường lỗi; không tạo hồ sơ rác; API thiếu trường trả400",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-03",
+    "platform": "P1 W/M",
+    "steps": "Dùng email đã đăng ký → đăng ký lại → bấm gửi nhanh hai lần",
+    "expected": "Không tạo hai tài khoản/hồ sơ; không đổi thông tin tài khoản cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-04",
+    "platform": "P0 B/D",
+    "steps": "Giả lập lỗi cập nhật users sau signUp qua API register",
+    "expected": "Báo lỗi; rollback Auth theo controller; kiểm tra không còn tài khoản mồ côi. Nếu rollback cũng lỗi phải ghi nhận để xử lý",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-05",
+    "platform": "P1 W/M",
+    "steps": "Đăng nhập lần lượt A, admin và từng role staff",
+    "expected": "Vào đúng màn hình theo vai trò; không giữ dữ liệu người trước",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-06",
+    "platform": "P1 W/M/B",
+    "steps": "Sai mật khẩu, email không tồn tại, thiếu identifier/password",
+    "expected": "Không có phiên đăng nhập; API sai thông tin401, thiếu trường400; không lộ mật khẩu trong lỗi",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-07",
+    "platform": "P1 B",
+    "steps": "Tài khoản test hỗ trợ phone/password → gọi login bằng phone; lặp bằng email",
+    "expected": "Nhánh email/phone xử lý đúng; lỗi của provider được báo, không tạo phiên giả",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-08",
+    "platform": "P1 W/M",
+    "steps": "Google OAuth thành công với user mới rồi user đã có hồ sơ",
+    "expected": "Tạo bổ sung hồ sơ khi cần; không tạo trùng hoặc tự nâng quyền; điều hướng đúng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-09",
+    "platform": "P1 W/M",
+    "steps": "Hủy OAuth; provider lỗi; callback thiếu dữ liệu → thử lại",
+    "expected": "Trở lại đăng nhập có thể thao tác; không mắc loading hoặc ghi hồ sơ dở",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-10",
+    "platform": "P1 W/M",
+    "steps": "Đăng nhập → đóng/mở app hoặc reload → để access token hết hạn",
+    "expected": "Phiên hợp lệ được phục hồi/refresh; phiên không phục hồi được yêu cầu đăng nhập, không lặp vô hạn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-11",
+    "platform": "P0 W/M",
+    "steps": "A đăng xuất → dùng Back/deep link → đăng nhập B",
+    "expected": "Không xem dữ liệu A; role cache/Realtime cũ không cấp quyền hoặc đẩy dữ liệu vào B",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-12",
+    "platform": "P1 W/M",
+    "steps": "Gửi quên mật khẩu bằng email test → mở link hợp lệ → đổi mật khẩu → đăng nhập lại",
+    "expected": "Mật khẩu mới dùng được; mật khẩu cũ thất bại; thông báo và luồng quay về đăng nhập đúng",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-62"
+    ],
+    "remaining": "Chỉ mở form recovery; chưa gửi email,mở link,đổi mật khẩu và đăng nhập."
+  },
+  {
+    "id": "AUTH-13",
+    "platform": "P1 W/M",
+    "steps": "Link recovery hết hạn/dùng lại; mở màn reset trực tiếp; mật khẩu dưới6 hoặc xác nhận lệch",
+    "expected": "Không cập nhật mật khẩu trái phép; có lỗi rõ; không coi session thường là recovery hợp lệ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-14",
+    "platform": "P0 W/D",
+    "steps": "Khách/khách A truy cập trực tiếp /admin và /staff; sửa role cache local thành admin",
+    "expected": "Quyền được xác minh từ nguồn tin cậy; không lấy được dữ liệu admin chỉ nhờ sửa local",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-15",
+    "platform": "P0 W/M/D",
+    "steps": "Admin hạ role một staff đang đăng nhập → staff thao tác lại",
+    "expected": "[YC] Quyền nhạy cảm bị thu hồi theo dữ liệu hiện tại; cache không duy trì quyền cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "AUTH-16",
+    "platform": "P1 W/M/B",
+    "steps": "Mạng mất/Render không truy cập được khi login; khôi phục → thử lại",
+    "expected": "Loading kết thúc, báo lỗi kết nối đúng; thử lại thành công, không mất dữ liệu form không cần thiết",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "NAV-01",
+    "platform": "P2 W",
+    "steps": "Mở landing desktop/mobile → đi qua menu, sản phẩm, gói, liên hệ, footer",
+    "expected": "Link/anchor tới đúng nội dung; không ảnh lỗi, nút bị che, tràn ngang; logo giữ tỷ lệ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "NAV-02",
+    "platform": "P1 W",
+    "steps": "Nhập /duong-dan-khong-ton-tai và đường dẫn sâu không tồn tại → reload",
+    "expected": "Hiện trang404 AquaCare; không màn trắng hay vòng chuyển hướng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "NAV-03",
+    "platform": "P2 W",
+    "steps": "Vào404 từ trang khác → Quay lại; mở404 trong tab mới → Về trang chủ",
+    "expected": "Back hoạt động theo lịch sử; về trang chủ luôn tới landing; không kẹt trang lỗi",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "NAV-04",
+    "platform": "P1 W",
+    "steps": "Reload trực tiếp /login, /cart, /dashboard trên local và bản staging Vercel/GitHub Pages",
+    "expected": "Hosting fallback trả shell đúng; router xử lý quyền/trang; asset không404. Không nhầm404 API với trang404",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "NAV-05",
+    "platform": "P1 M",
+    "steps": "Cài mới → onboarding/splash → login; mở lại app đã hoàn tất onboarding",
+    "expected": "Luồng đầu tiên đúng; không yêu cầu onboarding lặp không chủ đích; Back không bypass auth/update gate",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-35",
+      "FL-50",
+      "FL-51"
+    ],
+    "remaining": "Mới widget splash/onboarding; chưa cài mới,persistence,auth và Back trên app."
+  },
+  {
+    "id": "UPD-01",
+    "platform": "P0 M",
+    "steps": "APK release có gate; installedBuild nhỏ hơn minimumBuildNumber → mở app",
+    "expected": "Màn cập nhật bắt buộc; không dùng dashboard qua Back/deep link/phiên đã đăng nhập",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-02"
+    ],
+    "remaining": "Widget gate chặn nội dung; chưa APK release,Back/deep link và session thật."
+  },
+  {
+    "id": "UPD-02",
+    "platform": "P1 M",
+    "steps": "installedBuild bằng rồi lớn hơn minimumBuildNumber → kiểm tra",
+    "expected": "Cho dùng app; so sánh buildNumber, không so chuỗi version theo từ điển",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-01",
+      "FL-03"
+    ],
+    "remaining": "Mới service/widget test; chưa xác minh APK đã cài."
+  },
+  {
+    "id": "UPD-03",
+    "platform": "P1 M",
+    "steps": "App bị chặn → bấm Cập nhật",
+    "expected": "Mở landing AquaCare bằng browser ngoài; không giả định có tự tải/cài APK trong app",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "UPD-04",
+    "platform": "P1 M",
+    "steps": "Browser không mở được → bấm Cập nhật",
+    "expected": "Có thông báo và có thể thử lại; app vẫn bị chặn nếu build cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "UPD-05",
+    "platform": "P1 M",
+    "steps": "Manifest timeout/non200/JSON lỗi/thiếu latestVersion/minimumBuildNumber không hợp lệ",
+    "expected": "[HT] Chặn bằng màn lỗi kiểm tra phiên bản, có thử lại; không tự coi app là mới nhất",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-05"
+    ],
+    "remaining": "Mới lỗi check giả lập và retry; chưa đủ timeout,HTTP,JSON và schema manifest."
+  },
+  {
+    "id": "UPD-06",
+    "platform": "P1 M",
+    "steps": "Đang ở app → ra nền; nâng minimum build ở fixture → quay lại",
+    "expected": "Recheck khi resumed; build cũ bị chặn; không tạo nhiều request chồng hoặc setState sau dispose",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-04"
+    ],
+    "remaining": "Lifecycle giả lập; chưa thiết bị thật,request chồng và dispose."
+  },
+  {
+    "id": "UPD-07",
+    "platform": "P1 M",
+    "steps": "Debug không override; debug có AQUACARE_VERSION_URL; Flutter web",
+    "expected": "[HT] Debug không override và nền tảng không Android bỏ gate; debug override dùng manifest test",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "UPD-08",
+    "platform": "P0 W/M",
+    "steps": "Đối chiếu APK đã build với pubspec, manifest và nút/link landing → tải file qua link",
+    "expected": "Version/build của file thật khớp thông tin công bố; link tải đúng APK; minimum không cao hơn APK đang tải được",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "UPD-09",
+    "platform": "P1 M",
+    "steps": "APK cũ không có mã gate → mở với manifest mới",
+    "expected": "Ghi nhận giới hạn: APK không có gate không tự bị chặn. Không báo đây là lỗi so sánh manifest của bản mới",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-01",
+    "platform": "P1 W/M",
+    "steps": "A chưa có bể → mở tổng quan → thêm bể tên hợp lệ, chưa gán MAC",
+    "expected": "Empty state dùng được; tạo đúng chủ A; bể chưa có thiết bị không hiện dữ liệu của bể khác",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-57"
+    ],
+    "remaining": "Mới service với HTTP mock; chưa empty state,modal hủy/xác nhận và DB thật."
+  },
+  {
+    "id": "TANK-02",
+    "platform": "P1 W/M",
+    "steps": "Tên trống/chỉ dấu cách; thể tích âm/không phải số → lưu",
+    "expected": "[YC] Không lưu dữ liệu không hợp lệ; thông báo tại form",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-03",
+    "platform": "P1 W/M",
+    "steps": "Thêm bể với loài SPECIES và MAC rảnh",
+    "expected": "Bể/loài đúng; thiết bị gắn đúng tank_id, active; không tạo thêm thiết bị trùng MAC",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-58"
+    ],
+    "remaining": "Mới request mock tạo bể và gán thiết bị; chưa DB,loài và cả web/mobile."
+  },
+  {
+    "id": "TANK-04",
+    "platform": "P0 W/M/D",
+    "steps": "MAC không có, MAC thuộc B1 hoặc A2 → ghép vào A1",
+    "expected": "Từ chối MAC không hợp lệ/đã ghép; bể cũ không bị chiếm thiết bị",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-05",
+    "platform": "P0 W/M/D",
+    "steps": "Hai phiên cùng ghép một MAC rảnh vào hai bể",
+    "expected": "[YC] Chỉ một phiên thành công; không ghi đè âm thầm; UI thất bại khớp DB",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-06",
+    "platform": "P1 W/M",
+    "steps": "Sửa tên/thể tích/loài A1 → reload cả web/mobile",
+    "expected": "Giá trị lưu bền; ngưỡng và trạng thái cập nhật theo loài mới",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-07",
+    "platform": "P0 W/M/D",
+    "steps": "Đổi MAC A1 từ cũ sang rảnh mới → theo dõi cả hai thiết bị",
+    "expected": "MAC cũ tách/inactive; MAC mới gắn A1; không điều khiển nhầm MAC cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-08",
+    "platform": "P0 W/M/D",
+    "steps": "Gây lỗi sau tạo bể hoặc giữa tách MAC cũ/gắn MAC mới",
+    "expected": "[YC] Không báo thành công giả; có thể phục hồi; xác định bản ghi dở, không mất quyền thiết bị",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-09",
+    "platform": "P1 W/M",
+    "steps": "Mở xóa bể → hủy; mở lại → xác nhận",
+    "expected": "Hủy giữ nguyên; xác nhận xóa đúng bể và chuyển lựa chọn hợp lệ",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-57"
+    ],
+    "remaining": "Mới service với HTTP mock; chưa empty state,modal hủy/xác nhận và DB thật."
+  },
+  {
+    "id": "TANK-10",
+    "platform": "P0 W/M/D",
+    "steps": "Xóa A1 có telemetry, cảnh báo, lịch và thiết bị",
+    "expected": "Không lỗi FK hoặc mất dữ liệu bể khác; thiết bị không tiếp tục lịch của bể đã xóa; lịch/log xử lý theo quan hệ schema",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-11",
+    "platform": "P0 W/M",
+    "steps": "Đổi A1→A2 nhanh lúc request A1 đang chờ",
+    "expected": "Chỉ thấy dữ liệu A2; phản hồi A1 không ghi đè hình/trạng thái/thiết bị của A2",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "TANK-12",
+    "platform": "P2 W/M",
+    "steps": "Quan sát đủ9 ảnh; light/dark; nhiều kích thước",
+    "expected": "Ảnh thực sự thay đổi và phủ khối; cutout bo tự nhiên; Thêm bể không che text; shield/text ở đúng vị trí; dark mode nút tương phản",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-14",
+      "FL-15",
+      "FL-22",
+      "FL-25",
+      "FL-26",
+      "FL-27",
+      "FL-29",
+      "FL-31",
+      "FL-33",
+      "FL-34",
+      "FL-36",
+      "FL-37",
+      "FL-40",
+      "FL-41",
+      "FL-43",
+      "FL-44",
+      "FL-45",
+      "FL-46",
+      "FL-47",
+      "FL-48",
+      "FL-49",
+      "FL-56"
+    ],
+    "remaining": "Mới asset/widget/timer; chưa kiểm tra thị giác/cutout và trải nghiệm cả web/mobile."
+  },
+  {
+    "id": "TANK-13",
+    "platform": "P1 W/M",
+    "steps": "Thiết bị active→inactive→active → nạp telemetry",
+    "expected": "Trạng thái nhận dữ liệu theo is_active; không nhầm active với bật/tắt relay",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-01",
+    "platform": "P1 B/I/W/M",
+    "steps": "MAC active của A1 → gửi SENSOR trên topic telemetry test",
+    "expected": "Ghi telemetry đúng thiết bị; pin1 nhiệt,2pH,3TDS,5nước; UI đúng đơn vị và giá trị",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-02",
+    "platform": "P1 B/I",
+    "steps": "Gửi JSON hỏng, thiếu mac/readings hoặc không có sensor được hỗ trợ",
+    "expected": "Không crash worker/server; bỏ payload không hợp lệ; không ghi hàng toàn dữ liệu giả",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-03",
+    "platform": "P0 B/I",
+    "steps": "Gửi dữ liệu từ MAC chưa đăng ký hoặc inactive",
+    "expected": "Không ghi telemetry/alert như thiết bị active",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-04",
+    "platform": "P0 B/I",
+    "steps": "Gửi từng sensor thiếu, null, chuỗi, NaN biểu diễn dạng chuỗi, giá trị ngoài miền vật lý",
+    "expected": "[YC] Không biến thiếu dữ liệu thành0 hoặc cạn nước hợp lệ; không phát cảnh báo giả. Đặc biệt kiểm tra fallback hiện có trong parser",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-05",
+    "platform": "P1 B/W/M",
+    "steps": "Chạy BOUNDS: đúng min/max tốt, ngay ngoài; đúng biên warn, ngay ngoài; giữ các sensor khác tốt",
+    "expected": "Web/mobile/backend phân loại thống nhất; tốt xanh, warning vàng, danger đỏ; giá trị ở biên được xử lý nhất quán",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-08",
+      "FL-09"
+    ],
+    "remaining": "Chỉ Flutter với giá trị mẫu; chưa đủ biên và đồng nhất backend/web."
+  },
+  {
+    "id": "DATA-06",
+    "platform": "P1 B/W/M",
+    "steps": "Gán SPECIES → lần lượt đưa giá trị vào các dải tốt/warn/danger",
+    "expected": "Áp dụng ngưỡng loài và margin đúng; không vẫn dùng mặc định",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-08",
+      "FL-09"
+    ],
+    "remaining": "Chỉ Flutter với giá trị mẫu; chưa đủ biên và đồng nhất backend/web."
+  },
+  {
+    "id": "DATA-07",
+    "platform": "P1 B/W/M",
+    "steps": "Loài thiếu/null/min≥max hoặc truy vấn loài lỗi",
+    "expected": "Dùng fallback có chủ đích, không crash; không nhầm null thành0; ghi nhận nếu các nền tảng fallback khác nhau",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-10"
+    ],
+    "remaining": "Mới thiếu loài; chưa null,min≥max,lỗi truy vấn và các nền tảng."
+  },
+  {
+    "id": "DATA-08",
+    "platform": "P0 B/W/M",
+    "steps": "Các số tốt nhưng pin5=0; sau đó pin5=1",
+    "expected": "Cạn nước làm danger/khiên đỏ; phục hồi đủ nước trả về trạng thái theo các sensor còn lại",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-13"
+    ],
+    "remaining": "Mới ưu tiên trạng thái khiên; chưa telemetry,phục hồi và chuyển bể thực tế."
+  },
+  {
+    "id": "DATA-09",
+    "platform": "P1 W/M/D",
+    "steps": "Một sensor warn, một danger → khôi phục lần lượt → chuyển bể",
+    "expected": "Mức tổng hợp theo mức nghiêm trọng nhất; count/text khớp bể đang chọn",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-13"
+    ],
+    "remaining": "Mới ưu tiên trạng thái khiên; chưa telemetry,phục hồi và chuyển bể thực tế."
+  },
+  {
+    "id": "DATA-10",
+    "platform": "P1 W/M",
+    "steps": "Lịch sử rỗng, một điểm, nhiều điểm; đổi sensor/khoảng thời gian/bể",
+    "expected": "Chart không lỗi trục; chỉ lấy đúng bể và khoảng; tooltip/đơn vị/ngày giờ chính xác",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-11",
+    "platform": "P1 W/M/D",
+    "steps": "Mất mạng Realtime → nhận dữ liệu khi offline → kết nối lại",
+    "expected": "Khôi phục dữ liệu mới; không nhân bản điểm hoặc subscription; không hiện dữ liệu cũ như vừa nhận",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "DATA-12",
+    "platform": "P1 B/I",
+    "steps": "Thiết bị đang simulator → telemetry thật tới → chờ chu kỳ simulator tiếp",
+    "expected": "Cờ simulator chuyển đúng; dữ liệu giả không tiếp tục ghi đè dữ liệu thật",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-01",
+    "platform": "P1 B/D",
+    "steps": "Gửi một telemetry bất thường khi tắt các kênh gửi",
+    "expected": "Lịch sử cảnh báo vẫn ghi; không gửi email/push chỉ vì có alert",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-02",
+    "platform": "P1 B/W/M",
+    "steps": "Lưu lần lượt none, critical_only, warning_only và chế độ toàn bộ → phát warn/danger",
+    "expected": "none không gửi; critical_only chỉ danger; [HT] warning_only bỏ lượt có danger; toàn bộ gửi theo cấu hình",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-03",
+    "platform": "P1 B",
+    "steps": "Cùng lúc một warn và một danger với warning_only",
+    "expected": "[HT] Lượt gửi bị bỏ vì hasDanger; ghi rõ hành vi này để xác nhận nghiệp vụ, không mặc định warn vẫn gửi",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-04",
+    "platform": "P1 B",
+    "steps": "Có nhiều sensor bất thường cùng mẫu",
+    "expected": "Nội dung gom đúng sensor/giá trị/bể; không gửi một thư riêng cho từng sensor trong cùng lượt",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-05",
+    "platform": "P1 B/D",
+    "steps": "Phát lặp trước, đúng và sau cooldown",
+    "expected": "Không spam trước hạn; sau hạn được gửi; kiểm tra mốc last_alert_sent_at và đơn vị cooldown",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-06",
+    "platform": "P1 W/M/B",
+    "steps": "Bật riêng email, riêng web, riêng app rồi cả ba",
+    "expected": "Chỉ kênh được bật nhận; nội dung và tài khoản đích đúng; cấu hình lưu qua reload",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-06",
+      "BE-07"
+    ],
+    "remaining": "Chỉ Brevo fake fetch; chưa cấu hình kênh,FCM,SMTP,token,cooldown và gửi thật."
+  },
+  {
+    "id": "ALERT-07",
+    "platform": "P1 B",
+    "steps": "Email lỗi nhưng FCM thành công; không có email/token; token hết hạn",
+    "expected": "Server không crash; xử lý kênh độc lập; [HT] mốc throttle có thể vẫn cập nhật khi email lỗi; không hứa tự gửi lại ngay",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-06",
+      "BE-07"
+    ],
+    "remaining": "Chỉ Brevo fake fetch; chưa cấu hình kênh,FCM,SMTP,token,cooldown và gửi thật."
+  },
+  {
+    "id": "ALERT-08",
+    "platform": "P0 W/M/D",
+    "steps": "A đăng xuất, B đăng nhập cùng máy → phát cảnh báo A",
+    "expected": "[YC] B không nhận nội dung riêng của A qua token/subscription còn sót",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-09",
+    "platform": "P1 W/M",
+    "steps": "Từ chối quyền push, rồi bật lại; nhận push foreground/background",
+    "expected": "Không chặn chức năng khác; xin quyền/đăng ký token đúng; không hiển thị hai lần cùng một thông báo",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ALERT-10",
+    "platform": "P1 W/M",
+    "steps": "Lọc lịch sử cảnh báo theo bể/mức/thời gian; không có kết quả; dữ liệu lớn",
+    "expected": "Bộ lọc và thống kê nhất quán, empty state đúng; không lẫn khách khác",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-01",
+    "platform": "P0 W/M/B/I",
+    "steps": "Mỗi relay ban đầu OFF → bấm ON → đối chiếu API, MQTT, DB, tải",
+    "expected": "Đúng pin/MAC/bể; cmd OFF; DB true, UI ON, log USER ON; tải thử bật",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-02",
+    "platform": "P0 W/M/B/I",
+    "steps": "Mỗi relay ban đầu ON → bấm OFF → đối chiếu các lớp",
+    "expected": "cmd ON; DB false, UI OFF, log USER OFF; tải thử tắt",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-03",
+    "platform": "P0 W/M/I",
+    "steps": "Điều khiển A1 rồi đổi A2; giữ B1 kết nối",
+    "expected": "Chỉ thiết bị được chọn thay đổi; relay khác và bể khác không đổi",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-04",
+    "platform": "P1 W/M/B",
+    "steps": "Bấm nhanh cùng nút nhiều lần lúc request pending",
+    "expected": "Không tạo chuỗi đảo trạng thái ngoài ý định; pending rõ; kết quả cuối khớp nguồn dữ liệu",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-05",
+    "platform": "P0 W/M",
+    "steps": "Gửi lệnh A1 → đổi A2 trước phản hồi; đẩy Realtime A1 cũ",
+    "expected": "Không ghi trạng thái A1 vào A2; pending/stale response được dọn đúng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-06",
+    "platform": "P0 W/M/B/I",
+    "steps": "MQTT mất kết nối hoặc thiết bị offline → điều khiển",
+    "expected": "[YC] Không trình bày trạng thái DB là xác nhận vật lý chắc chắn; lỗi/pending được xử lý. Ghi riêng khả năng API trả200 dù tải không nhận",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-07",
+    "platform": "P0 B/D/I",
+    "steps": "Publish thành công nhưng update DB lỗi → thử lại từ UI",
+    "expected": "[YC] Báo lỗi và có cách đồng bộ lại; không đảo relay lần nữa chỉ vì retry; ghi nhận log/tải/DB lệch nếu có",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-08",
+    "platform": "P1 W/M",
+    "steps": "API treo quá timeout rồi trả muộn",
+    "expected": "Loading kết thúc, có thông báo; phản hồi muộn không ghi đè thao tác mới; user kiểm tra trạng thái được",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "RELAY-09",
+    "platform": "P0 W/M/D",
+    "steps": "Hai máy cùng điều khiển một relay với ý định trái nhau",
+    "expected": "Trạng thái cuối nhất quán theo lệnh được xử lý sau; không log thành công cho lệnh thất bại; không nhấp nháy vô hạn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-01",
+    "platform": "P1 W/M/D",
+    "steps": "Tạo lịch một lần ngày tương lai ON08:00/OFF09:00",
+    "expected": "Lưu device_schedules đúng device/relay/run_date; load lại đúng; không ghi sáu cột cũ",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-59"
+    ],
+    "remaining": "Mới payload mobile mock; chưa reload,DB đã drop cột và worker."
+  },
+  {
+    "id": "SCH-02",
+    "platform": "P1 W/M/B",
+    "steps": "Tạo lịch hàng ngày ON08:00/OFF09:00 → giả lập hai ngày",
+    "expected": "is_daily true, run_date null; mỗi mốc chạy một lần/ngày; ngày thứ hai vẫn chạy",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-09"
+    ],
+    "remaining": "Mới lịch daily Light ON hai ngày; chưa UI,DB thật,OFF và restart."
+  },
+  {
+    "id": "SCH-03",
+    "platform": "P0 B/I",
+    "steps": "Lịch đến hạn của từng relay → kiểm tra payload và tải",
+    "expected": "Cùng ánh xạ active-low như lệnh tay; relay_logs AUTO dùng trạng thái nghiệp vụ",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-08",
+      "BE-12"
+    ],
+    "remaining": "Mới once ON Pump bằng fake MQTT/DB; chưa đủ relay,OFF,restart và tải thật. Mới retry update DB sau OFF Aerator; chưa các lỗi publish,log,schedule và tải thật."
+  },
+  {
+    "id": "SCH-04",
+    "platform": "P1 B/D",
+    "steps": "Worker tick nhiều lần cùng phút và sau restart",
+    "expected": "on/off_executed_on ngăn lặp; không thêm log/lệnh trùng cho mốc đã hoàn thành",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-08",
+      "BE-09"
+    ],
+    "remaining": "Mới once ON Pump bằng fake MQTT/DB; chưa đủ relay,OFF,restart và tải thật. Mới lịch daily Light ON hai ngày; chưa UI,DB thật,OFF và restart."
+  },
+  {
+    "id": "SCH-05",
+    "platform": "P1 W/M/B",
+    "steps": "Lịch một lần ON23:59/OFF00:01 → qua nửa đêm",
+    "expected": "ON ngày chọn, OFF ngày sau theo Việt Nam; hoàn tất thì inactive",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-10",
+      "WEB-03"
+    ],
+    "remaining": "Mới hàm tính thời gian qua ngày; chưa trọn luồng lưu,ON/OFF,hoàn tất và thiết bị."
+  },
+  {
+    "id": "SCH-06",
+    "platform": "P1 B",
+    "steps": "ON=OFF ở lịch một lần; lặp lại với daily",
+    "expected": "[HT] Once coi off≤on là qua ngày; daily cùng phút ưu tiên OFF. Cần xác nhận đây là chính sách mong muốn trước khi cho phép UI lưu",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-07",
+    "platform": "P1 B",
+    "steps": "Lịch once chỉ ON; lịch once chỉ OFF → đến hạn",
+    "expected": "Chạy đúng mốc; lịch hoàn tất không tiếp tục lặp ngày sau",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-08"
+    ],
+    "remaining": "Mới once ON Pump bằng fake MQTT/DB; chưa đủ relay,OFF,restart và tải thật."
+  },
+  {
+    "id": "SCH-08",
+    "platform": "P1 W/M/D",
+    "steps": "Cả hai giờ trống, giờ sai, daily có date, once thiếu date → lưu/UI hoặc request",
+    "expected": "Bị validation/constraint từ chối; không tạo lịch worker không hiểu",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-09",
+    "platform": "P0 D/W/M",
+    "steps": "Hai phiên cùng tạo lịch active cho cùng device/relay",
+    "expected": "Chỉ một lịch active theo unique index; UI xử lý xung đột, không báo cả hai thành công",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-10",
+    "platform": "P1 W/M/B",
+    "steps": "Sửa giờ/ngày; tắt lịch trước hạn; bật lại; xóa lịch qua UI",
+    "expected": "Worker chỉ thực thi bản active mới; thao tác hủy không phụ thuộc quyền DELETE không được cấp; lịch cũ không chạy",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-11",
+    "platform": "P1 B",
+    "steps": "Once chạy trễ1,2,3 phút; daily chạy trễ1 phút",
+    "expected": "[HT] Once có cửa sổ trễ tối đa2 phút; daily cần đúng phút. Ghi nhận mốc bị lỡ, không tự giả định có catch-up",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-11"
+    ],
+    "remaining": "Mới once trễ1/3 phút và ngày sau; chưa mốc2 phút và daily trễ."
+  },
+  {
+    "id": "SCH-12",
+    "platform": "P0 B/I",
+    "steps": "Thiết bị inactive, mất tank_id hoặc MAC → lịch đến hạn",
+    "expected": "Không publish; không tạo log AUTO giả như đã bật tải",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-13"
+    ],
+    "remaining": "Mới inactive/disconnected MQTT; chưa mất tank/MAC,reconnect,DB outage và server chạy thật."
+  },
+  {
+    "id": "SCH-13",
+    "platform": "P1 B/D",
+    "steps": "Relay đã đúng trạng thái trước mốc lịch",
+    "expected": "Không publish/log thay đổi dư; đánh dấu mốc xử lý để không lặp",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-14",
+    "platform": "P0 B/D",
+    "steps": "Publish lỗi, update state lỗi, insert log lỗi, update schedule lỗi — từng lỗi riêng",
+    "expected": "Không đánh dấu hoàn tất trước bước cần thiết; retry không republish lệnh đã gửi trong cùng tiến trình; dữ liệu/log có thể phục hồi",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-12"
+    ],
+    "remaining": "Mới retry update DB sau OFF Aerator; chưa các lỗi publish,log,schedule và tải thật."
+  },
+  {
+    "id": "SCH-15",
+    "platform": "P0 B",
+    "steps": "Hai worker local và staging cùng chạy fixture một lịch",
+    "expected": "[YC] Tối đa một tác động nghiệp vụ; ghi nhận rủi ro khóa in-memory không ngăn hai process; không kết luận an toàn từ ca một process",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-16",
+    "platform": "P1 B",
+    "steps": "Server UTC; lịch Việt Nam; cuối tháng/năm, 29/02 năm nhuận",
+    "expected": "Ngày thực thi đúng Asia/Ho_Chi_Minh, không lệch7 giờ hoặc bỏ ngày",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SCH-17",
+    "platform": "P0 W/M/B/D",
+    "steps": "DB test đã drop sáu cột legacy → mở/sửa lịch/điều khiển/restart worker",
+    "expected": "Không query/update cột đã xóa; lịch mới và relay_logs hoạt động; migration không xóa trạng thái relay",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-59"
+    ],
+    "remaining": "Mới payload mobile mock; chưa reload,DB đã drop cột và worker."
+  },
+  {
+    "id": "SCH-18",
+    "platform": "P1 D",
+    "steps": "Trên DB test: áp migration theo thứ tự cũ→drop; thử dựng DB mới",
+    "expected": "Nhận diện migration ban đầu còn đọc cột cũ; quy trình khởi tạo phải có schema nền phù hợp, không mặc định chạy lại migration cũ sau drop là an toàn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-01",
+    "platform": "P1 W",
+    "steps": "Thêm V1/V3, thêm lặp V1, đổi số lượng, xóa; reload",
+    "expected": "Dòng hàng/số lượng và tổng giá đúng, không tạo dòng trùng ngoài ý định; persistence khớp thiết kế",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-02",
+    "platform": "P1 W",
+    "steps": "Số lượng0/âm/rất lớn/không nguyên; checkout giỏ rỗng",
+    "expected": "[YC] Không tạo đơn vô nghĩa; giới hạn hợp lệ rõ, tổng không âm/NaN",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-03",
+    "platform": "P1 W/D",
+    "steps": "Khách chưa login đặt COD đủ thông tin",
+    "expected": "orders pending user_id null và order_items khớp; success rồi mới xóa giỏ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-04",
+    "platform": "P1 W/D",
+    "steps": "A đặt hàng, sửa địa chỉ giao khác địa chỉ cũ",
+    "expected": "Đơn gắn A, địa chỉ đơn đúng; cập nhật hồ sơ theo luồng hiện có không làm đổi đơn cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-05",
+    "platform": "P1 W",
+    "steps": "Thiếu tên/phone/email/address, phone/email sai; note60 và61 từ",
+    "expected": "[YC] Form từ chối dữ liệu bắt buộc/sai; giới hạn note60 từ hoạt động theo UI",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-06",
+    "platform": "P0 W/D",
+    "steps": "Bấm đặt hai lần hoặc retry khi response chậm",
+    "expected": "[YC] Một ý định đặt hàng không tạo nhiều đơn; giỏ không bị xóa trước khi biết kết quả",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-07",
+    "platform": "P0 W/D",
+    "steps": "Insert orders thành công, insert order_items thất bại",
+    "expected": "[YC] Không có đơn thiếu hàng được xử lý như bình thường; UI không báo thành công; có rollback/khôi phục rõ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-08",
+    "platform": "P0 W/D",
+    "steps": "Sửa giá, total_price, product_id, user_id/status trong request test",
+    "expected": "[YC] Giá/tổng/quyền sở hữu/trạng thái được kiểm tra phía tin cậy; không cho tự tạo đơn delivered giá tùy ý",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-09",
+    "platform": "P1 W",
+    "steps": "Chọn chuyển khoản → xem QR và xác nhận",
+    "expected": "Thông tin đúng khả năng hiện tại; QR placeholder không được hiểu là tích hợp thanh toán thật; không tự báo đã thanh toán nếu không có xác minh",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-10",
+    "platform": "P0 W/D",
+    "steps": "A mở lịch sử/chi tiết đơn; thử ID đơn B và khách vãng lai",
+    "expected": "Chỉ dữ liệu được phép; không lộ địa chỉ/phone/MAC của B",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SHOP-11",
+    "platform": "P1 W",
+    "steps": "Mở catalog gói cước có/rỗng/lỗi dữ liệu",
+    "expected": "Giá/thời hạn/quyền lợi đúng DB; không giả định có luồng mua/gia hạn tự động khi source chưa triển khai",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SUP-01",
+    "platform": "P1 W/D",
+    "steps": "Guest và A gửi hỗ trợ đủ tên/email/nội dung; phone/address tùy chọn",
+    "expected": "Tạo pending, nội dung chính xác; user_id gắn đúng khi login",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SUP-02",
+    "platform": "P1 W",
+    "steps": "Bỏ trường bắt buộc; email sai; gửi lặp; DB lỗi",
+    "expected": "Validation/lỗi rõ; không thông báo gửi thành công khi thất bại",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SUP-03",
+    "platform": "P0 W/D",
+    "steps": "Tra lịch sử theo email A bằng guest, B; gọi RPC trực tiếp",
+    "expected": "[YC] Không lộ nội dung riêng chỉ nhờ biết email; kiểm tra quyền RPC, không chỉ bộ lọc UI",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SUP-04",
+    "platform": "P1 W/D",
+    "steps": "Insert hỗ trợ lỗi UUID → nhánh retry bỏ user_id",
+    "expected": "Không tạo hai phiếu; vẫn có khả năng tra đúng phiếu theo thiết kế; không nới quyền dữ liệu",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-01",
+    "platform": "P0 W/M/D",
+    "steps": "Đăng nhập từng role staff → mở các tab và thử truy vấn task loại khác",
+    "expected": "Warehouse packing/history; shipper delivery; support hỗ trợ; maintenance bảo trì; staff tổng hợp theo code. [YC] Quyền dữ liệu tương ứng, không chỉ ẩn tab",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-02",
+    "platform": "P1 W/M",
+    "steps": "Task todo chưa giao → nhận → hoàn thành",
+    "expected": "in_progress gắn người nhận; done có completed_at; vào lịch sử, không còn ở danh sách đang làm",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-03",
+    "platform": "P0 W/M/D",
+    "steps": "Hai nhân viên cùng nhận một task chưa giao",
+    "expected": "[YC] Chỉ một người được nhận; không ghi đè staff_id âm thầm",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-04",
+    "platform": "P0 W/M/D",
+    "steps": "Nhân viên B thao tác task đã giao A hoặc sửa status trực tiếp",
+    "expected": "[YC] Từ chối theo quyền; không hoàn tất hộ trái phép",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-05",
+    "platform": "P1 W/M/D",
+    "steps": "Admin duyệt đơn pending",
+    "expected": "Đơn confirmed; tạo một task packing đúng đơn/hàng; lỗi tạo task không bị che",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-06",
+    "platform": "P0 W/M/D",
+    "steps": "Hai admin duyệt cùng đơn; duyệt lại đơn đã confirmed",
+    "expected": "[YC] Không tạo hai task packing hoặc chuyển trạng thái lùi",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-07",
+    "platform": "P1 W/M/D",
+    "steps": "Đóng gói đơn có nhiều item và quantity>1, dùng MAC đúng version còn rảnh",
+    "expected": "Mỗi đơn vị có MAC; order_items lưu đúng; device active; packing done; một task delivery_install được tạo",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-08",
+    "platform": "P0 W/M/D",
+    "steps": "Thiếu MAC; trùng MAC khác hoa/thường/khoảng trắng; MAC không tồn tại",
+    "expected": "Từ chối trước khi hoàn tất; không gán thiếu/trùng thiết bị",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-09",
+    "platform": "P0 W/M/D",
+    "steps": "MAC active/đã ghép bể hoặc version khác sản phẩm",
+    "expected": "Không lấy thiết bị đang dùng/sai phiên bản để giao",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-10",
+    "platform": "P0 W/M/D",
+    "steps": "Hai đơn cùng đóng gói một MAC rảnh",
+    "expected": "[YC] MAC chỉ được cấp cho một đơn; không chỉ kiểm tra bản snapshot cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-11",
+    "platform": "P0 W/M/D",
+    "steps": "Lỗi giữa cập nhật items, active device, done task, tạo delivery",
+    "expected": "[YC] Không báo toàn bộ thành công khi dở; retry không tạo task trùng; xác định được items/MAC đã xử lý",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-12",
+    "platform": "P1 W/M/D",
+    "steps": "Shipper hoàn tất delivery_install",
+    "expected": "Task done và đơn delivered đúng; doanh thu chỉ bắt đầu tính khi đơn đủ điều kiện",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-13",
+    "platform": "P1 W/M/D",
+    "steps": "Support trả lời phiếu → khách xem lịch sử",
+    "expected": "Nội dung staff_reply và status replied đúng; khách chỉ xem phiếu của mình",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-14",
+    "platform": "P1 W/M/D",
+    "steps": "Chuyển phiếu sang bảo trì; có/không có đơn trước theo email/phone",
+    "expected": "Tạo maintenance task đúng nội dung; địa chỉ fallback theo code, không lấy nhầm khách; thiếu địa chỉ hiển thị rõ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "STAFF-15",
+    "platform": "P1 W/M",
+    "steps": "Lịch sử rỗng/nhiều task; task_type legacy giao/lắp/bảo trì",
+    "expected": "Hiển thị và lọc đúng các kiểu được code hỗ trợ; không mất task vì tên cũ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-01",
+    "platform": "P1 W/M",
+    "steps": "Thêm loài → sửa ngưỡng → tìm kiếm → xóa loài chưa dùng",
+    "expected": "CRUD đúng và tải lại nhất quán; ngưỡng lưu dạng số",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-02",
+    "platform": "P1 W/M/D",
+    "steps": "Loài tên trùng/trống; min=max/min>max; pH ngoài0–14; dữ liệu không số",
+    "expected": "[YC] Từ chối dữ liệu sai, không để cấu hình không hợp lệ âm thầm thành fallback",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-03",
+    "platform": "P0 W/M/D",
+    "steps": "Xóa loài đang gắn bể",
+    "expected": "FK/xử lý tham chiếu rõ; không xóa bể theo ngoài ý định; bể còn dùng được với ngưỡng hợp lệ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-04",
+    "platform": "P1 W/M",
+    "steps": "Thêm MAC theo dòng/dấu phẩy, có khoảng trắng và hoa/thường",
+    "expected": "Chuẩn hóa nhất quán; đúng số thiết bị/version; không dòng rỗng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-05",
+    "platform": "P0 W/M/D",
+    "steps": "Batch có MAC trùng nội bộ/trùng DB và một phần hợp lệ",
+    "expected": "Không trùng inventory; báo rõ batch thất bại hay phần nào đã lưu; retry không nhân bản",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-06",
+    "platform": "P0 W/M/D",
+    "steps": "Sửa MAC thành MAC đã có; xóa thiết bị đang có bể/lịch/đơn",
+    "expected": "Không phá lịch sử hoặc điều khiển sai thiết bị; xung đột/FK được báo rõ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-07",
+    "platform": "P1 W/M",
+    "steps": "Tra người mua từ thiết bị đã giao/chưa giao",
+    "expected": "Đúng đơn và người mua; trạng thái chưa có người mua không dùng thông tin dòng trước",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-08",
+    "platform": "P0 W/M/D",
+    "steps": "Admin tạo staff đầy đủ; ngay sau đó kiểm tra session admin",
+    "expected": "Staff role đúng; admin vẫn là admin, không bị signUp thay session sang nhân viên mới",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-09",
+    "platform": "P1 W/M",
+    "steps": "Tạo staff thiếu trường/trùng phone/email; sửa tên/phone/role",
+    "expected": "Validation và quyền cập nhật đúng; không tạo Auth mà thiếu profile hoặc ngược lại",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-10",
+    "platform": "P0 W/M/D",
+    "steps": "Xóa staff rồi thử token cũ và đăng nhập lại bằng Auth còn tồn tại",
+    "expected": "[YC] Không còn quyền staff. Phân biệt xóa users với xóa tài khoản Auth; không coi xóa profile là thu hồi session đầy đủ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-11",
+    "platform": "P1 W/M",
+    "steps": "Thêm gói: giá/thời hạn/max_tanks/history_days/setup; trên mobile sửa/xóa",
+    "expected": "Giá trị đúng và landing cập nhật; chỉ test thao tác thực sự có UI. Web hiện có luồng thêm, không mặc định có sửa/xóa như mobile",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-12",
+    "platform": "P1 W/M",
+    "steps": "Gói tên rỗng, giá âm, thời hạn0/âm, giới hạn không nguyên",
+    "expected": "[YC] Từ chối hoặc có quy ước giá trị đặc biệt rõ; không làm landing hiển thị dữ liệu sai",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "ADM-13",
+    "platform": "P1 W/M",
+    "steps": "Tìm/lọc đơn theo trạng thái, xem chi tiết item/MAC",
+    "expected": "Kết quả, tổng tiền, người nhận, phiên bản và MAC đúng đơn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-01",
+    "platform": "P0 B/W/M",
+    "steps": "Nạp REV vào năm quá khứ → mở bảng/line chart",
+    "expected": "Đủ12 tháng; T1/T2/T3 đúng, các tháng còn lại0; hai line revenue/MA3, đơn vị tiền chính xác",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-01"
+    ],
+    "remaining": "Test hàm dùng bộ số liệu khác; chưa chạy đủ dữ liệu REV/VERSION và cả giao diện web/mobile."
+  },
+  {
+    "id": "REV-02",
+    "platform": "P0 B/W/M",
+    "steps": "Đối chiếu growth T1/T2/T3/T4/T5 của REV",
+    "expected": "null, -5%, 18,42%, -100%, null; không Infinity/NaN; UI dùng dấu “—” cho null",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-01"
+    ],
+    "remaining": "Test hàm dùng bộ số liệu khác; chưa chạy đủ dữ liệu REV/VERSION và cả giao diện web/mobile."
+  },
+  {
+    "id": "REV-03",
+    "platform": "P0 B/W/M",
+    "steps": "Đối chiếu MA3 của REV T1–T4",
+    "expected": "T1/T2 null; T3=820.000.000; T4=553.333.333; làm tròn đồng theo backend",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-01"
+    ],
+    "remaining": "Test hàm dùng bộ số liệu khác; chưa chạy đủ dữ liệu REV/VERSION và cả giao diện web/mobile."
+  },
+  {
+    "id": "REV-04",
+    "platform": "P0 B/W/M",
+    "steps": "REV → xem tổng và Điểm nổi bật",
+    "expected": "Tổng2,46 tỷ; đỉnh900 triệu/T3; tăng18,42%; giảm-100%; bảng và chart dùng cùng dữ liệu",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-05",
+    "platform": "P1 B/W/M",
+    "steps": "Hai tháng cùng doanh thu cao nhất; chỉ tăng; chỉ giảm; cả năm0",
+    "expected": "[HT] Đỉnh đồng hạng chọn tháng đầu; không có tăng/giảm thì chỉ tiêu đó null; năm0 peakMonth null",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-02"
+    ],
+    "remaining": "Mới kiểm tra dữ liệu rỗng; chưa đủ đồng hạng, chỉ tăng/giảm và các biến thể thời gian."
+  },
+  {
+    "id": "REV-06",
+    "platform": "P0 B/W/M",
+    "steps": "Đơn created T1 nhưng delivered T3; thêm pending/confirmed/shipping/cancelled",
+    "expected": "[HT] Đơn delivered tính T1; các trạng thái khác không vào revenue; nhãn mô tả không gây hiểu nhầm doanh thu theo ngày giao",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-07",
+    "platform": "P0 B/D",
+    "steps": "Đơn ở hai mốc CLOCK và ranh giới mỗi tháng",
+    "expected": "Ghi đúng năm/tháng Việt Nam; cận cuối không bị tính hai lần",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-03"
+    ],
+    "remaining": "Mới kiểm tra hàm với fixture; chưa truy vấn database và đối chiếu UI."
+  },
+  {
+    "id": "REV-08",
+    "platform": "P1 W/M/B",
+    "steps": "Chọn năm quá khứ/năm hiện tại → đổi nhanh năm nhiều lần khi mạng chậm",
+    "expected": "Filter, bảng, chart, highlights cùng năm; response cũ không đè năm mới",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-09",
+    "platform": "P1 B",
+    "steps": "annual không truyền year; year=1999, năm tương lai, abc,2026.5, tham số lặp",
+    "expected": "Mặc định năm hiện tại; giá trị không hợp lệ400; không crash/500 do input",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-05"
+    ],
+    "remaining": "Mới thử year hợp lệ/banana và quyền; chưa đủ mặc định,1999,năm tương lai,số thập phân,tham số lặp."
+  },
+  {
+    "id": "REV-10",
+    "platform": "P1 B/W/M",
+    "steps": "Năm hiện tại đang T10, không có dữ liệu T7–T12",
+    "expected": "T7–T10=0; T11–T12=null; không nối MA3 qua tháng tương lai hay hiển thị tương lai thành doanh thu0 đã ghi nhận",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-02",
+      "FL-39"
+    ],
+    "remaining": "Mới kiểm tra dữ liệu rỗng; chưa đủ đồng hạng, chỉ tăng/giảm và các biến thể thời gian. Mới hiển thị fixture rỗng/thiếu tháng; chưa API và năm hiện tại đầy đủ."
+  },
+  {
+    "id": "REV-11",
+    "platform": "P0 B",
+    "steps": "Seed501 và1001 đơn delivered, có created_at trùng",
+    "expected": "Phân trang500 lấy đủ, ổn định theo created_at/id; tổng không bỏ/trùng đơn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-12",
+    "platform": "P0 B/W/M",
+    "steps": "VERSION → lọc đúng tháng/năm",
+    "expected": "V1=300.000; V3=600.000; tỷ trọng33,3%/66,7% theo format; tổng version900.000",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-01"
+    ],
+    "remaining": "Test hàm dùng bộ số liệu khác; chưa chạy đủ dữ liệu REV/VERSION và cả giao diện web/mobile."
+  },
+  {
+    "id": "REV-13",
+    "platform": "P0 B",
+    "steps": "Tổng đơn100đ; ba item cùng subtotal thuộc V1/V2/V3",
+    "expected": "Phân bổ33/33/34 theo thứ tự items; tổng100, không hụt tiền do làm tròn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-14",
+    "platform": "P1 B/W/M",
+    "steps": "Có item product_id ngoàiV1–V4, item subtotal≤0, đơn total âm/không hợp lệ",
+    "expected": "[HT] Annual bỏ total không hợp lệ/âm; item không hợp lệ không phân bổ. Version lạ không vào4 cột: phát hiện chênh tổng, không ép khớp sai",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-15",
+    "platform": "P1 W/M",
+    "steps": "Đổi tháng rồi năm ở bảng version, có tháng rỗng",
+    "expected": "Đúng kỳ; dữ liệu cũ không còn; tổng0 không chia cho0",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-16",
+    "platform": "P2 W/M",
+    "steps": "Version revenue khác nhau, đồng hạng thấp/cao, toàn0",
+    "expected": "Cao nhất xanh, chỉ mức thấp nhất đỏ nhạt; không tô mọi version còn lại đỏ. Trường hợp đồng hạng phải nhất quán và không vừa cao vừa thấp gây nhầm",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-17",
+    "platform": "P1 W/M/B",
+    "steps": "API404/401/403/500, timeout → khôi phục → Thử lại",
+    "expected": "Thông báo đúng; không thay lỗi bằng số0/mẫu demo; dữ liệu phục hồi khi thử lại",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-18",
+    "platform": "P1 B/W/M",
+    "steps": "Kiểm tra KPI đơn pending/packing/shipping; devices assigned; staff;4 đơn gần nhất",
+    "expected": "Đếm đúng nguồn: packing từ task đang mở, devices có tank_id, role staff%; không lẫn số lượng task với số đơn",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "REV-19",
+    "platform": "P1 B/W/M",
+    "steps": "Các đơn quanh ranh giới tháng; xem7/30 ngày và tăng trưởng tháng",
+    "expected": "Series đủ ngày, thiếu ngày điền0; tổng và mức tăng đúng; tháng trước0 thì phần trăm null",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-03"
+    ],
+    "remaining": "Mới kiểm tra hàm với fixture; chưa truy vấn database và đối chiếu UI."
+  },
+  {
+    "id": "REV-20",
+    "platform": "P2 W/M",
+    "steps": "Mobile320/360/390px, chữ lớn, light/dark → mở từng tháng và filter năm/tháng",
+    "expected": "Không bắt kéo ngang toàn màn; vùng highlight khớp hàng; text filter rõ; expand MA3 đúng tháng; chart tooltip chạm được",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-06",
+      "FL-07",
+      "FL-11",
+      "FL-16",
+      "FL-18",
+      "FL-20",
+      "FL-23",
+      "FL-32"
+    ],
+    "remaining": "Mới layout widget ở các độ rộng/theme; chưa web,tooltip,filter và mở từng tháng."
+  },
+  {
+    "id": "SEC-01",
+    "platform": "P0 B",
+    "steps": "GET admin dashboard/annual không token, token sai/hết hạn, token A, token admin",
+    "expected": "Lần lượt401,401,403,200; dữ liệu admin có private,no-store",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-04",
+      "BE-05"
+    ],
+    "remaining": "HTTP loopback với Auth giả lập; chưa token hết hạn và quyền trên môi trường thật."
+  },
+  {
+    "id": "SEC-02",
+    "platform": "P0 B/I",
+    "steps": "POST relay/command không token, token A với tank B1",
+    "expected": "[YC] Từ chối trước publish/update; không có tác động IoT ngoài quyền",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-03",
+    "platform": "P0 B/D",
+    "steps": "Relay payload state chuỗi/null, pin ngoài1–3, relay_field ngoài danh sách hoặc không khớp pin",
+    "expected": "[YC]400; không update cột tùy ý hoặc publish sai kênh",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-04",
+    "platform": "P0 D",
+    "steps": "Với A: đọc/sửa/xóa tanks, devices, telemetry, alerts, relay_logs của B qua Data API",
+    "expected": "[YC] RLS chặn từng thao tác, không chỉ UI; dữ liệu B giữ nguyên",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-05",
+    "platform": "P0 D",
+    "steps": "A insert/update device_schedules cho B; đổi device_id của lịch A sang B",
+    "expected": "RLS USING/WITH CHECK chặn; lịch B không bị xem/sửa/chiếm",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-06",
+    "platform": "P0 D",
+    "steps": "Khách/staff tự update users.role; sửa user_id của bể/đơn; sửa giá và trạng thái đơn",
+    "expected": "[YC] Từ chối nâng quyền/chiếm dữ liệu/gian lận; role không lấy từ dữ liệu người dùng sửa được",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-07",
+    "platform": "P0 D",
+    "steps": "Guest/A gọi RPC lịch sử support; truy vấn view nếu được expose",
+    "expected": "[YC] Không vượt RLS qua function/view; scope dữ liệu theo chính sách xác thực, không chỉ email tự nhập",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-08",
+    "platform": "P0 W/M/B",
+    "steps": "Kiểm tra bundle/APK/config công khai và lỗi runtime",
+    "expected": "Không có service_role, SMTP/Brevo secret, MQTT password, access/refresh token trong log; publishable/anon key không được nhầm là bí mật nếu có RLS đúng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-09",
+    "platform": "P1 W/D",
+    "steps": "Lưu chuỗi chứa HTML/script vô hại vào tên bể/support/note → hiển thị các role",
+    "expected": "Nội dung chỉ là text; không chạy script, không phá layout",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-10",
+    "platform": "P1 B",
+    "steps": "Request từ origin local/staging hợp lệ và origin ngoài allowlist; OPTIONS",
+    "expected": "CORS theo chính sách; preflight không cấp quyền API; client không Origin vẫn cần auth cho thao tác riêng tư",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-11",
+    "platform": "P1 W/B",
+    "steps": "Đọc response hosting test cho env/git/source-map/debug và header HTTPS",
+    "expected": "[YC] Không công khai file bí mật/debug; ghi riêng policy header cần đạt. Không suy ra an toàn chỉ từ status200 của SPA fallback",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "SEC-12",
+    "platform": "P1 W/M/B",
+    "steps": "Lặp đăng nhập/support/checkout bằng số lượng giới hạn trong môi trường test",
+    "expected": "[YC] Có cơ chế chống lạm dụng theo giới hạn thống nhất; không gửi mail/đơn vô hạn. Nếu chưa có SLA/limit, ghi thiếu yêu cầu thay vì tự đặt ngưỡng pass",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-01",
+    "platform": "P1 W/M/B",
+    "steps": "Dev web qua Vite proxy; Android emulator; AQUACARE_API_URL override; cấu hình release",
+    "expected": "Dev đến backend local phù hợp; release đến Render; không phải sửa endpoint source giữa hai môi trường",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-02",
+    "platform": "P1 W/M/B",
+    "steps": "Backend chưa chạy, khởi động chậm hoặc restart → mở màn có API",
+    "expected": "Lỗi kết nối/timeout rõ, có retry; không mất phiên và không báo số liệu0 như thành công",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-03",
+    "platform": "P0 B",
+    "steps": "MQTT mất→kết nối lại; DB mất→phục hồi; worker tick đang xử lý",
+    "expected": "Server sống; đăng ký lại đúng; không chạy chồng tick; không lặp tác động đã hoàn tất",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "BE-13"
+    ],
+    "remaining": "Mới inactive/disconnected MQTT; chưa mất tank/MAC,reconnect,DB outage và server chạy thật."
+  },
+  {
+    "id": "OPS-04",
+    "platform": "P1 B",
+    "steps": "Thiếu từng biến môi trường bắt buộc trong bản test → khởi động",
+    "expected": "Lỗi cấu hình có thể chẩn đoán, không in secret; không âm thầm chạy bằng credential khác",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-05",
+    "platform": "P2 W/M",
+    "steps": "Toàn màn chính ở light/dark, keyboard mở, font lớn, portrait/landscape",
+    "expected": "Text/nút đọc được, modal cuộn được, không overflow; thao tác chính không bị navigation/keyboard che",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-06",
+      "FL-07",
+      "FL-11",
+      "FL-16",
+      "FL-18",
+      "FL-20",
+      "FL-23",
+      "FL-24",
+      "FL-25",
+      "FL-26",
+      "FL-27",
+      "FL-29",
+      "FL-30",
+      "FL-31",
+      "FL-32",
+      "FL-33",
+      "FL-34",
+      "FL-36",
+      "FL-37",
+      "FL-38",
+      "FL-40",
+      "FL-41",
+      "FL-42",
+      "FL-43",
+      "FL-44",
+      "FL-45",
+      "FL-46",
+      "FL-47",
+      "FL-48",
+      "FL-49",
+      "FL-51",
+      "FL-52",
+      "FL-60",
+      "FL-61",
+      "FL-63",
+      "FL-64",
+      "FL-65",
+      "FL-66",
+      "FL-67",
+      "FL-68",
+      "FL-69",
+      "FL-70",
+      "FL-71",
+      "FL-72",
+      "FL-73",
+      "FL-74"
+    ],
+    "remaining": "Nhiều widget mobile đã kiểm tra kích thước; chưa toàn bộ màn,web,keyboard,landscape và thiết bị thật."
+  },
+  {
+    "id": "OPS-06",
+    "platform": "P2 W",
+    "steps": "Keyboard Tab/Enter/Escape trên login, modal bể, bộ lọc,404; icon-only button",
+    "expected": "Focus thấy rõ, nhãn truy cập có nghĩa, không bẫy focus; nút cấu hình/xóa phân biệt được",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-07",
+    "platform": "P1 W/M",
+    "steps": "Đổi tab/bể và vào/ra dashboard20 lần trong dữ liệu test",
+    "expected": "Không nhân subscription/timer/request; không crash khi dispose; carousel không chạy chồng",
+    "status": "CHƯA HOÀN TẤT",
+    "evidence": [
+      "FL-56"
+    ],
+    "remaining": "Mới dispose timer slideshow; chưa chuyển tab/bể20 lần và đếm subscription/request."
+  },
+  {
+    "id": "OPS-08",
+    "platform": "P1 W/M/B",
+    "steps": "Dữ liệu lịch sử lớn và501+ đơn → đo thời gian tải/bộ nhớ",
+    "expected": "Kết quả đầy đủ, có loading, không khóa UI. Ghi số đo; SLA hiệu năng cần chốt riêng trước khi đánh Pass/Fail về tốc độ",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-09",
+    "platform": "P1 W",
+    "steps": "Deploy thử staging → mở deep link và tải asset/APK/manifest",
+    "expected": "Rewrite không biến API/APK thành HTML; cache không giữ manifest/version cũ sau cập nhật",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-10",
+    "platform": "P0 W/M/B/D",
+    "steps": "Luồng đầy đủ: guest đặt hàng → admin duyệt → kho gán MAC → shipper giao → A ghép bể → telemetry → điều khiển → lịch → cảnh báo",
+    "expected": "Mỗi bước liên kết cùng đơn/MAC/bể/chủ; doanh thu chỉ đúng điều kiện; không cần sửa DB thủ công để đi hết luồng",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  },
+  {
+    "id": "OPS-11",
+    "platform": "P0 W/M/B/D",
+    "steps": "Luồng cách ly: A và B thực hiện đồng thời thao tác bể/thiết bị/đơn",
+    "expected": "Không rò dữ liệu hoặc gửi lệnh/thông báo nhầm người; lỗi một người không làm mất trạng thái người kia",
+    "status": "CHƯA CHẠY",
+    "evidence": [],
+    "remaining": ""
+  }
+]

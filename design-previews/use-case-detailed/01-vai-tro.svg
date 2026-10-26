@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="1000" viewBox="0 0 1760 1000"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="tri" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.2"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.edge{stroke:#7b8b9f;stroke-width:1.6;fill:none}.rel{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.gen{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#tri)}</style><rect width="100%" height="100%" fill="white"/>
+<text x="880" y="48" text-anchor="middle" font-size="32" fill="#18364a">AQUACARE · Vai trò và quan hệ kế thừa</text>
+<text x="880" y="83" text-anchor="middle" font-size="20" fill="#18364a">Mũi tên tam giác rỗng hướng từ vai trò chuyên biệt về vai trò chung.</text>
+<path class="edge" d="M400 303 V280 H880"/>
+<path class="edge" d="M880 303 V280 H880"/>
+<path class="edge" d="M1360 303 V280 H880"/>
+<path class="gen" d="M880 280 V247"/>
+<path class="edge" d="M400 558 V500 H880"/>
+<path class="edge" d="M720 558 V500 H880"/>
+<path class="edge" d="M1040 558 V500 H880"/>
+<path class="edge" d="M1360 558 V500 H880"/>
+<path class="gen" d="M880 500 V437"/>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="880" cy="125" r="13"/><path d="M880 138v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="880" y="234" text-anchor="middle" font-size="20" fill="#18364a">Người dùng hệ thống</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="400" cy="315" r="13"/><path d="M400 328v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="400" y="424" text-anchor="middle" font-size="20" fill="#18364a">Khách hàng</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="880" cy="315" r="13"/><path d="M880 328v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="880" y="424" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="1360" cy="315" r="13"/><path d="M1360 328v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="1360" y="424" text-anchor="middle" font-size="20" fill="#18364a">Quản trị viên</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="400" cy="570" r="13"/><path d="M400 583v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="400" y="679" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên kho</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="720" cy="570" r="13"/><path d="M720 583v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="720" y="679" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên giao hàng</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="1040" cy="570" r="13"/><path d="M1040 583v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="1040" y="679" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên hỗ trợ</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="1360" cy="570" r="13"/><path d="M1360 583v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="1360" y="679" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên bảo trì</text>
+<text x="880" y="760" text-anchor="middle" font-size="21" fill="#18364a">Actor ngoài hệ thống: Khách truy cập · Thiết bị IoT · Google OAuth · Dịch vụ email · Firebase FCM</text>
+<text x="880" y="810" text-anchor="middle" font-size="20" fill="#18364a">Nhân viên là vai trò khái quát: chỉ kế thừa chức năng chung, không kế thừa mọi quyền nghiệp vụ.</text>
+<text x="880" y="850" text-anchor="middle" font-size="20" fill="#18364a">Vai trò legacy staff có quyền tổng hợp; bốn vai trò staff_* được giới hạn theo nhóm công việc.</text>
+<text x="880" y="890" text-anchor="middle" font-size="20" fill="#18364a">Admin không kế thừa khách hàng hoặc nhân viên: các trang được điều hướng theo vai trò riêng.</text>
+</svg>

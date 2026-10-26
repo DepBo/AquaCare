@@ -1,0 +1,43 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+title AquaCare — Quản trị — dữ liệu, đơn hàng và doanh thu
+actor "Quản trị viên" as A0
+rectangle "AquaCare" {
+usecase "Xem tổng quan vận hành" as U1
+usecase "Xem doanh thu theo năm" as U2
+usecase "Xem doanh thu theo\nphiên bản thiết bị" as U3
+usecase "Tra cứu loài cá và\nngưỡng môi trường" as U4
+usecase "Thêm / sửa / xóa loài cá" as U5
+usecase "Tra cứu thiết bị / kho\nvà thông tin người mua" as U6
+usecase "Thêm / sửa / xóa thiết bị" as U7
+usecase "Tra cứu nhân viên" as U8
+usecase "Thêm / sửa / xóa\nhồ sơ nhân viên" as U9
+usecase "Tra cứu đơn hàng\nvà xem chi tiết" as U10
+usecase "Duyệt đơn hàng" as U11
+usecase "Tạo công việc đóng gói" as U12
+usecase "Xem và thêm gói cước" as U13
+usecase "Sửa / xóa gói cước" as U14
+}
+A0 -- U1
+A0 -- U2
+A0 -- U3
+A0 -- U4
+A0 -- U5
+A0 -- U6
+A0 -- U7
+A0 -- U8
+A0 -- U9
+A0 -- U10
+A0 -- U11
+U11 ..> U12 : <<include>>
+A0 -- U13
+A0 -- U14
+legend bottom
+Thống kê doanh thu dùng đơn đã giao, theo ngày tạo đơn; chưa phải đối soát thanh toán.
+Thêm / sửa / xóa được nhóm trong một ellipse để tránh lặp; là các thao tác độc lập.
+Xóa nhân viên trong code đang xóa hồ sơ users; không khẳng định đã xóa tài khoản Auth.
+Không thêm chức năng hủy đơn / hoàn tiền chỉ vì có trạng thái cancelled trong dữ liệu.
+endlegend
+@enduml

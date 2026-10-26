@@ -1,0 +1,19 @@
+@startuml
+top to bottom direction
+skinparam shadowing false
+actor "Người dùng hệ thống" as User
+actor "Khách hàng" as Customer
+actor "Nhân viên" as Staff
+actor "Quản trị viên" as Admin
+actor "Nhân viên kho" as Warehouse
+actor "Nhân viên giao hàng" as Shipper
+actor "Nhân viên hỗ trợ" as Support
+actor "Nhân viên bảo trì" as Maintenance
+Customer --|> User
+Staff --|> User
+Admin --|> User
+Warehouse --|> Staff
+Shipper --|> Staff
+Support --|> Staff
+Maintenance --|> Staff
+@enduml

@@ -58,7 +58,7 @@ test('one-time ON runs once and only logs the actual command', async () => {
   await check(); await check();
   assert.equal(s.is_active, false);
   assert.equal(s.on_executed_on, '2026-10-01');
-  assert.deepEqual(h.published.map(x => x.payload), [{ pin: 3, cmd: 'ON' }]);
+  assert.deepEqual(h.published.map(x => x.payload), [{ pin: 3, cmd: 'OFF' }]);
   assert.deepEqual(h.logs.map(x => x.action), ['ON']);
 });
 
@@ -101,6 +101,7 @@ test('retries database update without republishing or double logging', async () 
   });
   await check(); await check();
   assert.equal(h.published.length, 1);
+  assert.deepEqual(h.published[0].payload, { pin: 2, cmd: 'ON' });
   assert.equal(h.logs.length, 1);
   assert.equal(s.is_active, false);
 });

@@ -1,0 +1,44 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+title AquaCare — Nhân viên — kho, giao hàng, hỗ trợ, bảo trì
+actor "Nhân viên" as A0
+actor "Nhân viên kho" as A1
+actor "Nhân viên giao hàng" as A2
+actor "Nhân viên hỗ trợ" as A3
+actor "Nhân viên bảo trì" as A4
+rectangle "AquaCare" {
+usecase "Xem lịch sử công việc\ntheo quyền" as U1
+usecase "Xem công việc đóng gói\nvà chi tiết đơn hàng" as U2
+usecase "Xác nhận hoàn tất đóng gói" as U3
+usecase "Kiểm tra và gán MAC\ncho từng thiết bị trong đơn" as U4
+usecase "Tạo công việc\ngiao hàng / lắp đặt" as U5
+usecase "Xem và nhận công việc\ngiao hàng / lắp đặt" as U6
+usecase "Xác nhận hoàn tất\ngiao hàng / lắp đặt" as U7
+usecase "Cập nhật đơn hàng\nsang Đã giao" as U8
+usecase "Xem yêu cầu và\nphản hồi khách hàng" as U9
+usecase "Tạo công việc bảo trì" as U10
+usecase "Xem và nhận\ncông việc bảo trì" as U11
+usecase "Cập nhật hoàn tất\ncông việc bảo trì" as U12
+}
+A0 -- U1
+A1 -- U2
+A1 -- U3
+U3 ..> U4 : <<include>>
+U3 ..> U5 : <<include>>
+A2 -- U6
+A2 -- U7
+U7 ..> U8 : <<include>>
+A3 -- U9
+U10 ..> U9 : <<extend>>\n[cần bảo trì trực tiếp]
+A4 -- U11
+A4 -- U12
+legend bottom
+Kho kiểm tra MAC tồn tại, không trùng, chưa bán / gắn bể và đúng phiên bản sản phẩm.
+Hoàn tất đóng gói lưu MAC, đánh dấu thiết bị đã xuất và tạo việc giao / lắp đặt.
+Giao hàng và bảo trì nhận việc bằng cập nhật trạng thái, gán assigned_to cho người nhận.
+Vai trò legacy staff có các tab tổng hợp; bốn vai trò staff_* chỉ có tab được cấp.
+Không giả định nhân viên kho / hỗ trợ được dùng bảng nhận việc của giao hàng và bảo trì.
+endlegend
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+left to right direction
+skinparam shadowing false
+actor "Thiết bị IoT" as IoT
+actor "Khách hàng (người nhận)" as Customer
+actor "Dịch vụ email" as Email
+actor "Firebase FCM" as FCM
+rectangle AquaCare {
+usecase "Tiếp nhận dữ liệu cảm biến" as Receive
+usecase "Lưu dữ liệu cảm biến" as Store
+usecase "Đánh giá ngưỡng loài và mực nước" as Evaluate
+usecase "Ghi nhận cảnh báo vào lịch sử" as Alert
+usecase "Gửi thông báo cảnh báo" as Notify
+usecase "Gửi email cảnh báo" as SendEmail
+usecase "Gửi thông báo web / app" as Push
+usecase "Thực hiện lệnh theo lịch" as Scheduled
+usecase "Gửi lệnh điều khiển qua MQTT" as Command
+usecase "Cập nhật trạng thái và ghi log AUTO" as Log
+}
+IoT -- Receive
+IoT -- Scheduled
+Customer -- Notify
+Email -- SendEmail
+FCM -- Push
+Receive ..> Store : <<include>>
+Receive ..> Evaluate : <<include>>
+Alert ..> Evaluate : <<extend>>\n[bất thường]
+Notify ..> Alert : <<extend>>\n[đúng bộ lọc, hết cooldown]
+SendEmail ..> Notify : <<extend>>\n[bật email, có địa chỉ]
+Push ..> Notify : <<extend>>\n[bật kênh, có token]
+Scheduled ..> Command : <<include>>
+Scheduled ..> Log : <<include>>
+note bottom of Scheduled
+Đến hạn, thiết bị hoạt động, trạng thái cần đổi.
+Nếu trạng thái đã đúng: chỉ đánh dấu đã xử lý.
+end note
+@enduml

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="2047" viewBox="0 0 1760 2047"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="tri" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.2"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.edge{stroke:#7b8b9f;stroke-width:1.6;fill:none}.rel{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.gen{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#tri)}</style><rect width="100%" height="100%" fill="white"/>
+<text x="880" y="45" text-anchor="middle" font-size="30" fill="#18364a">AQUACARE · Quản trị — dữ liệu, đơn hàng và doanh thu</text>
+<text x="880" y="82" text-anchor="middle" font-size="19" fill="#18364a">Vai trò admin; chức năng trên Web / Mobile có một số khác biệt được ghi rõ.</text>
+<rect x="295" y="115" width="1170" height="1735" rx="6" fill="#fcfefe" stroke="#64748b" stroke-width="2"/>
+<text x="880" y="145" text-anchor="middle" font-size="20" fill="#18364a">HỆ THỐNG AQUACARE</text>
+<g stroke="#334155" stroke-width="2.4" fill="white"><circle cx="140" cy="952.5" r="13"/><path d="M140 965.5v43 m-25,-29 h50 m-25,29 l-22,29 m22,-29 l22,29" fill="none"/></g>
+<text x="140" y="1061.5" text-anchor="middle" font-size="20" fill="#18364a">Quản trị viên</text>
+<path class="edge" d="M165 982.5 L360 232.5"/>
+<ellipse cx="570" cy="232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="239.5" text-anchor="middle" font-size="22" fill="#18364a">Xem tổng quan vận hành</text>
+<path class="edge" d="M165 982.5 L360 357.5"/>
+<ellipse cx="570" cy="357.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="364.5" text-anchor="middle" font-size="22" fill="#18364a">Xem doanh thu theo năm</text>
+<text x="1140" y="364.5" text-anchor="middle" font-size="17" fill="#18364a">12 tháng, tăng trưởng tháng, trung bình động 3 tháng và điểm nổi bật.</text>
+<path class="edge" d="M165 982.5 L360 482.5"/>
+<ellipse cx="570" cy="482.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="477" text-anchor="middle" font-size="22" fill="#18364a">Xem doanh thu theo</text>
+<text x="570" y="502" text-anchor="middle" font-size="22" fill="#18364a">phiên bản thiết bị</text>
+<text x="1140" y="489.5" text-anchor="middle" font-size="17" fill="#18364a">Lọc tháng / năm; cao nhất và thấp nhất được đánh dấu.</text>
+<path class="edge" d="M165 982.5 L360 607.5"/>
+<ellipse cx="570" cy="607.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="602" text-anchor="middle" font-size="22" fill="#18364a">Tra cứu loài cá và</text>
+<text x="570" y="627" text-anchor="middle" font-size="22" fill="#18364a">ngưỡng môi trường</text>
+<path class="edge" d="M165 982.5 L360 732.5"/>
+<ellipse cx="570" cy="732.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="739.5" text-anchor="middle" font-size="22" fill="#18364a">Thêm / sửa / xóa loài cá</text>
+<text x="1140" y="739.5" text-anchor="middle" font-size="17" fill="#18364a">Các ngưỡng pH, nhiệt độ, TDS được lưu cùng cấu hình loài.</text>
+<path class="edge" d="M165 982.5 L360 857.5"/>
+<ellipse cx="570" cy="857.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="852" text-anchor="middle" font-size="22" fill="#18364a">Tra cứu thiết bị / kho</text>
+<text x="570" y="877" text-anchor="middle" font-size="22" fill="#18364a">và thông tin người mua</text>
+<path class="edge" d="M165 982.5 L360 982.5"/>
+<ellipse cx="570" cy="982.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="989.5" text-anchor="middle" font-size="22" fill="#18364a">Thêm / sửa / xóa thiết bị</text>
+<text x="1140" y="989.5" text-anchor="middle" font-size="17" fill="#18364a">Có nhập nhiều MAC cùng lúc; kiểm tra trùng MAC.</text>
+<path class="edge" d="M165 982.5 L360 1107.5"/>
+<ellipse cx="570" cy="1107.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1114.5" text-anchor="middle" font-size="22" fill="#18364a">Tra cứu nhân viên</text>
+<path class="edge" d="M165 982.5 L360 1232.5"/>
+<ellipse cx="570" cy="1232.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1227" text-anchor="middle" font-size="22" fill="#18364a">Thêm / sửa / xóa</text>
+<text x="570" y="1252" text-anchor="middle" font-size="22" fill="#18364a">hồ sơ nhân viên</text>
+<text x="1140" y="1239.5" text-anchor="middle" font-size="17" fill="#18364a">Tạo tài khoản, cập nhật họ tên / điện thoại / vai trò; xóa hồ sơ users.</text>
+<path class="edge" d="M165 982.5 L360 1357.5"/>
+<ellipse cx="570" cy="1357.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1352" text-anchor="middle" font-size="22" fill="#18364a">Tra cứu đơn hàng</text>
+<text x="570" y="1377" text-anchor="middle" font-size="22" fill="#18364a">và xem chi tiết</text>
+<path class="edge" d="M165 982.5 L360 1482.5"/>
+<ellipse cx="570" cy="1482.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1489.5" text-anchor="middle" font-size="22" fill="#18364a">Duyệt đơn hàng</text>
+<ellipse cx="1160" cy="1482.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="1160" y="1489.5" text-anchor="middle" font-size="22" fill="#18364a">Tạo công việc đóng gói</text>
+<path class="rel" d="M780 1482.5 L950 1482.5"/>
+<text x="865" y="1469.5" text-anchor="middle" font-size="17" fill="#18364a">&lt;&lt;include&gt;&gt;</text>
+<path class="edge" d="M165 982.5 L360 1607.5"/>
+<ellipse cx="570" cy="1607.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1614.5" text-anchor="middle" font-size="22" fill="#18364a">Xem và thêm gói cước</text>
+<path class="edge" d="M165 982.5 L360 1732.5"/>
+<ellipse cx="570" cy="1732.5" rx="210" ry="43" stroke="#0f766e" stroke-width="2" fill="#f0fdfa"/>
+<text x="570" y="1739.5" text-anchor="middle" font-size="22" fill="#18364a">Sửa / xóa gói cước</text>
+<text x="1140" y="1739.5" text-anchor="middle" font-size="17" fill="#18364a">Đã có trên Mobile; Web hiện chỉ xem và thêm.</text>
+<text x="330" y="1880" text-anchor="start" font-size="21" fill="#18364a">Ghi chú phạm vi và điều kiện</text>
+<text x="330" y="1912" text-anchor="start" font-size="18" fill="#18364a">• Thống kê doanh thu dùng đơn đã giao, theo ngày tạo đơn; chưa phải đối soát thanh toán.</text>
+<text x="330" y="1940" text-anchor="start" font-size="18" fill="#18364a">• Thêm / sửa / xóa được nhóm trong một ellipse để tránh lặp; là các thao tác độc lập.</text>
+<text x="330" y="1968" text-anchor="start" font-size="18" fill="#18364a">• Xóa nhân viên trong code đang xóa hồ sơ users; không khẳng định đã xóa tài khoản Auth.</text>
+<text x="330" y="1996" text-anchor="start" font-size="18" fill="#18364a">• Không thêm chức năng hủy đơn / hoàn tiền chỉ vì có trạng thái cancelled trong dữ liệu.</text>
+</svg>

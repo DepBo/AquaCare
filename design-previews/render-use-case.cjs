@@ -1,0 +1,63 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const out = [];
+const esc = s => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+const text = (x,y,s,size=22,anchor='middle',color='#16354a') => out.push(`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" fill="${color}">${esc(s)}</text>`);
+const line = (d,type='assoc') => out.push(`<path d="${d}" class="${type}"/>`);
+function actor(x,y,label) {
+ out.push(`<g stroke="#334155" stroke-width="2.5" fill="white"><circle cx="${x}" cy="${y-32}" r="14"/><path d="M${x},${y-18}v44 m-27,-30 h54 m-27,30 l-24,30 m24,-30 l24,30" fill="none"/></g>`);
+ text(x,y+84,label,21);
+}
+function uc(x,y,lines) {
+ out.push(`<ellipse cx="${x}" cy="${y}" rx="205" ry="43" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>`);
+ lines.forEach((s,i)=>text(x,y+7+(i-(lines.length-1)/2)*26,s,22));
+}
+out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1790" viewBox="0 0 1800 1790"><defs><marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#475569" stroke-width="1.5"/></marker><marker id="triangle" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="13" markerHeight="13" orient="auto"><path d="M1 1 L13 7 L1 13 Z" fill="white" stroke="#475569" stroke-width="1.3"/></marker></defs><style>text{font-family:Arial,'Segoe UI',sans-serif}.assoc{stroke:#94a3b8;stroke-width:1.6;fill:none}.relation{stroke:#475569;stroke-width:1.8;fill:none;stroke-dasharray:7 5;marker-end:url(#arrow)}.general{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#triangle)}</style><rect width="1800" height="1790" fill="white"/><rect x="300" y="105" width="1220" height="1480" rx="6" fill="#fbfdfd" stroke="#64748b" stroke-width="2"/>`);
+text(900,48,'AQUACARE · USE CASE DIAGRAM',32);
+text(900,80,'Tổng quan chức năng thực tế · Web, Mobile & Backend',20);
+text(910,140,'HỆ THỐNG AQUACARE',22);
+// Actor inheritance: arrowheads point to the shared parent actor.
+line('M102 585 H30 V180 H102','general');
+line('M102 1040 H48 V198 H102','general');
+line('M102 1400 H66 V216 H102','general');
+actor(130,180,'Người dùng hệ thống');
+actor(130,585,'Khách hàng');
+actor(130,1040,'Nhân viên');
+actor(130,1400,'Quản trị viên');
+actor(1680,540,'Thiết bị IoT');
+line('M158 180 L375 200');
+[320,430,540,650,760,870].forEach(y=>line(`M158 585 L375 ${y}`));
+[1010,1130].forEach(y=>line(`M158 1040 L375 ${y}`));
+[1290,1400,1510].forEach(y=>line(`M158 1400 L375 ${y}`));
+line('M1395 540 H1652');
+uc(580,200,['Đăng nhập']);
+uc(580,320,['Quản lý bể và','cấu hình cảnh báo']);
+uc(580,430,['Theo dõi chỉ số,','lịch sử và cảnh báo']);
+uc(580,540,['Bật / tắt thiết bị']);
+uc(1190,540,['Gửi lệnh tới thiết bị']);
+uc(580,650,['Quản lý lịch bật / tắt']);
+uc(580,760,['Đặt và theo dõi đơn hàng']);
+uc(580,870,['Gửi yêu cầu hỗ trợ']);
+uc(580,1010,['Thực hiện công việc','được phân công']);
+uc(580,1130,['Xử lý yêu cầu hỗ trợ']);
+uc(1190,1130,['Tạo công việc bảo trì']);
+uc(580,1290,['Xem thống kê, doanh thu']);
+uc(580,1400,['Duyệt đơn hàng']);
+uc(1190,1400,['Tạo công việc đóng gói']);
+uc(580,1510,['Quản lý danh mục','và nhân viên']);
+line('M785 540 H985','relation'); text(885,522,'<<include>>',19);
+line('M985 1130 H785','relation'); text(885,1112,'<<extend>>',19);
+text(1190,1200,'[Khi cần bảo trì trực tiếp]',19);
+line('M785 1400 H985','relation'); text(885,1382,'<<include>>',19);
+text(1190,995,'Công việc theo quyền:',20);
+text(1190,1024,'kho, giao hàng / lắp đặt, hỗ trợ, bảo trì.',19);
+text(1190,1496,'Danh mục gồm: loài cá và ngưỡng,',19);
+text(1190,1525,'thiết bị / kho, gói cước.',19);
+text(900,1630,'Quan hệ UML',23);
+line('M180 1670 H275');text(290,1677,'Liên kết actor – use case',19,'start');
+line('M680 1670 H775','relation');text(790,1677,'include / extend',19,'start');
+line('M1200 1670 H1295','general');text(1310,1677,'Generalization (kế thừa)',19,'start');
+text(900,1720,'Khách hàng, nhân viên và quản trị viên kế thừa chức năng đăng nhập từ actor chung.',19);
+text(900,1750,'Sơ đồ tổng quan: các chức năng nhỏ như đăng ký, quên mật khẩu và hồ sơ được lược bớt.',18);
+out.push('</svg>');
+fs.writeFileSync(path.join(__dirname,'aquacare-use-case.svg'),out.join('\n'));
