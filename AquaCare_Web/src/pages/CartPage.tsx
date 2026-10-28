@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, CheckCircle, CreditCard, Truck, User, MapPin, Phone, Mail, FileText, QrCode, X, Clock, ArrowRight } from 'lucide-react'
 import { useCart } from '../contexts/CartContext'
 import { createClient } from '@supabase/supabase-js'
+import { API_URL } from '../config/api'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
@@ -14,6 +15,7 @@ export default function CartPage() {
 
   const [isCheckout, setIsCheckout] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [isDemoSuccess, setIsDemoSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -62,6 +64,7 @@ export default function CartPage() {
   }
 
   const noteWordsCount = formData.note.trim() === '' ? 0 : formData.note.trim().split(/\s+/).length;
+  const isDemoCart = cart.length > 0 && cart.every(item => item.id === 'v3-demo')
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -85,6 +88,40 @@ export default function CartPage() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (cart.some(item => item.id === 'v3-demo') && cart.some(item => item.id !== 'v3-demo')) {
+        alert('Vui lòng đặt V3 Demo thành đơn riêng để hệ thống cấp mã tự động.')
+        setIsSubmitting(false)
+        return
+      }
+      const demoOnly = cart.length > 0 && cart.every(item => item.id === 'v3-demo')
+      if (demoOnly) {
+        if (!session?.access_token) {
+          alert('Vui lòng đăng nhập để nhận mã V3 Demo trong tài khoản của bạn.')
+          setIsSubmitting(false)
+          return
+        }
+        const keyName = 'aquacare_demo_checkout_key'
+        const quantity = cart.reduce((sum, item) => sum + item.quantity, 0)
+        let savedRequest: { key: string, quantity: number } | null = null
+        try { savedRequest = JSON.parse(sessionStorage.getItem(keyName) || 'null') } catch { /* Use a new key. */ }
+        const requestKey = savedRequest?.quantity === quantity ? savedRequest.key : crypto.randomUUID()
+        sessionStorage.setItem(keyName, JSON.stringify({ key: requestKey, quantity }))
+        const response = await fetch(`${API_URL}/api/orders/demo/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            requestKey, quantity,
+            fullName: formData.fullName, note: formData.note,
+          }),
+        })
+        const result = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(result.error || 'Không thể hoàn tất đơn demo.')
+        sessionStorage.removeItem(keyName)
+        setIsDemoSuccess(true)
+        setIsSuccess(true)
+        clearCart()
+        return
+      }
 
       const orderItems: any[] = cart.map(item => ({
         product_id: item.id,
@@ -154,7 +191,9 @@ export default function CartPage() {
           <CheckCircle size={80} color="#5AE87D" style={{ margin: '0 auto 24px' }} />
           <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16 }}>Đặt hàng thành công!</h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 32, lineHeight: 1.6 }}>
-            Cảm ơn bạn đã mua hàng. Đơn hàng của bạn đang được xử lý và sẽ được giao trong thời gian sớm nhất.
+            {isDemoSuccess
+              ? 'Đơn V3 Demo đã được xử lý tự động. Mã MAC simulator sẽ được gửi đến email tài khoản của bạn. Không có thiết bị vật lý được giao.'
+              : 'Cảm ơn bạn đã mua hàng. Đơn hàng của bạn đang được xử lý và sẽ được giao trong thời gian sớm nhất.'}
           </p>
           <button
             onClick={() => navigate('/')}
@@ -348,7 +387,7 @@ export default function CartPage() {
                 }}>
                   <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Truck size={20} color="#4DA6FF" />
-                    Thông tin giao hàng
+                    {isDemoCart ? 'Thông tin nhận mã V3 Demo' : 'Thông tin giao hàng'}
                   </h3>
 
                   <div style={{ display: 'grid', gap: 20 }}>
@@ -368,7 +407,7 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div style={{ position: 'relative' }}>
+                    {!isDemoCart && <div style={{ position: 'relative' }}>
                       <label style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>Số điện thoại</label>
                       <div style={{ position: 'relative' }}>
                         <Phone size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
@@ -382,7 +421,7 @@ export default function CartPage() {
                           }}
                         />
                       </div>
-                    </div>
+                    </div>}
 
                     <div style={{ position: 'relative' }}>
                       <label style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>Email</label>
@@ -390,7 +429,8 @@ export default function CartPage() {
                         <Mail size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
                         <input
                           type="email" name="email" required
-                          value={formData.email} onChange={handleInputChange}
+                          value={isDemoCart ? (userSession?.email || formData.email) : formData.email}
+                          onChange={handleInputChange} readOnly={isDemoCart && !!userSession}
                           placeholder="Nhập địa chỉ email"
                           style={{
                             width: '100%', padding: '14px 14px 14px 44px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)',
@@ -400,7 +440,7 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div style={{ position: 'relative' }}>
+                    {!isDemoCart && <div style={{ position: 'relative' }}>
                       <label style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>Địa chỉ giao hàng</label>
                       <div style={{ position: 'relative' }}>
                         <MapPin size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: 14, top: 20, transform: 'translateY(-50%)' }} />
@@ -414,7 +454,7 @@ export default function CartPage() {
                           }}
                         />
                       </div>
-                    </div>
+                    </div>}
 
                     <div style={{ position: 'relative' }}>
                       <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>
@@ -437,7 +477,11 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div style={{ position: 'relative', marginTop: 8 }}>
+                    {isDemoCart ? (
+                      <div style={{ padding: 16, borderRadius: 12, background: 'rgba(0,168,150,0.12)', color: '#a7f3d0', fontSize: 14 }}>
+                        Đơn V3 Demo miễn phí. Không cần thanh toán hoặc nhận thiết bị vật lý; mã MAC sẽ được gửi tới email tài khoản.
+                      </div>
+                    ) : <div style={{ position: 'relative', marginTop: 8 }}>
                       <label style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 12 }}>Phương thức thanh toán</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '16px', borderRadius: 12, border: `1px solid ${formData.paymentMethod === 'cod' ? '#4DA6FF' : 'rgba(255,255,255,0.1)'}`, backgroundColor: formData.paymentMethod === 'cod' ? 'rgba(77,166,255,0.05)' : 'rgba(0,0,0,0.2)' }}>
@@ -463,7 +507,7 @@ export default function CartPage() {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 </form>
               )}
@@ -600,7 +644,9 @@ export default function CartPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
                 <span style={{ color: 'rgba(255,255,255,0.5)' }}>Trạng thái:</span>
                 <span style={{ fontWeight: 600, color: detailsModal.order.status === 'pending' ? '#FCD34D' : '#6EE7B7' }}>
-                  {detailsModal.order.status === 'pending' ? 'Chờ duyệt' : 'Đã duyệt'}
+                  {detailsModal.order.status === 'pending' ? 'Chờ duyệt'
+                    : detailsModal.order.status === 'delivered' ? 'Đã hoàn tất'
+                      : detailsModal.order.status === 'cancelled' ? 'Đã hủy' : 'Đang xử lý'}
                 </span>
               </div>
               <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0 }}></div>
@@ -618,7 +664,8 @@ export default function CartPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
                 <span style={{ color: 'rgba(255,255,255,0.5)' }}>Thanh toán:</span>
-                <span>{detailsModal.order.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD (Thanh toán khi nhận hàng)'}</span>
+                <span>{detailsModal.order.payment_method === 'demo' ? 'V3 Demo miễn phí'
+                  : detailsModal.order.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD (Thanh toán khi nhận hàng)'}</span>
               </div>
               {detailsModal.order.note && (
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>

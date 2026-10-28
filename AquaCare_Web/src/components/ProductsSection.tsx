@@ -23,7 +23,7 @@ export default function ProductsSection() {
       setLoading(true);
       const [productsRes, devicesRes] = await Promise.all([
         supabase.from('products').select('*').eq('is_available', true).order('version', { ascending: true }),
-        supabase.from('devices').select('firmware_version').eq('is_active', false).is('tank_id', null)
+        supabase.from('devices').select('firmware_version,is_simulator').eq('is_active', false).is('tank_id', null)
       ])
 
       if (!productsRes.error && productsRes.data && productsRes.data.length > 0) {
@@ -31,6 +31,7 @@ export default function ProductsSection() {
         const stockCounts: Record<string, number> = {};
         devicesData.forEach(d => {
           const vKey = d.firmware_version;
+          if (vKey === 'V3 Demo' && d.is_simulator !== true) return;
           stockCounts[vKey] = (stockCounts[vKey] || 0) + 1;
         });
 
@@ -40,9 +41,9 @@ export default function ProductsSection() {
           description: p.description,
           price: p.price,
           image: p.image_url,
-          rating: 4.9,
+          rating: p.id === 'v3-demo' ? undefined : 4.9,
           details: p.details || [],
-          stock: stockCounts['V' + p.version] || 0,
+          stock: stockCounts[p.id === 'v3-demo' ? 'V3 Demo' : 'V' + p.version] || 0,
           version: p.version
         }))
         setProducts(formatted)
@@ -50,6 +51,7 @@ export default function ProductsSection() {
         console.error("Failed to load products", productsRes.error)
       }
       setLoading(false);
+      requestAnimationFrame(() => window.dispatchEvent(new Event('aquacare:products-layout-ready')));
     }
     fetchProducts()
   }, [])
@@ -61,6 +63,7 @@ export default function ProductsSection() {
   }, [])
 
   const handleAddToCart = (product: Product) => {
+    if (product.stock !== undefined && product.stock <= 0) return;
     addToCart(product);
     setAddedItems({ ...addedItems, [product.id]: true });
     setTimeout(() => {
@@ -126,12 +129,14 @@ export default function ProductsSection() {
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }} className="products-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 24 }} className="products-grid">
             {products.map((product, i) => (
               <div
                 key={product.id}
+                id={product.id === 'v3-demo' ? 'product-v3-demo' : undefined}
               className="glass-card"
               style={{
+                scrollMarginTop: 100,
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: 20,
@@ -151,20 +156,27 @@ export default function ProductsSection() {
                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 />
+                {product.id === 'v3-demo' && (
+                  <span style={{ position: 'absolute', top: 14, left: 14, padding: '6px 10px', borderRadius: 999, background: '#0b9997', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>
+                    DEMO · KHÔNG PHẦN CỨNG
+                  </span>
+                )}
               </div>
               <div style={{ padding: 24, display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0, lineHeight: 1.4 }}>{product.name}</h3>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Star size={14} color="#FFD700" fill="#FFD700" />
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{product.rating}</span>
-                  </div>
+                  {product.rating !== undefined && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Star size={14} color="#FFD700" fill="#FFD700" />
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{product.rating}</span>
+                    </div>
+                  )}
                   {/* Stock badge */}
                   {(product as any).stock !== undefined && (
                     <span style={{
-                      fontSize: 11, fontWeight: 600,
+                      fontSize: 11, fontWeight: 600, marginLeft: 'auto',
                       padding: '3px 8px', borderRadius: 20,
                       background: (product as any).stock <= 0
                         ? 'rgba(255, 80, 80, 0.15)'
@@ -185,7 +197,7 @@ export default function ProductsSection() {
                       }`,
                     }}>
                       {(product as any).stock <= 0
-                        ? 'Hết hàng'
+                        ? product.id === 'v3-demo' ? 'Sắp mở dùng thử' : 'Hết hàng'
                         : `Còn: ${(product as any).stock}`
                       }
                     </span>
@@ -247,7 +259,7 @@ export default function ProductsSection() {
                       }}
                     >
                       <ShoppingCart size={16} />
-                      {(product as any).stock <= 0 ? 'Hết hàng' : addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
+                      {(product as any).stock <= 0 ? product.id === 'v3-demo' ? 'Sắp mở' : 'Hết hàng' : addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
                     </button>
                   </div>
                 </div>
@@ -298,9 +310,13 @@ export default function ProductsSection() {
             <div style={{ padding: 32, overflowY: 'auto' }}>
               <h2 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 12 }}>{selectedProduct.name}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 20 }}>
-                <Star size={16} color="#FFD700" fill="#FFD700" />
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{selectedProduct.rating}</span>
-                <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.2)' }}>|</span>
+                {selectedProduct.rating !== undefined && (
+                  <>
+                    <Star size={16} color="#FFD700" fill="#FFD700" />
+                    <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{selectedProduct.rating}</span>
+                    <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.2)' }}>|</span>
+                  </>
+                )}
                 <span style={{ fontSize: 20, fontWeight: 700, color: '#4DA6FF' }}>{formatPrice(selectedProduct.price)}</span>
               </div>
               <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 24 }}>
@@ -323,21 +339,25 @@ export default function ProductsSection() {
               
               <div style={{ marginTop: 32, display: 'flex', gap: 16 }}>
                 <button
+                  disabled={selectedProduct.stock !== undefined && selectedProduct.stock <= 0}
                   onClick={() => {
+                    if (selectedProduct.stock !== undefined && selectedProduct.stock <= 0) return;
                     handleAddToCart(selectedProduct);
                     setSelectedProduct(null);
                   }}
                   style={{
                     flex: 1, padding: '14px 24px', borderRadius: 12,
-                    background: '#FF8C42', color: '#fff', fontSize: 16, fontWeight: 600,
-                    border: 'none', cursor: 'pointer', transition: 'all 200ms',
+                    background: selectedProduct.stock !== undefined && selectedProduct.stock <= 0 ? '#475569' : '#FF8C42', color: '#fff', fontSize: 16, fontWeight: 600,
+                    border: 'none', cursor: selectedProduct.stock !== undefined && selectedProduct.stock <= 0 ? 'not-allowed' : 'pointer', transition: 'all 200ms',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = '#ff9d5c'}
                   onMouseLeave={e => e.currentTarget.style.background = '#FF8C42'}
                 >
                   <ShoppingCart size={20} />
-                  Thêm vào giỏ hàng
+                  {selectedProduct.stock !== undefined && selectedProduct.stock <= 0
+                    ? selectedProduct.id === 'v3-demo' ? 'Sắp mở dùng thử' : 'Hết hàng'
+                    : 'Thêm vào giỏ hàng'}
                 </button>
               </div>
             </div>

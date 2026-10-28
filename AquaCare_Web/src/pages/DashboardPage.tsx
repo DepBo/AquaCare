@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
+import FeedbackButton from '../components/FeedbackButton'
 import DeviceControlPanel from '../components/DeviceControlPanel'
 import { clearVerifiedRole } from '../authRoleCache'
 import InnerMoonToggle from '../components/InnerMoonToggle'
@@ -315,7 +316,7 @@ function PondDropdown({
   }, [])
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} data-tour-target="pond-select" style={{ position: 'relative' }}>
       {/* Trigger */}
       <button onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -777,12 +778,13 @@ function OnboardingContent({ isOverlay, onDismiss, onAddPond }: { isOverlay: boo
       zIndex: isOverlay ? 1002 : 1, position: isOverlay ? 'fixed' : 'relative',
       top: isOverlay ? '50%' : 'auto', left: isOverlay ? '50%' : 'auto',
       transform: isOverlay ? 'translate(-50%, -50%)' : 'none',
-      width: '100%', maxWidth: 860, padding: 20,
+      width: '100%', maxWidth: 860, maxHeight: isOverlay ? 'calc(100% - 32px)' : undefined,
+      overflowY: isOverlay ? 'auto' : undefined, padding: 20,
       margin: isOverlay ? 0 : 'auto'
     }} onClick={e => e.stopPropagation()}>
 
       <div style={{ textAlign: 'center', marginBottom: 36 }}>
-        <h1 style={{ fontSize: isOverlay ? 44 : 36, fontWeight: 900, margin: '0 0 12px', color: isOverlay ? '#fff' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: isOverlay ? 'clamp(26px, 4vw, 44px)' : 36, fontWeight: 900, margin: '0 0 12px', color: isOverlay ? '#fff' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Chào mừng đến với AquaCare!
         </h1>
         <p style={{ fontSize: 15, color: isOverlay ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)', maxWidth: 540, margin: '0 auto', lineHeight: 1.6 }}>
@@ -798,7 +800,7 @@ function OnboardingContent({ isOverlay, onDismiss, onAddPond }: { isOverlay: boo
           boxShadow: isOverlay ? '0 24px 48px rgba(0,0,0,0.4)' : '0 12px 32px rgba(0,0,0,0.08)',
           border: '1px solid rgba(0, 168, 150, 0.2)',
           display: 'flex', flexDirection: 'column'
-        }}>
+        }} data-tour-source={isOverlay ? 'features' : undefined}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #00A896, #028090)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 800, boxShadow: '0 8px 16px rgba(0,168,150,0.3)' }}>1</div>
             <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Khám phá tính năng</h3>
@@ -818,7 +820,7 @@ function OnboardingContent({ isOverlay, onDismiss, onAddPond }: { isOverlay: boo
           boxShadow: isOverlay ? '0 24px 48px rgba(0,0,0,0.4)' : '0 12px 32px rgba(0,0,0,0.08)',
           border: '1px solid rgba(77, 166, 255, 0.2)',
           display: 'flex', flexDirection: 'column'
-        }}>
+        }} data-tour-source={isOverlay ? 'start' : undefined}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #4DA6FF, #0066CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 800, boxShadow: '0 8px 16px rgba(77,166,255,0.3)' }}>2</div>
             <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Bắt đầu sử dụng</h3>
@@ -863,6 +865,55 @@ function OnboardingContent({ isOverlay, onDismiss, onAddPond }: { isOverlay: boo
   )
 }
 
+function OnboardingArrows() {
+  const overlayRef = useRef<SVGSVGElement>(null)
+  const [paths, setPaths] = useState<{ green: string; blue: string }>({ green: '', blue: '' })
+
+  useEffect(() => {
+    const measure = () => {
+      const svg = overlayRef.current
+      const features = document.querySelector<HTMLElement>('[data-tour-source="features"]')
+      const start = document.querySelector<HTMLElement>('[data-tour-source="start"]')
+      const sidebar = document.querySelector<HTMLElement>('[data-tour-target="sidebar-nav"]')
+      const pond = document.querySelector<HTMLElement>('[data-tour-target="pond-select"]')
+      if (!svg || !features || !start || !sidebar || !pond) return
+      const root = svg.getBoundingClientRect()
+      const sx = svg.clientWidth / root.width
+      const sy = svg.clientHeight / root.height
+      const point = (rect: DOMRect, x: number, y: number) => ({
+        x: (rect.left + rect.width * x - root.left) * sx,
+        y: (rect.top + rect.height * y - root.top) * sy,
+      })
+      const greenFrom = point(features.getBoundingClientRect(), 0, 0.3)
+      const greenTo = point(sidebar.getBoundingClientRect(), 0.83, 0.22)
+      const blueFrom = point(start.getBoundingClientRect(), 1, 0.22)
+      const blueTo = point(pond.getBoundingClientRect(), 0.5, 1)
+      setPaths({
+        green: `M ${greenFrom.x} ${greenFrom.y} C ${greenFrom.x - 90} ${greenFrom.y - 60}, ${greenTo.x + 100} ${greenTo.y + 90}, ${greenTo.x} ${greenTo.y}`,
+        blue: `M ${blueFrom.x} ${blueFrom.y} C ${blueFrom.x + 80} ${blueFrom.y - 90}, ${blueTo.x - 70} ${blueTo.y + 100}, ${blueTo.x} ${blueTo.y}`,
+      })
+    }
+    const frame = requestAnimationFrame(measure)
+    const observer = new ResizeObserver(measure)
+    ;['[data-tour-source="features"]', '[data-tour-source="start"]', '[data-tour-target="sidebar-nav"]', '[data-tour-target="pond-select"]'].forEach(selector => {
+      const element = document.querySelector(selector)
+      if (element) observer.observe(element)
+    })
+    window.addEventListener('resize', measure)
+    document.addEventListener('scroll', measure, true)
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('resize', measure); document.removeEventListener('scroll', measure, true) }
+  }, [])
+
+  return <svg ref={overlayRef} aria-hidden="true" style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1002 }}>
+    <defs>
+      <marker id="onboarding-green-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#00A896" /></marker>
+      <marker id="onboarding-blue-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#4DA6FF" /></marker>
+    </defs>
+    <path d={paths.green} fill="none" stroke="#00A896" strokeWidth="3" strokeDasharray="8 8" markerEnd="url(#onboarding-green-arrow)" />
+    <path d={paths.blue} fill="none" stroke="#4DA6FF" strokeWidth="3" strokeDasharray="8 8" markerEnd="url(#onboarding-blue-arrow)" />
+  </svg>
+}
+
 // ── Component chính ───────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -870,7 +921,10 @@ export default function DashboardPage() {
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(userInfoStr ? JSON.parse(userInfoStr) : {})
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [pondsLoaded, setPondsLoaded] = useState(false)
-  const [hideOnboarding, setHideOnboarding] = useState(() => localStorage.getItem('hide_onboarding') === 'true')
+  const [hideOnboarding, setHideOnboarding] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('user_info') || '{}')
+    return !!user.id && localStorage.getItem(`hide_onboarding_${user.id}`) === 'true'
+  })
   const [sensorData, setSensorData] = useState<SensorData>(emptySensor())
   const [selectedSensor, setSelectedSensor] = useState<keyof SensorData>('ph')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -1842,7 +1896,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Nav items */}
-        <nav style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <nav data-tour-target="sidebar-nav" style={{ flex: 1, padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {[
             { id: 'overview', icon: Home, label: 'Tổng quan' },
             { id: 'sensors', icon: Activity, label: 'Cảm biến' },
@@ -2646,6 +2700,8 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {!showFullOverlay && <FeedbackButton />}
+
       {/* ── Dialog: Thêm bể mới ── */}
       {addDialog && (
         <Dialog
@@ -2900,36 +2956,17 @@ export default function DashboardPage() {
           position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(5, 15, 30, 0.85)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }} onClick={() => setHideOnboarding(true)}>
-          {/* Arrow 1: To Sidebar */}
-          <svg style={{ position: 'absolute', top: 120, left: sidebarOpen ? 260 : 80, width: 300, height: 200, pointerEvents: 'none', zIndex: 1003 }} viewBox="0 0 300 200">
-            <defs>
-              <marker id="arrow1" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-                <path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#00A896" />
-              </marker>
-            </defs>
-            <path d="M 280 180 Q 150 180 20 40" fill="transparent" stroke="#00A896" strokeWidth="3" strokeDasharray="8,8" markerEnd="url(#arrow1)" />
-          </svg>
-
-          {/* Arrow 2: To Header */}
-          <svg style={{ position: 'absolute', top: 80, right: 280, width: 300, height: 200, pointerEvents: 'none', zIndex: 1003 }} viewBox="0 0 300 200">
-            <defs>
-              <marker id="arrow2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-                <path d="M 0 0 L 12 6 L 0 12 Q 3 6 0 0" fill="#4DA6FF" />
-              </marker>
-            </defs>
-            <path d="M 20 180 Q 150 180 280 40" fill="transparent" stroke="#4DA6FF" strokeWidth="3" strokeDasharray="8,8" markerEnd="url(#arrow2)" />
-          </svg>
-
           <OnboardingContent
             isOverlay={true}
             onDismiss={(neverShowAgain) => {
-              if (neverShowAgain) localStorage.setItem('hide_onboarding', 'true');
+              if (neverShowAgain && currentUserInfo?.id) localStorage.setItem(`hide_onboarding_${currentUserInfo.id}`, 'true');
               setHideOnboarding(true);
             }}
             onAddPond={() => { }}
           />
         </div>
       )}
+      {showFullOverlay && <OnboardingArrows />}
 
       <style>{`
         /* ─── CSS Theme Variables ─── */

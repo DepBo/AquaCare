@@ -42,7 +42,7 @@ export default function Footer() {
                 {items.map(item => (
                   <li key={item}>
                     <a
-                      href="#"
+                      href={item === 'Hướng dẫn' ? '#guide' : '#'}
                       style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 200ms' }}
                       onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}
                       onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}

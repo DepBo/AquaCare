@@ -16,6 +16,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 // import FishFarmGame from './pages/FishFarmGame'
 import DashboardPage from './pages/DashboardPage'
 import ProductsSection from './components/ProductsSection'
+import GuideSection from './components/GuideSection'
 import SubscriptionSection from './components/SubscriptionSection'
 import CartPage from './pages/CartPage'
 import { CartProvider } from './contexts/CartContext'
@@ -128,6 +129,7 @@ function ScrollToHash() {
     if (!hash) return
 
     const targetId = hash.replace('#', '')
+    const followsProducts = ['guide', 'subscriptions', 'technology', 'howitworks', 'contact'].includes(targetId)
 
     const scrollToTarget = () => {
       const el = document.getElementById(targetId)
@@ -138,11 +140,16 @@ function ScrollToHash() {
       return false
     }
 
+    if (followsProducts) window.addEventListener('aquacare:products-layout-ready', scrollToTarget)
+
     // Cố gắng cuộn ngay lập tức
     if (scrollToTarget()) {
       // Cuộn lại lần nữa sau một chút để đảm bảo vị trí chuẩn xác sau khi DOM ổn định
       const timeout = setTimeout(scrollToTarget, 300)
-      return () => clearTimeout(timeout)
+      return () => {
+        clearTimeout(timeout)
+        if (followsProducts) window.removeEventListener('aquacare:products-layout-ready', scrollToTarget)
+      }
     }
 
     // Nếu DOM chưa sẵn sàng, thử lại định kỳ trong 2 giây
@@ -159,6 +166,7 @@ function ScrollToHash() {
     return () => {
       clearInterval(timer)
       clearTimeout(maxWait)
+      if (followsProducts) window.removeEventListener('aquacare:products-layout-ready', scrollToTarget)
     }
   }, [location.pathname, location.hash, location.state])
 
@@ -181,6 +189,7 @@ function MainPage() {
       <AboutSection />
       <FeaturesSection />
       <ProductsSection />
+      <GuideSection />
       <SubscriptionSection />
       <TechnologySection />
       <HowItWorksSection />

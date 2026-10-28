@@ -22,6 +22,7 @@ import '../services/fcm_service.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // All symbols used by the customer overview are vector SVGs, not font icons.
 // Keeping icon paths local avoids a network request during dashboard rendering.
@@ -1978,9 +1979,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            child: _buildFeedbackCard(),
+          ),
+        ),
+        SliverToBoxAdapter(
           child: SizedBox(height: 96 + MediaQuery.paddingOf(context).bottom),
         ),
       ],
+    );
+  }
+
+  Future<void> _openFeedbackForm() async {
+    try {
+      final opened = await launchUrl(
+        Uri.parse('https://forms.gle/mKFwk4N73y5SxCTj9'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) throw Exception('Could not open feedback form');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không mở được form góp ý. Vui lòng thử lại.')),
+      );
+    }
+  }
+
+  Widget _buildFeedbackCard() {
+    return Material(
+      color: CustomerColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(17),
+        side: BorderSide(color: CustomerColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _openFeedbackForm,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00A896).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(Icons.edit_outlined, color: CustomerColors.accentText),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chia sẻ trải nghiệm',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: CustomerColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Góp ý cho AquaCare · khoảng 3 phút',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: CustomerColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new, size: 18, color: CustomerColors.accentText),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

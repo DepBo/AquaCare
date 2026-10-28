@@ -156,6 +156,7 @@ interface SubscriptionPlan {
 const getNormalizedVersion = (version: string) => {
   if (!version) return 'V1'
   const v = version.toUpperCase().trim()
+  if (v.includes('V3 DEMO')) return 'V3 Demo'
   const m = v.match(/V(\d+)/i)
   if (m) return `V${m[1]}`
   if (/^\d+$/.test(v)) return `V${v}`
@@ -316,7 +317,7 @@ export default function AdminPage() {
   const [deviceFilterVersion, setDeviceFilterVersion] = useState('all')
   const [deviceFilterStatus, setDeviceFilterStatus] = useState('all')
 
-  const [products, setProducts] = useState<{version: number, price: number}[]>([])
+  const [products, setProducts] = useState<{id: string, version: number, price: number}[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
@@ -424,7 +425,7 @@ export default function AdminPage() {
       setOrders(mappedOrders)
     }
 
-    const { data: prodData } = await supabase.from('products').select('version, price')
+    const { data: prodData } = await supabase.from('products').select('id, version, price')
     if (prodData) setProducts(prodData)
 
     const { data: subData } = await supabase.from('subscription_plans').select('*').order('id')
@@ -697,7 +698,9 @@ export default function AdminPage() {
 
   const formatPrice = (version: string) => {
     const vNum = parseInt(version.replace('V', ''), 10)
-    const prod = products.find(p => p.version === vNum)
+    const prod = version === 'V3 Demo'
+      ? products.find(p => p.id === 'v3-demo')
+      : products.find(p => p.version === vNum && p.id !== 'v3-demo')
     const price = prod ? prod.price : 0
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
   }
@@ -1028,6 +1031,7 @@ export default function AdminPage() {
                   <option value="V1">V1</option>
                   <option value="V2">V2</option>
                   <option value="V3">V3</option>
+                  <option value="V3 Demo">V3 Demo</option>
                   <option value="V4">V4</option>
                 </select>
 
@@ -1645,6 +1649,7 @@ export default function AdminPage() {
                   <option value="V1" style={{ color: '#000' }}>V1</option>
                   <option value="V2" style={{ color: '#000' }}>V2</option>
                   <option value="V3" style={{ color: '#000' }}>V3</option>
+                  <option value="V3 Demo" style={{ color: '#000' }}>V3 Demo</option>
                   <option value="V4" style={{ color: '#000' }}>V4</option>
                 </select>
               </div>

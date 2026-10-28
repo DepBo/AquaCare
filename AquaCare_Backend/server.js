@@ -4,6 +4,9 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
 const { createAdminDashboardRouter } = require('./routes/admin-dashboard.routes');
 const { getSpeciesThresholds } = require('./config/species_thresholds');
+const { createDemoOrdersRouter, startDemoEmailWorker } = require('./routes/demo-orders.routes');
+const demoSupabase = require('./config/demo-supabase');
+const { sendDemoMacEmail } = require('./config/mailer');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,6 +51,8 @@ app.use('/api/auth', authRoutes);
 if (ADMIN_DASHBOARD_ENABLED) {
   app.use('/api/admin/dashboard', createAdminDashboardRouter({ supabase: require('./config/supabase') }));
 }
+const demoEmailWorker = startDemoEmailWorker({ supabase: demoSupabase, sendDemoMacEmail });
+app.use('/api/orders/demo', createDemoOrdersRouter({ supabase: demoSupabase, processEmail: demoEmailWorker.processEmail }));
 
 // Route Health Check dành cho UptimeRobot
 app.get('/api/health', (req, res) => {

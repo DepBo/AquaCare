@@ -83,4 +83,40 @@ async function sendAlertEmail(toEmail, pondName, alertContent) {
   }
 }
 
-module.exports = { sendAlertEmail };
+async function sendDemoMacEmail(toEmail, orderId, macs) {
+  if (!toEmail || !Array.isArray(macs) || macs.length === 0 || !macs.every(mac => /^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$/i.test(mac))) {
+    console.error('[Demo email] Invalid recipient or MAC list');
+    return false;
+  }
+  const from = process.env.EMAIL_USER || process.env.ALERT_EMAIL_FROM;
+  if (!from) return false;
+  const subject = `AquaCare V3 Demo - mã thiết bị cho đơn #${orderId}`;
+  const macList = macs.map(mac => `<li><code>${mac}</code></li>`).join('');
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#183747">
+    <h2>AquaCare V3 Demo</h2>
+    <p>Đơn hàng #${orderId} của bạn đã được hệ thống hoàn tất. Đây là mã MAC simulator riêng để tạo bể:</p>
+    <ul>${macList}</ul>
+    <p>Mở ứng dụng AquaCare, tạo bể và nhập một mã MAC ở trên. Đây là bản dùng thử; không có thiết bị vật lý được giao.</p>
+    <p>Vui lòng giữ mã trong tài khoản của bạn.</p></div>`;
+  try {
+    if (process.env.BREVO_API_KEY) {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'AquaCare', email: from }, to: [{ email: toEmail }], subject, htmlContent: html }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error(`Brevo HTTP ${response.status}`);
+    } else {
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) throw new Error('SMTP is not configured');
+      await transporter.sendMail({ from: `"AquaCare" <${process.env.EMAIL_USER}>`, to: toEmail, subject, html });
+    }
+    console.log(`[Demo email] Accepted for order #${orderId}`);
+    return true;
+  } catch (error) {
+    console.error(`[Demo email] Order #${orderId}:`, error.message);
+    return false;
+  }
+}
+
+module.exports = { sendAlertEmail, sendDemoMacEmail };
