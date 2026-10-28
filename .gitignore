@@ -120,6 +120,7 @@ schema.sql
 database.txt
 security/private-audit.md
 AquaCare_App/CHANGELOG.md
+test-results/
 
 # KiCad temporary files
 *.kicad_prl

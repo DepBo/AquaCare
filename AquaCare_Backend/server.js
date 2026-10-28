@@ -1,4 +1,6 @@
-require('dotenv').config();
+const ISOLATED_TEST = process.env.AQUACARE_TEST_MODE === '1';
+if (!ISOLATED_TEST) require('dotenv').config();
+require('./testing/isolation').assertIsolatedTestEnvironment(process.env);
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
@@ -6,7 +8,9 @@ const { createAdminDashboardRouter } = require('./routes/admin-dashboard.routes'
 const { getSpeciesThresholds } = require('./config/species_thresholds');
 const { createDemoOrdersRouter, startDemoEmailWorker } = require('./routes/demo-orders.routes');
 const demoSupabase = require('./config/demo-supabase');
-const { sendDemoMacEmail } = require('./config/mailer');
+const { sendDemoMacEmail } = ISOLATED_TEST
+  ? { sendDemoMacEmail: async () => false }
+  : require('./config/mailer');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,7 +55,9 @@ app.use('/api/auth', authRoutes);
 if (ADMIN_DASHBOARD_ENABLED) {
   app.use('/api/admin/dashboard', createAdminDashboardRouter({ supabase: require('./config/supabase') }));
 }
-const demoEmailWorker = startDemoEmailWorker({ supabase: demoSupabase, sendDemoMacEmail });
+const demoEmailWorker = ISOLATED_TEST
+  ? { processEmail: async () => {}, stop: () => {} }
+  : startDemoEmailWorker({ supabase: demoSupabase, sendDemoMacEmail });
 app.use('/api/orders/demo', createDemoOrdersRouter({ supabase: demoSupabase, processEmail: demoEmailWorker.processEmail }));
 
 // Route Health Check dành cho UptimeRobot
@@ -148,8 +154,12 @@ app.listen(PORT, () => {
 // ==========================================
 const mqtt = require('mqtt');
 const supabase = require('./config/supabase'); // Sử dụng chung supabase instance có sẵn
-const { sendAlertEmail } = require('./config/mailer');
-const { sendWebPush } = require('./config/fcm');
+const { sendAlertEmail } = ISOLATED_TEST
+  ? { sendAlertEmail: async () => false }
+  : require('./config/mailer');
+const { sendWebPush } = ISOLATED_TEST
+  ? { sendWebPush: async () => {} }
+  : require('./config/fcm');
 
 const MQTT_HOST = '8263ee975ee9413ca344b39c068b3dbc.s1.eu.hivemq.cloud';
 const MQTT_PORT = 8883;
@@ -158,7 +168,7 @@ const MQTT_PASS = 'Amazing_iot2025';
 const TOPIC_DATA = 'iras-rag/telemetry/+';
 
 const connectUrl = `mqtts://${MQTT_HOST}:${MQTT_PORT}`;
-const mqttClient = mqtt.connect(connectUrl, {
+const mqttClient = ISOLATED_TEST ? new (require('node:events').EventEmitter)() : mqtt.connect(connectUrl, {
   clientId: 'AquaCare_Backend_' + Math.random().toString(16).slice(2, 8),
   username: MQTT_USER,
   password: MQTT_PASS,
@@ -166,9 +176,17 @@ const mqttClient = mqtt.connect(connectUrl, {
   connectTimeout: 4000,
   reconnectPeriod: 1000,
 });
+if (ISOLATED_TEST) {
+  mqttClient.connected = true;
+  mqttClient.publish = (_topic, _payload, options, callback) => {
+    const done = typeof options === 'function' ? options : callback;
+    done?.(null);
+  };
+  mqttClient.subscribe = (_topic, callback) => callback?.(null);
+}
 
 const { startTimerWorker } = require('./timer_worker');
-startTimerWorker({ supabase, mqttClient });
+if (!ISOLATED_TEST) startTimerWorker({ supabase, mqttClient });
 
 // Hàm kiểm tra và lưu cảnh báo (Tích hợp bộ lọc chống spam & gộp trạng thái)
 async function checkAndInsertAlerts(device, state) {
