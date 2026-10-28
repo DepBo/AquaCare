@@ -171,17 +171,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildContactRow(
               icon: Icons.phone_in_talk_rounded,
               title: 'Hotline kỹ thuật',
-              detail: '1900 6868 (8:00 - 20:00)',
+              detail: '0902943981 (8:00 - 20:00)',
               color: const Color(0xFF38B2AC),
-              onTap: () => _launchExternalUrl('tel:19006868'),
+              onTap: () => _launchExternalUrl('tel:0902943981'),
             ),
             const SizedBox(height: 12),
             _buildContactRow(
               icon: Icons.email_outlined,
               title: 'Email hỗ trợ',
-              detail: 'support@aquacare.vn',
+              detail: 'phamlenhatminh1609@gmail.com',
               color: const Color(0xFF4299E1),
-              onTap: () => _launchExternalUrl('mailto:support@aquacare.vn'),
+              onTap: () => _launchExternalUrl('mailto:phamlenhatminh1609@gmail.com'),
             ),
             const SizedBox(height: 12),
             _buildContactRow(
