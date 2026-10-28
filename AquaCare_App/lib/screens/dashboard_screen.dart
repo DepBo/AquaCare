@@ -11,6 +11,7 @@ import '../services/supabase_service.dart';
 import '../utils/species_thresholds.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'alerts_screen.dart';
+import 'settings_screen.dart';
 import '../widgets/alerts_pie_chart.dart';
 import '../widgets/tank_overview_hero.dart';
 import 'control_screen.dart';
@@ -69,7 +70,7 @@ class _AquaSvg extends StatelessWidget {
         '<path d="M2 8c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2M2 14c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/>',
     'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     'settings':
-        '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>',
+        '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
     'pencil':
         '<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/><path d="m15 5 4 4"/>',
     'trash': '<path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/>',
@@ -1438,15 +1439,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
         ),
         IconButton(
-          onPressed: _handleLogout,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          },
           icon: _AquaSvg(
-            'logout',
-            size: 19,
+            'settings',
+            size: 20,
             color: CustomerColors.secondaryText,
           ),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-          tooltip: 'Đăng xuất',
+          tooltip: 'Cài đặt',
           splashRadius: 18,
         ),
         const SizedBox(width: 6),
