@@ -1,0 +1,37 @@
+.aquacare-sidebar {
+  --sidebar-nature-bg: linear-gradient(165deg, #0a1426 12%, #0c2029 55%, #102c30);
+  --sidebar-nature-surface: rgba(10, 20, 38, 0.8);
+  --sidebar-footer-bg: linear-gradient(160deg, #10292f, #102e30);
+  isolation: isolate;
+}
+
+[data-theme='light'] .aquacare-sidebar {
+  --sidebar-nature-bg: linear-gradient(165deg, #fff 12%, #f5fbf9 55%, #eaf6f4);
+  --sidebar-nature-surface: rgba(255, 255, 255, 0.78);
+  --sidebar-footer-bg: linear-gradient(160deg, #eff9f6, #e5f3ef);
+}
+
+.aquacare-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/sidebar-nature.svg') center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.aquacare-sidebar > :first-child {
+  background: var(--sidebar-nature-surface);
+}
+
+.aquacare-sidebar > :last-child {
+  background:
+    url('/sidebar-footer-nature.svg') right bottom / 100% auto no-repeat,
+    var(--sidebar-footer-bg);
+}
+
+.aquacare-sidebar--collapsed > :last-child {
+  background: var(--sidebar-footer-bg);
+}
+
+.aquacare-sidebar--collapsed::before { opacity: 0.4; }

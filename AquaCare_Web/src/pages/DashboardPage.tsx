@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import FeedbackButton from '../components/FeedbackButton'
+import '../components/SidebarNature.css'
 import DeviceControlPanel from '../components/DeviceControlPanel'
 import { clearVerifiedRole } from '../authRoleCache'
 import InnerMoonToggle from '../components/InnerMoonToggle'
@@ -1001,6 +1002,7 @@ export default function DashboardPage() {
         .select('id, is_active')
         .single()
       if (error || !data) throw error || new Error('Không tìm thấy thiết bị của bể này.')
+      if (data.is_active !== nextActive) throw new Error('Trạng thái thiết bị không được lưu như yêu cầu.')
       if (activeDeviceRef.current === tankId) setDeviceActive(data.is_active === true)
       showNotification(nextActive ? 'Đã bật thiết bị.' : 'Đã tắt thiết bị.')
     } catch (error) {
@@ -1857,9 +1859,9 @@ export default function DashboardPage() {
       <style>{PowerStyles}</style>
 
       {/* ── Sidebar ── */}
-      <aside style={{
+      <aside className={`aquacare-sidebar${sidebarOpen ? '' : ' aquacare-sidebar--collapsed'}`} style={{
         width: sidebarOpen ? 256 : 68, flexShrink: 0,
-        background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-color)',
+        background: 'var(--sidebar-nature-bg)', borderRight: '1px solid var(--border-color)',
         backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
         transition: 'width 280ms cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden',
         position: 'sticky', top: 0, height: '111.111vh', zIndex: showFullOverlay ? 1001 : 10,

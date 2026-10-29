@@ -22,6 +22,10 @@ test('unknown route shows the AquaCare 404 page', async ({ page }) => {
   await page.goto('/duong-dan-khong-ton-tai')
   await expect(page.getByText('Ối! Bạn đã bơi lạc rồi.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Về trang chủ', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Ối! Bạn đã bơi lạc rồi.')).toBeVisible()
+  await page.getByRole('link', { name: 'Về trang chủ', exact: true }).click()
+  await expect(page).toHaveURL('http://127.0.0.1:5174/')
 })
 
 test('landing keeps the guide available on a narrow phone', async ({ page }) => {

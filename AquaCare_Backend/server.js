@@ -19,6 +19,7 @@ const ADMIN_DASHBOARD_ENABLED = true;
 
 // Middlewares – CORS phải được khai báo ĐẦU TIÊN, trước mọi route
 const allowedOrigins = [
+  ...(ISOLATED_TEST ? ['http://127.0.0.1:5174'] : []),
   'http://localhost:5173',          // Dev local (Vite default)
   'http://localhost:3000',          // Dev local (alt port)
   'https://aquacare-p78r.onrender.com', // Backend Render (self)
@@ -145,7 +146,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, ISOLATED_TEST ? '127.0.0.1' : undefined, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 

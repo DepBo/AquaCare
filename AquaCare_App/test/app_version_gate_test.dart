@@ -15,6 +15,22 @@ void main() {
     );
   });
 
+  test('invalid or incomplete version manifests fail closed', () {
+    for (final body in [
+      '{}',
+      '{"minimumBuildNumber":0,"latestVersion":"1.0.7"}',
+      '{"minimumBuildNumber":"8","latestVersion":"1.0.7"}',
+      '{"minimumBuildNumber":8,"latestVersion":""}',
+      'not json',
+    ]) {
+      expect(
+        () => AppVersionService.fromManifest(body, 7),
+        throwsFormatException,
+        reason: body,
+      );
+    }
+  });
+
   testWidgets('old build cannot reach app content', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
