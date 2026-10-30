@@ -214,6 +214,14 @@ try {
   foreach ($row in $results) { $lines += "| $($row.Suite) | $($row.Result) | $($row.Seconds) |" }
   $lines += @('', "Case matrix: $caseCount cases in test-results/case-matrix.md. Only ID-tagged full system tests can be marked PASS or FAIL.", 'PARTIAL PASS is not a full case PASS. The remaining system cases have not been fully run.', 'No production database, MQTT broker, email provider, Firebase project, or physical relay is used by this runner.')
   Set-Content -LiteralPath (Join-Path $reportDir 'latest.md') -Value $lines -Encoding UTF8
+  try {
+    & node.exe (Join-Path $root 'tools\testing\build-case-report.js')
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the HTML case report.' }
+  } catch { Write-Warning 'Could not build the HTML case report.' }
+  try {
+    & node.exe (Join-Path $root 'tools\testing\build-playwright-scope-report.js')
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the Playwright scope report.' }
+  } catch { Write-Warning 'Could not build the Playwright scope report.' }
   Write-Host "`nReport: $reportDir\latest.md"
   if ($results.Where({ $_.Result -ne 'PASS' }).Count -gt 0) { exit 1 }
 }

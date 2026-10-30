@@ -7,6 +7,9 @@ test('gửi cảnh báo qua Brevo HTTP khi có API key', async () => {
   const oldKey = process.env.BREVO_API_KEY;
   const oldFrom = process.env.ALERT_EMAIL_FROM;
   const oldFetch = global.fetch;
+  const oldLog = console.log;
+  const messages = [];
+  console.log = (...args) => messages.push(args.join(' '));
   process.env.BREVO_API_KEY = 'test-key';
   process.env.ALERT_EMAIL_FROM = 'alerts@example.com';
   let request;
@@ -23,7 +26,9 @@ test('gửi cảnh báo qua Brevo HTTP khi có API key', async () => {
     assert.deepEqual(body.sender, { name: 'AquaCare System', email: 'alerts@example.com' });
     assert.deepEqual(body.to, [{ email: 'owner@example.com' }]);
     assert.match(body.htmlContent, /pH thấp/);
+    assert.ok(messages.some(message => message.includes('Đã nhận email cảnh báo')));
   } finally {
+    console.log = oldLog;
     global.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.BREVO_API_KEY;
     else process.env.BREVO_API_KEY = oldKey;
@@ -36,6 +41,9 @@ test('báo thất bại khi Brevo từ chối email', async () => {
   const oldKey = process.env.BREVO_API_KEY;
   const oldFrom = process.env.ALERT_EMAIL_FROM;
   const oldFetch = global.fetch;
+  const oldError = console.error;
+  const errors = [];
+  console.error = (...args) => errors.push(args.join(' '));
   process.env.BREVO_API_KEY = 'test-key';
   process.env.ALERT_EMAIL_FROM = 'alerts@example.com';
   global.fetch = async () => ({
@@ -46,7 +54,9 @@ test('báo thất bại khi Brevo từ chối email', async () => {
 
   try {
     assert.equal(await sendAlertEmail('owner@example.com', 'Bể thử', 'pH thấp'), false);
+    assert.ok(errors.some(message => message.includes('Brevo HTTP 401')));
   } finally {
+    console.error = oldError;
     global.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.BREVO_API_KEY;
     else process.env.BREVO_API_KEY = oldKey;
