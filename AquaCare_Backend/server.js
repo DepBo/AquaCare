@@ -8,7 +8,7 @@ const { createAdminDashboardRouter } = require('./routes/admin-dashboard.routes'
 const { getSpeciesThresholds } = require('./config/species_thresholds');
 const { createDemoOrdersRouter, startDemoEmailWorker } = require('./routes/demo-orders.routes');
 const demoSupabase = require('./config/demo-supabase');
-const { sendDemoMacEmail } = ISOLATED_TEST
+const { sendDemoMacEmail, sendOrderMacEmail } = ISOLATED_TEST
   ? { sendDemoMacEmail: async () => false }
   : require('./config/mailer');
 
@@ -59,6 +59,8 @@ if (ADMIN_DASHBOARD_ENABLED) {
 const demoEmailWorker = ISOLATED_TEST
   ? { processEmail: async () => {}, stop: () => {} }
   : startDemoEmailWorker({ supabase: demoSupabase, sendDemoMacEmail });
+const orderMacEmail = require('./routes/order-mac-email.routes').createOrderMacEmail({ supabase: demoSupabase, sendEmail: sendOrderMacEmail, enabled: !ISOLATED_TEST });
+app.use('/api/orders/mac-email', orderMacEmail.router);
 app.use('/api/orders/demo', createDemoOrdersRouter({ supabase: demoSupabase, processEmail: demoEmailWorker.processEmail }));
 
 // Route Health Check dành cho UptimeRobot

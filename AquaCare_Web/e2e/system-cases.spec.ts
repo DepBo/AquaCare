@@ -145,7 +145,7 @@ test('[GUIDE-02] guide shows an error message when its video cannot load', async
   await capture(page, 'GUIDE-02', 'video-load-error.png')
 })
 
-test('[FEED-01] feedback control drags, remembers position and stays inside desktop and phone viewports', async ({ page }) => {
+test('[FEED-01] fixed feedback control collapses and stays inside desktop and phone viewports', async ({ page }) => {
   const db = serviceDb()
   const fixture = JSON.parse(await readFile(join('..', 'test-results', 'local-fixtures.json'), 'utf8'))
   const tank = await db.from('tanks').insert({ user_id: fixture.a, tank_name: `QA feedback ${Date.now()}`, water_volume_liter: 100 }).select('id').single()
@@ -155,30 +155,43 @@ test('[FEED-01] feedback control drags, remembers position and stays inside desk
     await loginCustomer(page)
     const control = page.locator('.feedback-entry')
     await expect(control).toBeVisible()
-    const before = await control.boundingBox()
-    if (!before) throw new Error('Feedback control has no bounding box')
-    await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(before.x + before.width / 2 - 150, before.y + before.height / 2 - 100, { steps: 8 })
-    await page.mouse.up()
-    const afterDrag = await control.boundingBox()
-    await capture(page, 'FEED-01', 'desktop-after-drag.png')
+    await expect(control).toHaveCSS('position', 'fixed')
+    await expect(control).toHaveCSS('right', '20px')
+    await expect(control).toHaveCSS('bottom', '20px')
+    await expect(control.getByRole('link', { name: 'Mở form góp ý AquaCare' })).toHaveAttribute('href', 'https://forms.gle/mKFwk4N73y5SxCTj9')
+    const desktop = await control.boundingBox()
+    await control.getByRole('button', { name: 'Thu nhỏ nút góp ý' }).click()
+    await expect(control).toHaveClass(/feedback-entry--collapsed/)
+    await expect(control.getByRole('button', { name: 'Mở rộng nút góp ý' })).toBeVisible()
+    await capture(page, 'FEED-01', 'desktop-collapsed.png')
+    await control.getByRole('button', { name: 'Mở rộng nút góp ý' }).click()
+    await expect(control).not.toHaveClass(/feedback-entry--collapsed/)
+    await expect(control).toHaveCSS('right', '20px')
+    await expect(control).toHaveCSS('bottom', '20px')
+    const expanded = await control.boundingBox()
     await page.reload()
     await expect(control).toBeVisible()
+    await expect(control).toHaveCSS('position', 'fixed')
+    await expect(control).toHaveCSS('right', '20px')
+    await expect(control).toHaveCSS('bottom', '20px')
     const afterReload = await control.boundingBox()
     await page.setViewportSize({ width: 390, height: 844 })
     await page.reload()
     await expect(control).toBeVisible()
+    await expect(control).toHaveCSS('position', 'fixed')
+    await expect(control).toHaveCSS('right', '12px')
+    await expect(control).toHaveCSS('bottom', '12px')
     const mobile = await control.boundingBox()
     await capture(page, 'FEED-01', 'phone-after-resize.png')
-    const moved = !!afterDrag && Math.abs(afterDrag.x - before.x) > 20 && Math.abs(afterDrag.y - before.y) > 20
-    const remembered = !!afterDrag && !!afterReload && Math.abs(afterReload.x - afterDrag.x) < 10 && Math.abs(afterReload.y - afterDrag.y) < 10
+    const inDesktop = !!desktop && desktop.x >= 0 && desktop.y >= 0 && desktop.x + desktop.width <= 1280 && desktop.y + desktop.height <= 800
+    const inDesktopAfterToggle = !!expanded && expanded.x >= 0 && expanded.y >= 0 && expanded.x + expanded.width <= 1280 && expanded.y + expanded.height <= 800
+    const inDesktopAfterReload = !!afterReload && afterReload.x >= 0 && afterReload.y >= 0 && afterReload.x + afterReload.width <= 1280 && afterReload.y + afterReload.height <= 800
     const inPhone = !!mobile && mobile.x >= 0 && mobile.y >= 0 && mobile.x + mobile.width <= 390 && mobile.y + mobile.height <= 844
-    const evidence = { before, afterDrag, afterReload, mobile, moved, remembered, inPhone }
+    const evidence = { desktop, expanded, afterReload, mobile, inDesktop, inDesktopAfterToggle, inDesktopAfterReload, inPhone }
     const folder = join(evidenceDir, 'FEED-01')
     await mkdir(folder, { recursive: true })
     await writeFile(join(folder, 'position-results.json'), JSON.stringify(evidence, null, 2), 'utf8')
-    expect(moved && remembered && inPhone).toBe(true)
+    expect(inDesktop && inDesktopAfterToggle && inDesktopAfterReload && inPhone).toBe(true)
   } finally {
     await db.from('tanks').delete().eq('id', tank.data.id)
   }

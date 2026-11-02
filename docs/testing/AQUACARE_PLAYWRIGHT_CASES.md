@@ -10,7 +10,7 @@ Bộ kế hoạch đầy đủ được giữ ở `AQUACARE_SYSTEM_TEST_CASES.md
 | NAV-03 | Vào404 từ trang khác → Quay lại; mở404 trong tab mới → Về trang chủ | Back hoạt động theo lịch sử; về trang chủ luôn tới landing; không kẹt trang lỗi |
 | GUIDE-01 | Mở landing lần đầu trên desktop/mobile, đóng gợi ý, tải lại | Gợi ý xuất hiện đúng một lần theo localStorage; không che thao tác chính |
 | GUIDE-02 | Video hướng dẫn: phát/tạm dừng, tốc độ, toàn màn hình, lỗi tải video | Điều khiển hoạt động; trên điện thoại không tràn ngang; có thông báo lỗi |
-| FEED-01 | Kéo nút feedback, thu/phóng cửa sổ, tải lại trên desktop/mobile | Vị trí được nhớ và luôn nằm trong viewport; không cản nút quan trọng |
+| FEED-01 | Nút góp ý cố định: thu nhỏ/mở rộng, tải lại trên desktop/mobile | Nút hoạt động, luôn nằm trong viewport và dẫn tới form góp ý |
 | NAV-01 | Mở landing desktop/mobile → đi qua menu, sản phẩm, gói, liên hệ, footer | Link/anchor tới đúng nội dung; không ảnh lỗi, nút bị che, tràn ngang; logo giữ tỷ lệ |
 | DEMO-01 | Xem V3 Demo 0đ, số lượng kho, modal chi tiết, thêm giỏ | Giá 0đ, không hiển thị như thiết bị vật lý giao thật |
 | DEMO-02 | Tài khoản A đặt 1 V3 Demo hai lần với cùng request key | Chỉ tạo một đơn/fulfilment và cấp đúng một MAC |

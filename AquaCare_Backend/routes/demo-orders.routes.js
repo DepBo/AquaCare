@@ -45,14 +45,14 @@ function createDemoOrdersRouter({ supabase, processEmail }) {
   return router;
 }
 
-function startDemoEmailWorker({ supabase, sendDemoMacEmail, intervalMs = 30000 }) {
+function startDemoEmailWorker({ supabase, sendDemoMacEmail, intervalMs = 30000, claimRpc = 'claim_demo_email', queueTable = 'demo_fulfillments' }) {
   let busy = false;
   async function processEmail() {
     if (busy) return;
     busy = true;
     try {
       for (let i = 0; i < 10; i += 1) {
-        const { data, error } = await supabase.rpc('claim_demo_email');
+        const { data, error } = await supabase.rpc(claimRpc);
         if (error) throw error;
         const job = data?.[0];
         if (!job) break;
@@ -61,7 +61,7 @@ function startDemoEmailWorker({ supabase, sendDemoMacEmail, intervalMs = 30000 }
         const update = sent
           ? { email_sent_at: new Date().toISOString(), email_claim_until: null, last_email_error: null }
           : { email_claim_until: null, email_retry_at: new Date(Date.now() + 5 * 60_000).toISOString(), last_email_error: 'Email provider rejected delivery' };
-        const { error: updateError } = await supabase.from('demo_fulfillments').update(update).eq('order_id', job.order_id);
+        const { error: updateError } = await supabase.from(queueTable).update(update).eq('order_id', job.order_id);
         if (updateError) throw updateError;
       }
     } finally {

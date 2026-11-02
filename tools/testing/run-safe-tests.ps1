@@ -1,3 +1,4 @@
+param([switch]$Ui, [switch]$UsbMobile)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $reportDir = Join-Path $root 'test-results'
@@ -7,6 +8,9 @@ $env:PATH = "$dockerDir;$env:PATH"
 $results = [System.Collections.Generic.List[object]]::new()
 $backendProcess = $null
 $startedLocalSupabase = $false
+$uiSessionOpened = $false
+
+if ($UsbMobile -and -not $Ui) { throw 'USB mobile mode requires Playwright UI mode.' }
 
 function Get-LocalSupabaseStatus {
   Push-Location $root
@@ -111,6 +115,30 @@ try {
     try { & flutter.bat test } finally { Pop-Location }
   }
 
+  if ($UsbMobile) {
+    Push-Location (Join-Path $root 'AquaCare_App')
+    try {
+      $devices = @(& flutter.bat devices --machine | ConvertFrom-Json)
+      $phones = @($devices | Where-Object {
+        $_.isSupported -and -not $_.emulator -and $_.targetPlatform -like 'android-*'
+      })
+      if ($phones.Count -ne 1) {
+        throw "Connect exactly one USB Android phone with USB debugging enabled; found $($phones.Count). Check 'flutter devices'."
+      }
+      $adbCandidates = @(
+        (Get-Command adb.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+        (Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe')
+      ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+      if (-not $adbCandidates) { throw 'Android platform-tools (adb.exe) is required to check the phone before installing the test app.' }
+      $installedApp = & $adbCandidates[0] -s $phones[0].id shell pm path com.aquacare.aquacare_app.qa
+      if ($LASTEXITCODE -ne 0) { throw 'Could not inspect installed apps on the USB phone.' }
+      if ($installedApp) { Write-Host 'Existing AquaCare QA installation may be replaced by this test run.' -ForegroundColor Yellow }
+      Write-Host "`nRunning isolated Flutter integration test on $($phones[0].name) ($($phones[0].id))..." -ForegroundColor Cyan
+      & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true
+      if ($LASTEXITCODE -ne 0) { throw 'USB mobile integration test failed. Playwright UI was not opened.' }
+    } finally { Pop-Location }
+  }
+
   if (Get-NetTCPConnection -LocalPort 5051 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Port 5051 is already in use. Refusing to reuse an unknown backend.'
   }
@@ -129,13 +157,20 @@ try {
   }
   if (-not $ready) { throw 'Isolated backend did not become healthy.' }
 
-  Run-Suite 'Playwright web desktop and phone smoke tests' {
+  if ($Ui) {
+    Write-Host "`nOpening Playwright UI with a visible browser. Close the UI to stop the isolated services." -ForegroundColor Cyan
+    $uiSessionOpened = $true
     Push-Location (Join-Path $root 'AquaCare_Web')
-    try {
-      $playwrightJson = Join-Path $reportDir 'playwright.json'
-      if (Test-Path $playwrightJson) { Remove-Item -LiteralPath $playwrightJson }
-      & npm.cmd run test:e2e
-    } finally { Pop-Location }
+    try { & npm.cmd run test:e2e -- --ui --headed } finally { Pop-Location }
+  } else {
+    Run-Suite 'Playwright web desktop and phone smoke tests' {
+      Push-Location (Join-Path $root 'AquaCare_Web')
+      try {
+        $playwrightJson = Join-Path $reportDir 'playwright.json'
+        if (Test-Path $playwrightJson) { Remove-Item -LiteralPath $playwrightJson }
+        & npm.cmd run test:e2e
+      } finally { Pop-Location }
+    }
   }
 } catch {
   Write-Host "SAFETY STOP: $($_.Exception.Message)" -ForegroundColor Red
@@ -152,6 +187,7 @@ try {
       Write-Warning 'Local Supabase did not stop cleanly; check Docker Desktop.'
     } finally { Pop-Location }
   }
+  if (-not $Ui) {
   $suiteState = @{}
   foreach ($row in $results) { $suiteState[$row.Suite] = $row.Result }
   $fullCaseResults = @{}
@@ -224,4 +260,11 @@ try {
   } catch { Write-Warning 'Could not build the Playwright scope report.' }
   Write-Host "`nReport: $reportDir\latest.md"
   if ($results.Where({ $_.Result -ne 'PASS' }).Count -gt 0) { exit 1 }
+  } else {
+    if ($uiSessionOpened) {
+      Write-Host 'Playwright UI closed. No automated summary was generated for this interactive session.' -ForegroundColor Cyan
+    } else {
+      Write-Host 'Interactive test stopped before Playwright UI opened.' -ForegroundColor Yellow
+    }
+  }
 }

@@ -39,6 +39,9 @@ class SupabaseService {
     final normalizedMac = macAddress?.trim() ?? '';
     Map<String, dynamic>? availableDevice;
     if (normalizedMac.isNotEmpty) {
+      final orders = await client.from('orders').select('order_items(device_macs)').eq('user_id', userId).eq('status', 'delivered');
+      final owned = (orders as List).any((order) => ((order['order_items'] as List?) ?? []).any((item) => ((item['device_macs'] as List?) ?? []).any((mac) => mac.toString().toUpperCase() == normalizedMac.toUpperCase())));
+      if (!owned) throw StateError('Mã MAC chưa được cấp cho tài khoản này.');
       availableDevice = await client
           .from('devices')
           .select('id, tank_id, mac_address')

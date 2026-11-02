@@ -1,3 +1,5 @@
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -2650,6 +2652,20 @@ class _AddPondDialogState extends State<_AddPondDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _volumeController = TextEditingController();
+  List<Map<String, dynamic>> _ownedMacs = [];
+  String _macSearch = '';
+  String _macLoadError = '';
+  @override
+  void initState() { super.initState(); _loadOwnedMacs(); }
+  Future<void> _loadOwnedMacs() async {
+    try {
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      if (token == null) throw StateError('Vui lòng đăng nhập lại');
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/orders/mac-email/mine'), headers: {'Authorization': 'Bearer $token'});
+      if (response.statusCode != 200) throw StateError('Không tải được danh sách thiết bị');
+      if (mounted) setState(() => _ownedMacs = List<Map<String, dynamic>>.from(jsonDecode(response.body)));
+    } catch (e) { if (mounted) setState(() => _macLoadError = e.toString()); }
+  }
   final _macController = TextEditingController();
   int? _speciesId;
   bool _saving = false;
@@ -2760,7 +2776,7 @@ class _AddPondDialogState extends State<_AddPondDialog> {
         ],
       ),
       content: SizedBox(
-        width: 360,
+        width: MediaQuery.sizeOf(context).width >= 700 ? 520 : MediaQuery.sizeOf(context).width - 72,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -2834,21 +2850,38 @@ class _AddPondDialogState extends State<_AddPondDialog> {
                       : (value) => setState(() => _speciesId = value),
                 ),
                 const SizedBox(height: 14),
-                _label('MÃ THIẾT BỊ (MAC)', optional: true),
-                TextFormField(
-                  controller: _macController,
-                  enabled: !_saving,
-                  textCapitalization: TextCapitalization.characters,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _submit(),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: CustomerColors.text,
-                  ),
-                  decoration: _decoration(
-                    'VD: 68:FE:71:16:A5:18 hoặc để trống',
-                  ),
+                Row(children: [Expanded(child: _label('CHỌN THIẾT BỊ')), Text('${_ownedMacs.length} thiết bị', style: GoogleFonts.inter(fontSize: 11, color: CustomerColors.mutedText))]),
+                TextField(
+                  decoration: _decoration('Tìm tên, phiên bản hoặc mã MAC'),
+                  onChanged: (value) => setState(() => _macSearch = value),
                 ),
+                if (_macLoadError.isNotEmpty) Text(_macLoadError),
+                const SizedBox(height: 8),
+                Container(
+                  height: 220,
+                  decoration: BoxDecoration(border: Border.all(color: CustomerColors.border), borderRadius: BorderRadius.circular(12)),
+                  child: ListView(children: [
+                    for (final item in _ownedMacs.where((item) => '${item['name']} ${item['version']} ${item['mac']} ${item['tankName'] ?? ''}'.toLowerCase().contains(_macSearch.toLowerCase())))
+                      ListTile(
+                        enabled: item['tankName'] == null,
+                        selected: _macController.text == item['mac'],
+                        leading: Icon(_macController.text == item['mac'] ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: const Color(0xFF00A896)),
+                        title: Text(item['name']?.toString() ?? 'Thiết bị AquaCare', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                        subtitle: Text('${item['version'] ?? 'Không rõ phiên bản'} · ${item['mac']}${item['tankName'] == null ? '' : '\nĐã dùng · ${item['tankName']}'}', style: GoogleFonts.inter(fontSize: 11)),
+                        isThreeLine: item['tankName'] != null,
+                        onTap: item['tankName'] == null ? () => setState(() => _macController.text = item['mac'].toString()) : null,
+                      ),
+                    ListTile(
+                      leading: Icon(_macController.text.isEmpty ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: const Color(0xFF00A896)),
+                      title: Text('Không gắn thiết bị', style: GoogleFonts.inter(fontSize: 13)),
+                      subtitle: const Text('Bạn có thể chọn thiết bị sau'),
+                      onTap: () => setState(() => _macController.text = ''),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 8),
+                Text('Thiết bị đã dùng vẫn hiển thị để bạn đối chiếu.', style: GoogleFonts.inter(fontSize: 11, color: CustomerColors.mutedText)),
+
                 if (_error.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),

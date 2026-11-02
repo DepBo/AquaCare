@@ -103,8 +103,10 @@ AquaCare_App/ios/coverage/
 
 # Firebase configuration files
 AquaCare_App/android/app/google-services.json
+AquaCare_App/android/app/src/**/google-services.json
 AquaCare_App/ios/Runner/GoogleService-Info.plist
 AquaCare_App/macos/Runner/GoogleService-Info.plist
+AquaCare_Backend/config/firebase-service-account.json
 
 # ==============================================================================
 # AquaCare TVC — chỉ lưu cục bộ, không đưa lên Git
@@ -121,6 +123,19 @@ database.txt
 security/private-audit.md
 AquaCare_App/CHANGELOG.md
 test-results/
+
+# Local database migrations, exports and credentials
+/migrations/
+/supabase/migrations/
+*.dump
+*.backup
+*.sql.gz
+*_schema_only.sql
+*_data_only.sql
+*service-account*.json
+*.pem
+*.p12
+*.pfx
 
 # KiCad temporary files
 *.kicad_prl

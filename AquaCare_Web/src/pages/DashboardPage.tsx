@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import FeedbackButton from '../components/FeedbackButton'
 import '../components/SidebarNature.css'
+import './AddTankPicker.css'
 import DeviceControlPanel from '../components/DeviceControlPanel'
 import { clearVerifiedRole } from '../authRoleCache'
 import InnerMoonToggle from '../components/InnerMoonToggle'
@@ -230,10 +231,10 @@ function statusLabel(val: number, good: number[], warn: number[], key?: string) 
 // ── Custom Dialog ────────────────────────────────────────────
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
-  confirmColor = '#00A896', onConfirm, onCancel, loading = false, children
+  confirmColor = '#00A896', onConfirm, onCancel, loading = false, children, wide = false
 }: {
   title: React.ReactNode | string; message?: string; error?: string; confirmText?: string; cancelText?: string
-  confirmColor?: string; onConfirm: () => void; onCancel: () => void; loading?: boolean; children?: React.ReactNode
+  confirmColor?: string; onConfirm: () => void; onCancel: () => void; loading?: boolean; children?: React.ReactNode; wide?: boolean
 }) {
   return (
     <div style={{
@@ -244,7 +245,7 @@ function Dialog({
       <div style={{
         background: 'var(--bg-dialog)',
         border: '1px solid var(--border-color)',
-        borderRadius: 18, padding: '28px 32px', width: 360, maxWidth: '90vw',
+        borderRadius: 18, padding: '28px 32px', width: wide ? 600 : 360, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         animation: 'dialogIn 200ms cubic-bezier(0.34,1.56,0.64,1)',
       }} onClick={e => e.stopPropagation()}>
@@ -1214,6 +1215,9 @@ export default function DashboardPage() {
   const [addVolume, setAddVolume] = useState<number | string>('')
   const [addSpeciesId, setAddSpeciesId] = useState<number>(0)
   const [addMacAddress, setAddMacAddress] = useState('')
+  const [ownedMacs, setOwnedMacs] = useState<Array<{mac: string; name: string; version?: string; tankName?: string | null}>>([])
+  const [macSearch, setMacSearch] = useState('')
+  const [macLoadError, setMacLoadError] = useState('')
   const [editDialog, setEditDialog] = useState<Pond | null>(null)
   const [editTab, setEditTab] = useState<'general' | 'alerts'>('general')
   const [editName, setEditName] = useState('')
@@ -1653,6 +1657,21 @@ export default function DashboardPage() {
     setActiveDevice(id)
   }
 
+  useEffect(() => {
+    if (!addDialog) return
+    let active = true
+    setMacLoadError('')
+    setMacSearch('')
+    supabase.auth.getSession().then(async ({ data }) => {
+      const token = data.session?.access_token
+      if (!token) throw new Error('Vui lòng đăng nhập lại')
+      const response = await fetch(`${API_URL}/api/orders/mac-email/mine`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!response.ok) throw new Error('Không tải được danh sách thiết bị')
+      if (active) setOwnedMacs(await response.json())
+    }).catch(error => { if (active) setMacLoadError(String(error)) })
+    return () => { active = false }
+  }, [addDialog])
+
   const handleAddConfirm = async () => {
     if (tankSaving) return
     setDialogError('')
@@ -1662,6 +1681,7 @@ export default function DashboardPage() {
     setTankSaving(true)
     try {
       const mac = addMacAddress.trim()
+      if (mac && !ownedMacs.some(item => item.mac === mac && !item.tankName)) return setDialogError('Mã MAC không thuộc thiết bị khả dụng của bạn.')
       if (mac) {
         const { data: dev } = await supabase.from('devices').select('id, tank_id').eq('mac_address', mac).single()
         if (!dev) return setDialogError('Mã thiết bị không tồn tại trên hệ thống!')
@@ -1678,7 +1698,10 @@ export default function DashboardPage() {
       }).select('*, fish_species(*)')
 
       if (data && data.length > 0) {
-        if (mac) await supabase.from('devices').update({ tank_id: data[0].id, is_active: true }).eq('mac_address', mac)
+        if (mac) {
+          const { data: attached, error: attachError } = await supabase.from('devices').update({ tank_id: data[0].id, is_active: true }).eq('mac_address', mac).is('tank_id', null).select('id')
+          if (attachError || !attached?.length) { await supabase.from('tanks').delete().eq('id', data[0].id); return setDialogError('Thiết bị vừa được gắn vào bể khác. Hãy chọn lại.') }
+        }
 
         const t = data[0]
         const newPond: Pond = {
@@ -2709,6 +2732,7 @@ export default function DashboardPage() {
         <Dialog
           title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18} color="#00A896" /> Thêm bể cá mới</div>}
           confirmText="Thêm bể"
+          wide
           error={dialogError}
           loading={tankSaving}
           onConfirm={handleAddConfirm}
@@ -2733,6 +2757,7 @@ export default function DashboardPage() {
               onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
             />
           </div>
+          <div className="add-tank-fields">
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Thể tích (Lít)
@@ -2774,23 +2799,16 @@ export default function DashboardPage() {
               ))}
             </select>
           </div>
-          <div style={{ marginTop: 12, marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Mã thiết bị (MAC Address)
-            </label>
-            <input
-              value={addMacAddress}
-              onChange={e => setAddMacAddress(e.target.value)}
-              placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống"
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
+          </div>
+          <div style={{ marginTop: 14, marginBottom: 4 }}>
+            <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:9}}><label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em' }}>CHỌN THIẾT BỊ</label><span style={{fontSize:12,color:'var(--text-muted)'}}>{ownedMacs.length} thiết bị</span></div>
+            <input value={macSearch} onChange={e => setMacSearch(e.target.value)} placeholder="Tìm tên, phiên bản hoặc mã MAC" aria-label="Tìm thiết bị" style={{ width: '100%', padding: '12px 14px', borderRadius: 10, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
+            {macLoadError && <p role="alert" style={{color:'#FF6B6B'}}>{macLoadError}</p>}
+            <div style={{maxHeight: 242, overflowY: 'auto', marginTop: 8, border:'1px solid var(--border-color)',borderRadius:12}}>
+              {ownedMacs.filter(item => `${item.name} ${item.version} ${item.mac} ${item.tankName || ''}`.toLowerCase().includes(macSearch.toLowerCase())).map(item => <button key={item.mac} type="button" disabled={!!item.tankName} onClick={() => setAddMacAddress(item.mac)} className="add-tank-device" style={{background:addMacAddress === item.mac ? 'rgba(0,168,150,.12)' : 'var(--bg-btn-cancel)',opacity:item.tankName?.55:1,cursor:item.tankName?'not-allowed':'pointer'}}><span className="add-tank-radio" aria-hidden="true">{addMacAddress === item.mac ? '●' : '○'}</span><span className="add-tank-device-copy"><strong>{item.name}</strong><small>{item.version || 'Không rõ phiên bản'} · {item.mac}</small></span><span className="add-tank-badge">{item.tankName ? `Đã dùng · ${item.tankName}` : 'Sẵn sàng'}</span></button>)}
+              <button type="button" onClick={() => setAddMacAddress('')} className="add-tank-device" style={{background:!addMacAddress?'rgba(0,168,150,.12)':'var(--bg-btn-cancel)'}}><span className="add-tank-radio" aria-hidden="true">{!addMacAddress ? '●' : '○'}</span><span className="add-tank-device-copy"><strong>Không gắn thiết bị</strong><small>Bạn có thể chọn thiết bị sau</small></span></button>
+            </div>
+            <p style={{fontSize:12,color:'var(--text-muted)',margin:'9px 0 0'}}>Thiết bị đã dùng vẫn hiển thị để bạn đối chiếu.</p>
           </div>
         </Dialog>
       )}
@@ -2850,6 +2868,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ marginTop: 12, marginBottom: 4 }}>
                 <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Mã thiết bị (MAC Address)</label>
+                <p style={{fontSize: 12, color: 'var(--text-muted)'}}>Mã MAC được gửi đến email tài khoản sau khi giao hàng thành công. V3 Demo nhận mã khi đơn tự động hoàn tất.</p>
                 <input value={editMacAddress} onChange={e => setEditMacAddress(e.target.value)} placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
               </div>
             </div>
