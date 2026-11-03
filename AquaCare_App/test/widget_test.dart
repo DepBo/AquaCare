@@ -229,6 +229,22 @@ void main() {
         'test-anon-key',
         httpClient: MockClient((request) async {
           requests.add(request);
+          if (request.method == 'GET' && request.url.path.endsWith('/orders')) {
+            return http.Response(
+              jsonEncode([
+                {
+                  'order_items': [
+                    {
+                      'device_macs': ['AA:BB:CC:DD:EE:FF'],
+                    },
+                  ],
+                },
+              ]),
+              200,
+              headers: {'content-type': 'application/json'},
+              request: request,
+            );
+          }
           if (request.method == 'GET' &&
               request.url.path.endsWith('/devices')) {
             return http.Response(

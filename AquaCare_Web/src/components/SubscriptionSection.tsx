@@ -25,6 +25,7 @@ export default function SubscriptionSection() {
   const [vis, setVis] = useState(false)
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -37,8 +38,11 @@ export default function SubscriptionSection() {
 
       if (!error && data) {
         setPlans(data as SubscriptionPlan[])
+        setLoadError(false)
       } else {
         console.error("Failed to load subscription plans", error)
+        setPlans([])
+        setLoadError(true)
       }
       setLoading(false)
     }
@@ -86,6 +90,10 @@ export default function SubscriptionSection() {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
             <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#FF8C42', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
           </div>
+        ) : loadError ? (
+          <p role="status" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Không tải được gói dịch vụ. Vui lòng thử lại sau.</p>
+        ) : plans.length === 0 ? (
+          <p role="status" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Chưa có gói dịch vụ nào.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }} className="subscriptions-grid">
             {plans.map((plan, i) => {
@@ -122,6 +130,7 @@ export default function SubscriptionSection() {
                       </span>
                       {plan.price > 0 && <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>/tháng</span>}
                     </div>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Thời hạn {plan.duration_months} tháng</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, marginBottom: 40 }}>

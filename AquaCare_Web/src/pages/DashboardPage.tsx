@@ -1153,9 +1153,11 @@ export default function DashboardPage() {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15000)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Authentication required')
       const response = await fetch(`${API_URL}/api/device/relay`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ pin, state: desired, tank_id: tankId, relay_field: relayField }),
         signal: controller.signal
       })

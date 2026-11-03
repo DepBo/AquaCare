@@ -677,11 +677,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    final created = await showCustomerDialog<Map<String, dynamic>>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (_) =>
-          _AddPondDialog(userId: userId, fishSpeciesList: _fishSpecies),
+    final created = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) =>
+            _AddPondDialog(userId: userId, fishSpeciesList: _fishSpecies),
+      ),
     );
     if (!mounted || created == null) return;
 
@@ -1117,8 +1117,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildOnboardingSection() {
     bool isOverlay = !_hideOnboarding;
-    final headingColor = isOverlay ? Colors.white : CustomerColors.text;
-    final descriptionColor = isOverlay
+    final headingColor = isOverlay && CustomerColors.dark
+        ? Colors.white
+        : CustomerColors.text;
+    final descriptionColor = isOverlay && CustomerColors.dark
         ? const Color(0xFFD7E1EA)
         : CustomerColors.secondaryText;
 
@@ -1325,7 +1327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   height: 20,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: isOverlay
+                      color: isOverlay && CustomerColors.dark
                           ? Colors.white.withValues(alpha: 0.72)
                           : CustomerColors.mutedText,
                     ),
@@ -1364,7 +1366,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Container(
-      color: Colors.black.withValues(alpha: 0.85),
+      color: CustomerColors.dark
+          ? Colors.black.withValues(alpha: 0.85)
+          : CustomerColors.background,
       child: Stack(
         children: [
           // Arrow up (to "Chọn bể cá")
@@ -1711,7 +1715,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         // Divider
-        PopupMenuDivider(height: 1),
+        if (_ponds.isNotEmpty) const PopupMenuDivider(height: 1),
         // Add item
         PopupMenuItem<String>(
           value: '__add__',
@@ -2009,7 +2013,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không mở được form góp ý. Vui lòng thử lại.')),
+        const SnackBar(
+          content: Text('Không mở được form góp ý. Vui lòng thử lại.'),
+        ),
       );
     }
   }
@@ -2035,7 +2041,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: const Color(0xFF00A896).withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(Icons.edit_outlined, color: CustomerColors.accentText),
+                child: Icon(
+                  Icons.edit_outlined,
+                  color: CustomerColors.accentText,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2061,7 +2070,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              Icon(Icons.open_in_new, size: 18, color: CustomerColors.accentText),
+              Icon(
+                Icons.open_in_new,
+                size: 18,
+                color: CustomerColors.accentText,
+              ),
             ],
           ),
         ),
@@ -2656,16 +2669,32 @@ class _AddPondDialogState extends State<_AddPondDialog> {
   String _macSearch = '';
   String _macLoadError = '';
   @override
-  void initState() { super.initState(); _loadOwnedMacs(); }
+  void initState() {
+    super.initState();
+    _loadOwnedMacs();
+  }
+
   Future<void> _loadOwnedMacs() async {
     try {
       final token = Supabase.instance.client.auth.currentSession?.accessToken;
       if (token == null) throw StateError('Vui lòng đăng nhập lại');
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/orders/mac-email/mine'), headers: {'Authorization': 'Bearer $token'});
-      if (response.statusCode != 200) throw StateError('Không tải được danh sách thiết bị');
-      if (mounted) setState(() => _ownedMacs = List<Map<String, dynamic>>.from(jsonDecode(response.body)));
-    } catch (e) { if (mounted) setState(() => _macLoadError = e.toString()); }
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/api/orders/mac-email/mine'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200)
+        throw StateError('Không tải được danh sách thiết bị');
+      if (mounted)
+        setState(
+          () => _ownedMacs = List<Map<String, dynamic>>.from(
+            jsonDecode(response.body),
+          ),
+        );
+    } catch (e) {
+      if (mounted) setState(() => _macLoadError = e.toString());
+    }
   }
+
   final _macController = TextEditingController();
   int? _speciesId;
   bool _saving = false;
@@ -2753,190 +2782,441 @@ class _AddPondDialogState extends State<_AddPondDialog> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: CustomerColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: CustomerColors.border),
+  Widget _sectionHeader(IconData icon, String title) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00A896).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 19, color: CustomerColors.accentText),
       ),
-      title: Row(
-        children: [
-          const _AquaSvg('plus', size: 20, color: Color(0xFF00A896)),
-          const SizedBox(width: 8),
-          Text(
-            'Thêm bể cá mới',
-            style: GoogleFonts.inter(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: CustomerColors.text,
+      const SizedBox(width: 10),
+      Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: CustomerColors.text,
+        ),
+      ),
+    ],
+  );
+
+  Widget _deviceOption(Map<String, dynamic>? item) {
+    final isNone = item == null;
+    final used = item?['tankName'] != null;
+    final mac = item?['mac']?.toString() ?? '';
+    final selected = _macController.text == mac;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: InkWell(
+        onTap: used ? null : () => setState(() => _macController.text = mac),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          decoration: BoxDecoration(
+            color: used
+                ? CustomerColors.subtle.withValues(alpha: 0.7)
+                : CustomerColors.card,
+            border: Border.all(
+              color: selected && !used
+                  ? const Color(0xFF00A896)
+                  : CustomerColors.border,
+              width: selected && !used ? 1.5 : 1,
             ),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
-      content: SizedBox(
-        width: MediaQuery.sizeOf(context).width >= 700 ? 520 : MediaQuery.sizeOf(context).width - 72,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _label('TÊN BỂ CÁ'),
-                TextFormField(
-                  controller: _nameController,
-                  autofocus: true,
-                  enabled: !_saving,
-                  textInputAction: TextInputAction.next,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: CustomerColors.text,
-                  ),
-                  decoration: _decoration('VD: Bể Rồng Phòng Ngủ'),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Vui lòng nhập tên bể'
-                      : null,
-                ),
-                const SizedBox(height: 14),
-                _label('THỂ TÍCH (LÍT)'),
-                TextFormField(
-                  controller: _volumeController,
-                  enabled: !_saving,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: CustomerColors.text,
-                  ),
-                  decoration: _decoration('VD: 250'),
-                  validator: (value) {
-                    final text = value?.trim().replaceAll(',', '.') ?? '';
-                    if (text.isEmpty) return null;
-                    final volume = double.tryParse(text);
-                    return volume == null || volume <= 0
-                        ? 'Thể tích phải là số lớn hơn 0'
-                        : null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                _label('LOÀI CÁ', optional: true),
-                DropdownButtonFormField<int>(
-                  initialValue: _speciesId,
-                  isExpanded: true,
-                  dropdownColor: CustomerColors.card,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: CustomerColors.text,
-                  ),
-                  decoration: _decoration('-- Chọn loài cá --'),
-                  items: [
-                    const DropdownMenuItem<int>(
-                      value: null,
-                      child: Text('Không xác định'),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 23,
+                color: used
+                    ? CustomerColors.mutedText
+                    : selected
+                    ? const Color(0xFF00A896)
+                    : CustomerColors.mutedText,
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isNone
+                          ? 'Chưa gắn thiết bị'
+                          : item['name']?.toString() ?? 'Thiết bị AquaCare',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: used
+                            ? CustomerColors.mutedText
+                            : CustomerColors.text,
+                      ),
                     ),
-                    ...widget.fishSpeciesList.map(
-                      (species) => DropdownMenuItem<int>(
-                        value: species['id'] as int,
-                        child: Text(species['species_name'] as String),
+                    const SizedBox(height: 3),
+                    Text(
+                      isNone
+                          ? 'Bạn có thể chọn sau'
+                          : '${item['version'] ?? 'Không rõ phiên bản'} · $mac${used ? '\nĐã dùng · ${item['tankName']}' : ''}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: CustomerColors.mutedText,
                       ),
                     ),
                   ],
-                  onChanged: _saving
-                      ? null
-                      : (value) => setState(() => _speciesId = value),
                 ),
-                const SizedBox(height: 14),
-                Row(children: [Expanded(child: _label('CHỌN THIẾT BỊ')), Text('${_ownedMacs.length} thiết bị', style: GoogleFonts.inter(fontSize: 11, color: CustomerColors.mutedText))]),
-                TextField(
-                  decoration: _decoration('Tìm tên, phiên bản hoặc mã MAC'),
-                  onChanged: (value) => setState(() => _macSearch = value),
-                ),
-                if (_macLoadError.isNotEmpty) Text(_macLoadError),
-                const SizedBox(height: 8),
-                Container(
-                  height: 220,
-                  decoration: BoxDecoration(border: Border.all(color: CustomerColors.border), borderRadius: BorderRadius.circular(12)),
-                  child: ListView(children: [
-                    for (final item in _ownedMacs.where((item) => '${item['name']} ${item['version']} ${item['mac']} ${item['tankName'] ?? ''}'.toLowerCase().contains(_macSearch.toLowerCase())))
-                      ListTile(
-                        enabled: item['tankName'] == null,
-                        selected: _macController.text == item['mac'],
-                        leading: Icon(_macController.text == item['mac'] ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: const Color(0xFF00A896)),
-                        title: Text(item['name']?.toString() ?? 'Thiết bị AquaCare', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-                        subtitle: Text('${item['version'] ?? 'Không rõ phiên bản'} · ${item['mac']}${item['tankName'] == null ? '' : '\nĐã dùng · ${item['tankName']}'}', style: GoogleFonts.inter(fontSize: 11)),
-                        isThreeLine: item['tankName'] != null,
-                        onTap: item['tankName'] == null ? () => setState(() => _macController.text = item['mac'].toString()) : null,
-                      ),
-                    ListTile(
-                      leading: Icon(_macController.text.isEmpty ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: const Color(0xFF00A896)),
-                      title: Text('Không gắn thiết bị', style: GoogleFonts.inter(fontSize: 13)),
-                      subtitle: const Text('Bạn có thể chọn thiết bị sau'),
-                      onTap: () => setState(() => _macController.text = ''),
+              ),
+              if (!isNone) ...[
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 5,
                     ),
-                  ]),
-                ),
-                const SizedBox(height: 8),
-                Text('Thiết bị đã dùng vẫn hiển thị để bạn đối chiếu.', style: GoogleFonts.inter(fontSize: 11, color: CustomerColors.mutedText)),
-
-                if (_error.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
+                    decoration: BoxDecoration(
+                      color:
+                          (used
+                                  ? CustomerColors.mutedText
+                                  : const Color(0xFF00A896))
+                              .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     child: Text(
-                      _error,
+                      used ? 'Đã dùng' : 'Khả dụng',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: const Color(0xFFFF6B6B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: used
+                            ? CustomerColors.mutedText
+                            : CustomerColors.accentText,
                       ),
                     ),
                   ),
+                ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: CustomerTheme.mode,
+      builder: (context, mode, _) => Theme(
+        data: CustomerTheme.data,
+        child: Scaffold(
+          backgroundColor: CustomerColors.background,
+          appBar: AppBar(
+            backgroundColor: CustomerColors.background,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new, color: CustomerColors.text),
+              onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Thêm bể cá',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: CustomerColors.text,
+                  ),
+                ),
+                Text(
+                  'Thiết lập bể mới của bạn',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: CustomerColors.mutedText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(56, 0, 0, 18),
+                        child: SizedBox(
+                          width: 144,
+                          child: Row(
+                            children: [
+                              for (var index = 0; index < 3; index++) ...[
+                                Expanded(
+                                  child: Container(
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: index == 0
+                                          ? const Color(0xFF00A896)
+                                          : CustomerColors.border.withValues(
+                                              alpha: 0.65,
+                                            ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                                if (index < 2) const SizedBox(width: 7),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: CustomerColors.card,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _sectionHeader(
+                              Icons.article_outlined,
+                              'Thông tin bể',
+                            ),
+                            const SizedBox(height: 20),
+                            _label('TÊN BỂ CÁ'),
+                            TextFormField(
+                              controller: _nameController,
+                              autofocus: false,
+                              enabled: !_saving,
+                              textInputAction: TextInputAction.next,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: CustomerColors.text,
+                              ),
+                              decoration: _decoration('VD: Bể Rồng Phòng Ngủ'),
+                              validator: (value) =>
+                                  value == null || value.trim().isEmpty
+                                  ? 'Vui lòng nhập tên bể'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            _label('THỂ TÍCH (LÍT)'),
+                            TextFormField(
+                              controller: _volumeController,
+                              enabled: !_saving,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              textInputAction: TextInputAction.next,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: CustomerColors.text,
+                              ),
+                              decoration: _decoration('VD: 250'),
+                              validator: (value) {
+                                final text =
+                                    value?.trim().replaceAll(',', '.') ?? '';
+                                if (text.isEmpty) return null;
+                                final volume = double.tryParse(text);
+                                return volume == null || volume <= 0
+                                    ? 'Thể tích phải là số lớn hơn 0'
+                                    : null;
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            _label('LOÀI CÁ', optional: true),
+                            DropdownButtonFormField<int>(
+                              initialValue: _speciesId,
+                              isExpanded: true,
+                              dropdownColor: CustomerColors.card,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: CustomerColors.text,
+                              ),
+                              decoration: _decoration('-- Chọn loài cá --'),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: null,
+                                  child: Text('Không xác định'),
+                                ),
+                                ...widget.fishSpeciesList.map(
+                                  (species) => DropdownMenuItem<int>(
+                                    value: species['id'] as int,
+                                    child: Text(
+                                      species['species_name'] as String,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              onChanged: _saving
+                                  ? null
+                                  : (value) =>
+                                        setState(() => _speciesId = value),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: CustomerColors.card,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _sectionHeader(
+                                  Icons.memory_outlined,
+                                  'Thiết bị của bạn',
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF00A896,
+                                    ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_ownedMacs.where((item) => item['tankName'] == null).length} thiết bị khả dụng',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: CustomerColors.accentText,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            TextField(
+                              decoration:
+                                  _decoration(
+                                    'Tìm tên, phiên bản hoặc mã MAC',
+                                  ).copyWith(
+                                    prefixIcon: Icon(
+                                      Icons.search,
+                                      color: CustomerColors.mutedText,
+                                    ),
+                                  ),
+                              onChanged: (value) =>
+                                  setState(() => _macSearch = value),
+                            ),
+                            if (_macLoadError.isNotEmpty) Text(_macLoadError),
+                            const SizedBox(height: 8),
+                            Column(
+                              children: [
+                                for (final item in _ownedMacs.where(
+                                  (item) =>
+                                      '${item['name']} ${item['version']} ${item['mac']} ${item['tankName'] ?? ''}'
+                                          .toLowerCase()
+                                          .contains(_macSearch.toLowerCase()),
+                                ))
+                                  _deviceOption(item),
+                                _deviceOption(null),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'ⓘ  Thiết bị đã dùng được làm mờ để bạn đối chiếu.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: CustomerColors.mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_error.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            _error,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: const Color(0xFFFF6B6B),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              decoration: BoxDecoration(
+                color: CustomerColors.card,
+                border: Border(top: BorderSide(color: CustomerColors.border)),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: const Text('Hủy'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: _saving ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00A896),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Thêm bể'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: CustomerColors.secondaryText,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          ),
-          child: Text('Hủy', style: GoogleFonts.inter(fontSize: 13)),
-        ),
-        ElevatedButton(
-          onPressed: _saving ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00A896),
-            foregroundColor: CustomerColors.text,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: _saving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  'Thêm bể',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-        ),
-      ],
     );
   }
 }

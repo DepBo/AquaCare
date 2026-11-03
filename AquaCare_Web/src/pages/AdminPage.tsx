@@ -990,14 +990,17 @@ export default function AdminPage() {
             const buyerInfo = macCustomerMap[d.mac_address.trim().toUpperCase()];
             const isBought = d.is_active || Boolean(buyerInfo);
             const isUsing = Boolean(d.tank_id);
+            const isNoLongerActive = !isUsing && Boolean(buyerInfo) && !d.is_active;
 
             let sMatch = true;
             if (deviceFilterStatus === 'active') {
               sMatch = isUsing;
             } else if (deviceFilterStatus === 'bought') {
-              sMatch = !isUsing && isBought;
+              sMatch = !isUsing && isBought && !isNoLongerActive;
             } else if (deviceFilterStatus === 'inactive') {
               sMatch = !isUsing && !isBought;
+            } else if (deviceFilterStatus === 'no_longer_active') {
+              sMatch = isNoLongerActive;
             }
             return mMatch && vMatch && sMatch;
           });
@@ -1044,6 +1047,7 @@ export default function AdminPage() {
                   <option value="active">Đang dùng</option>
                   <option value="bought">Đã được mua</option>
                   <option value="inactive">Trong kho</option>
+                  <option value="no_longer_active">Không hoạt động</option>
                 </select>
               </div>
             </div>
@@ -1125,8 +1129,9 @@ export default function AdminPage() {
                   {paginatedDevices.map(d => {
                     const buyerInfo = macCustomerMap[d.mac_address.trim().toUpperCase()]
                     const isBought = d.is_active || Boolean(buyerInfo)
-                    const status = d.tank_id ? 'Đang dùng' : (isBought ? 'Đã được mua' : 'Trong kho')
-                    const statusColor = d.tank_id ? '#d97706' : (isBought ? '#0284c7' : '#16a34a')
+                    const isNoLongerActive = !d.tank_id && Boolean(buyerInfo) && !d.is_active
+                    const status = d.tank_id ? 'Đang dùng' : (isNoLongerActive ? 'Không hoạt động' : isBought ? 'Đã được mua' : 'Trong kho')
+                    const statusColor = d.tank_id ? '#d97706' : (isNoLongerActive ? '#64748b' : isBought ? '#0284c7' : '#16a34a')
                     
                     let ownerName = '-'
                     if (d.tanks?.users) {
@@ -1145,7 +1150,7 @@ export default function AdminPage() {
                         <td style={{ padding: '12px 20px', fontWeight: 600, fontFamily: 'monospace', color: 'var(--ap-text-primary)' }}>{d.mac_address}</td>
                         <td style={{ padding: '12px 20px', color: 'var(--ap-text-secondary)' }}>{d.firmware_version}</td>
                         <td style={{ padding: '12px 20px' }}>
-                          <span className={`admin-status ${d.tank_id ? 'admin-status--warning' : isBought ? 'admin-status--info' : 'admin-status--success'}`} style={{ fontSize: 12, fontWeight: 600, color: statusColor }}>
+                          <span className={`admin-status ${d.tank_id ? 'admin-status--warning' : isNoLongerActive ? 'admin-status--inactive' : isBought ? 'admin-status--info' : 'admin-status--success'}`} style={{ fontSize: 12, fontWeight: 600, color: statusColor }}>
                             {status}
                           </span>
                         </td>

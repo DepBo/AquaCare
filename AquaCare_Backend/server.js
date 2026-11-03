@@ -83,6 +83,24 @@ app.post('/api/device/relay', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const relayFieldsByPin = {
+      1: 'relay_light_state',
+      2: 'relay_aerator_state',
+      3: 'relay_pump_state',
+    };
+    if (typeof state !== 'boolean' || !Number.isInteger(pin) || relayFieldsByPin[pin] !== relay_field) {
+      return res.status(400).json({ error: "Invalid relay command" });
+    }
+
+    const token = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || '')?.[1];
+    if (!token) return res.status(401).json({ error: "Authentication required" });
+    const { data: auth, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !auth?.user) return res.status(401).json({ error: "Invalid session" });
+    const { data: tank, error: tankError } = await supabase.from('tanks')
+      .select('id').eq('id', tank_id).eq('user_id', auth.user.id).maybeSingle();
+    if (tankError) return res.status(500).json({ error: "Failed to verify tank" });
+    if (!tank) return res.status(403).json({ error: "Tank access denied" });
+
     // Lấy MAC Address từ DB
     const { data: device, error: fetchErr } = await supabase.from('devices').select('mac_address').eq('tank_id', tank_id).single();
     if (fetchErr || !device || !device.mac_address) {

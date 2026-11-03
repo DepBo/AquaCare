@@ -1,4 +1,4 @@
-param([switch]$Ui, [switch]$UsbMobile)
+param([switch]$Ui, [switch]$UsbMobile, [switch]$Core, [switch]$ShowWeb, [string]$CaseFilter)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $reportDir = Join-Path $root 'test-results'
@@ -10,14 +10,15 @@ $backendProcess = $null
 $startedLocalSupabase = $false
 $uiSessionOpened = $false
 
-if ($UsbMobile -and -not $Ui) { throw 'USB mobile mode requires Playwright UI mode.' }
+if ($UsbMobile -and -not ($Ui -or $Core)) { throw 'USB mobile mode requires Playwright UI or Core mode.' }
+if ($ShowWeb -and (-not $Core -or $Ui)) { throw 'Visible automated web mode requires Core without interactive Playwright UI.' }
 
 function Get-LocalSupabaseStatus {
   Push-Location $root
   $priorErrorAction = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $lines = & npx.cmd --yes supabase status -o env 2>&1
+    $lines = & npx.cmd --yes supabase@2.122.0 status -o env 2>&1
     $code = $LASTEXITCODE
   } finally {
     $ErrorActionPreference = $priorErrorAction
@@ -55,7 +56,7 @@ try {
     $priorErrorAction = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-      & npx.cmd --yes supabase start --network-id aquacare-local-only 2>&1 | ForEach-Object {
+      & npx.cmd --yes supabase@2.122.0 start --network-id aquacare-local-only 2>&1 | ForEach-Object {
         $message = [string]$_
         if ($message -match 'Started supabase|Starting database|Starting containers|Waiting for health') { Write-Host $message }
       }
@@ -116,6 +117,7 @@ try {
   }
 
   if ($UsbMobile) {
+    Run-Suite 'Flutter USB integration test' {
     Push-Location (Join-Path $root 'AquaCare_App')
     try {
       $devices = @(& flutter.bat devices --machine | ConvertFrom-Json)
@@ -137,6 +139,7 @@ try {
       & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true
       if ($LASTEXITCODE -ne 0) { throw 'USB mobile integration test failed. Playwright UI was not opened.' }
     } finally { Pop-Location }
+    }
   }
 
   if (Get-NetTCPConnection -LocalPort 5051 -State Listen -ErrorAction SilentlyContinue) {
@@ -168,7 +171,15 @@ try {
       try {
         $playwrightJson = Join-Path $reportDir 'playwright.json'
         if (Test-Path $playwrightJson) { Remove-Item -LiteralPath $playwrightJson }
-        & npm.cmd run test:e2e
+        if ($Core) {
+          # Run the complete Playwright suite; the Core report includes every result.
+          $coreArgs = @('test')
+          if ($CaseFilter) { $coreArgs += @('--grep', "\[$([regex]::Escape($CaseFilter))\]") }
+          if ($ShowWeb) { $coreArgs += '--headed' }
+          & node.exe (Join-Path $root 'AquaCare_Web\node_modules\@playwright\test\cli.js') @coreArgs
+        } else {
+          & npm.cmd run test:e2e
+        }
       } finally { Pop-Location }
     }
   }
@@ -181,7 +192,7 @@ try {
     Write-Host 'Stopping local Supabase and saving its backup...' -ForegroundColor Cyan
     Push-Location $root
     try {
-      & npx.cmd --yes supabase stop *> $null
+      & npx.cmd --yes supabase@2.122.0 stop *> $null
       if ($LASTEXITCODE -ne 0) { Write-Warning 'Local Supabase did not stop cleanly; check Docker Desktop.' }
     } catch {
       Write-Warning 'Local Supabase did not stop cleanly; check Docker Desktop.'
@@ -208,6 +219,8 @@ try {
       }
     } catch { Write-Warning 'Could not parse Playwright case results.' }
   }
+  $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+  if (-not $Core) {
   $caseLines = @('# AquaCare test case matrix', '', 'This file distinguishes partial automated checks from full system test cases.', '', '| ID | Source | Status | Automated evidence |', '|---|---|---|---|')
   $caseSources = @(
     @{ Path = (Join-Path $root 'docs\testing\AQUACARE_SYSTEM_TEST_CASES.md'); Label = 'Original 178' },
@@ -245,11 +258,32 @@ try {
     }
   }
   Set-Content -LiteralPath (Join-Path $reportDir 'case-matrix.md') -Value $caseLines -Encoding UTF8
-  $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
   $lines = @('# AquaCare isolated test run', '', "Run: $timestamp (local time)", '', '| Suite | Result | Seconds |', '|---|---|---:|')
   foreach ($row in $results) { $lines += "| $($row.Suite) | $($row.Result) | $($row.Seconds) |" }
   $lines += @('', "Case matrix: $caseCount cases in test-results/case-matrix.md. Only ID-tagged full system tests can be marked PASS or FAIL.", 'PARTIAL PASS is not a full case PASS. The remaining system cases have not been fully run.', 'No production database, MQTT broker, email provider, Firebase project, or physical relay is used by this runner.')
   Set-Content -LiteralPath (Join-Path $reportDir 'latest.md') -Value $lines -Encoding UTF8
+  }
+  if ($Core) {
+    $coreLines = @('# AquaCare core test run', '', "Run: $timestamp (local time)", '', 'This runs all available backend, Flutter widget and Playwright tests; it is not a claim of 196-case coverage.', '', '| Suite | Result | Seconds |', '|---|---|---:|')
+    foreach ($row in $results) { $coreLines += "| $($row.Suite) | $($row.Result) | $($row.Seconds) |" }
+    $coreLines += @('', '| Playwright test | Result |', '|---|---|')
+    $corePassed = 0
+    $coreFailed = 0
+    if (Test-Path $playwrightJson) {
+      $coreReport = Get-Content -LiteralPath $playwrightJson -Raw | ConvertFrom-Json
+      foreach ($suite in $coreReport.suites) {
+        foreach ($spec in $suite.specs) {
+          $statuses = @($spec.tests | ForEach-Object { $_.results | ForEach-Object { $_.status } })
+          $state = if ($statuses.Count -gt 0 -and @($statuses | Where-Object { $_ -ne 'passed' }).Count -eq 0) { 'PASS' } else { 'FAIL' }
+          if ($state -eq 'PASS') { $corePassed++ } else { $coreFailed++ }
+          $coreLines += "| $($spec.title.Replace('|', '\|')) | $state |"
+        }
+      }
+    }
+    $coreLines += @('', "Playwright: $($corePassed + $coreFailed) cases, $corePassed PASS, $coreFailed FAIL.", 'Evidence: test-results/playwright-html/index.html and test-results/evidence/.')
+    Set-Content -LiteralPath (Join-Path $reportDir 'core-results.md') -Value $coreLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $reportDir 'latest.md') -Value $coreLines -Encoding UTF8
+  } else {
   try {
     & node.exe (Join-Path $root 'tools\testing\build-case-report.js')
     if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the HTML case report.' }
@@ -258,7 +292,9 @@ try {
     & node.exe (Join-Path $root 'tools\testing\build-playwright-scope-report.js')
     if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the Playwright scope report.' }
   } catch { Write-Warning 'Could not build the Playwright scope report.' }
+  }
   Write-Host "`nReport: $reportDir\latest.md"
+  if ($Core) { Write-Host "Core report: $reportDir\core-results.md" }
   if ($results.Where({ $_.Result -ne 'PASS' }).Count -gt 0) { exit 1 }
   } else {
     if ($uiSessionOpened) {

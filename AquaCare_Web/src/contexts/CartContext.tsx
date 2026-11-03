@@ -22,6 +22,8 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
+const validQuantity = (quantity: number) => Number.isInteger(quantity) && quantity >= 1 && quantity <= 99;
+
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
@@ -45,7 +47,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('aquacare_cart');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed.filter((item): item is CartItem =>
+          item && validQuantity(item.quantity) && Number.isFinite(item.price) && item.price >= 0
+        ) : [];
       } catch (e) {
         console.error('Failed to parse cart from localStorage', e);
       }
@@ -163,11 +168,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [cart, isInitialized, user, isSyncingFromDb]);
 
   const addToCart = (product: Product, quantity = 1) => {
+    if (!validQuantity(quantity)) return;
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
         return prevCart.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          item.id === product.id ? { ...item, quantity: Math.min(item.quantity + quantity, 99) } : item
         );
       }
       return [...prevCart, { ...product, quantity }];
@@ -183,6 +189,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+    if (!validQuantity(quantity)) return;
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item

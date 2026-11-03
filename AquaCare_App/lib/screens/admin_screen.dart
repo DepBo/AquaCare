@@ -44,7 +44,7 @@ class _AdminScreenState extends State<AdminScreen> {
   Map<String, BuyerInfo> _macCustomerMap = {};
   final TextEditingController _deviceSearchCtrl = TextEditingController();
   String _deviceFilterVersion = 'all'; // all, V1, V2, V3, V4
-  String _deviceFilterStatus = 'all'; // all, active, bought, inactive
+  String _deviceFilterStatus = 'all'; // all, active, bought, inactive, no_longer_active
   int _devicePage = 0;
   static const int _pageSize = 12;
 
@@ -283,14 +283,18 @@ class _AdminScreenState extends State<AdminScreen> {
         matchVersion = (vNorm == _deviceFilterVersion);
       }
 
-      // 3. Status Filter (Strictly matches DB condition)
+      // 3. A sold device can be detached and inactive without returning to stock.
+      final hasBuyer = _macCustomerMap.containsKey(d.macAddress.trim().toUpperCase());
+      final noLongerActive = d.tankId == null && hasBuyer && !d.isActive;
       bool matchStatus = true;
       if (_deviceFilterStatus == 'active') {
         matchStatus = (d.tankId != null);
       } else if (_deviceFilterStatus == 'bought') {
-        matchStatus = (d.tankId == null && d.isActive == true);
+        matchStatus = (d.tankId == null && d.isActive && !noLongerActive);
       } else if (_deviceFilterStatus == 'inactive') {
-        matchStatus = (d.tankId == null && d.isActive == false);
+        matchStatus = (d.tankId == null && !d.isActive && !hasBuyer);
+      } else if (_deviceFilterStatus == 'no_longer_active') {
+        matchStatus = noLongerActive;
       }
 
       return matchSearch && matchVersion && matchStatus;
@@ -1485,6 +1489,10 @@ class _AdminScreenState extends State<AdminScreen> {
                               DropdownMenuItem(
                                 value: 'inactive',
                                 child: Text('Trong kho'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'no_longer_active',
+                                child: Text('Không hoạt động'),
                               ),
                             ],
                           ),
@@ -2813,6 +2821,10 @@ class _DeviceCard extends StatelessWidget {
       statusText = 'Đang dùng';
       statusColor = const Color(0xFFD97706);
       statusBg = isDark ? const Color(0x33D97706) : const Color(0xFFFEF3C7);
+    } else if (buyerInfo != null && !device.isActive) {
+      statusText = 'Không hoạt động';
+      statusColor = const Color(0xFF64748B);
+      statusBg = isDark ? const Color(0x3364748B) : const Color(0xFFF1F5F9);
     } else if (device.isActive) {
       statusText = 'Đã được mua';
       statusColor = const Color(0xFF0284C7);
