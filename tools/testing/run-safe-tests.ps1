@@ -111,37 +111,6 @@ try {
     Push-Location (Join-Path $root 'AquaCare_Backend')
     try { & npm.cmd run test:all } finally { Pop-Location }
   }
-  Run-Suite 'Flutter mobile widget tests' {
-    Push-Location (Join-Path $root 'AquaCare_App')
-    try { & flutter.bat test } finally { Pop-Location }
-  }
-
-  if ($UsbMobile) {
-    Run-Suite 'Flutter USB integration test' {
-    Push-Location (Join-Path $root 'AquaCare_App')
-    try {
-      $devices = @(& flutter.bat devices --machine | ConvertFrom-Json)
-      $phones = @($devices | Where-Object {
-        $_.isSupported -and -not $_.emulator -and $_.targetPlatform -like 'android-*'
-      })
-      if ($phones.Count -ne 1) {
-        throw "Connect exactly one USB Android phone with USB debugging enabled; found $($phones.Count). Check 'flutter devices'."
-      }
-      $adbCandidates = @(
-        (Get-Command adb.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
-        (Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe')
-      ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
-      if (-not $adbCandidates) { throw 'Android platform-tools (adb.exe) is required to check the phone before installing the test app.' }
-      $installedApp = & $adbCandidates[0] -s $phones[0].id shell pm path com.aquacare.aquacare_app.qa
-      if ($LASTEXITCODE -ne 0) { throw 'Could not inspect installed apps on the USB phone.' }
-      if ($installedApp) { Write-Host 'Existing AquaCare QA installation may be replaced by this test run.' -ForegroundColor Yellow }
-      Write-Host "`nRunning isolated Flutter integration test on $($phones[0].name) ($($phones[0].id))..." -ForegroundColor Cyan
-      & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true
-      if ($LASTEXITCODE -ne 0) { throw 'USB mobile integration test failed. Playwright UI was not opened.' }
-    } finally { Pop-Location }
-    }
-  }
-
   if (Get-NetTCPConnection -LocalPort 5051 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Port 5051 is already in use. Refusing to reuse an unknown backend.'
   }
@@ -183,6 +152,69 @@ try {
       } finally { Pop-Location }
     }
   }
+  Run-Suite 'Flutter mobile widget tests' {
+    Push-Location (Join-Path $root 'AquaCare_App')
+    try { & flutter.bat test } finally { Pop-Location }
+  }
+
+  if ($UsbMobile) {
+    Run-Suite 'Flutter USB integration test' {
+    Push-Location (Join-Path $root 'AquaCare_App')
+    try {
+      $phones = @()
+      for ($attempt = 1; $attempt -le 10; $attempt++) {
+        $deviceJson = (& flutter.bat devices --machine) -join "`n"
+        if ($LASTEXITCODE -ne 0) { throw 'flutter devices failed while checking the USB phone.' }
+        $devices = ConvertFrom-Json -InputObject $deviceJson
+        $phones = @()
+        foreach ($device in $devices) {
+          if ($device.isSupported -and -not $device.emulator -and $device.targetPlatform -like 'android-*') {
+            $phones += $device
+          }
+        }
+        if ($phones.Count -eq 1) { break }
+        if ($phones.Count -gt 1) { break }
+        Write-Host "USB phone not detected yet ($attempt/10). Retrying..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 2
+      }
+      if ($phones.Count -ne 1) {
+        $detected = ($devices | ForEach-Object { "$($_.name) [$($_.id): $($_.targetPlatform)]" }) -join ', '
+        throw "Connect exactly one USB Android phone with USB debugging enabled; found $($phones.Count). Flutter detected: $detected. Check 'flutter devices' and accept the USB debugging prompt on the phone."
+      }
+      $adbCandidates = @(
+        (Get-Command adb.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+        (Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe')
+      ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+      if (-not $adbCandidates) { throw 'Android platform-tools (adb.exe) is required to check the phone before installing the test app.' }
+      $installedPackages = & $adbCandidates[0] -s $phones[0].id shell pm list packages com.aquacare.aquacare_app.qa
+      if ($LASTEXITCODE -ne 0) { throw 'Could not query Android Package Manager on the USB phone. Check the ADB error above.' }
+      $installedApp = @($installedPackages) -contains 'package:com.aquacare.aquacare_app.qa'
+      if ($installedApp) {
+        Write-Host 'Existing AquaCare QA installation may be replaced by this test run.' -ForegroundColor Yellow
+      } else {
+        Write-Host 'AquaCare QA is not installed yet. Flutter will install it for the integration test.' -ForegroundColor Cyan
+      }
+      Write-Host "`nRunning isolated Flutter integration test on $($phones[0].name) ($($phones[0].id))..." -ForegroundColor Cyan
+      & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true
+      $integrationTestExitCode = $LASTEXITCODE
+      Write-Host 'Building the normal AquaCare QA app to keep on the phone...' -ForegroundColor Cyan
+      & flutter.bat build apk --debug --flavor qa
+      $qaBuildExitCode = $LASTEXITCODE
+      $qaApk = Join-Path (Get-Location) 'build\app\outputs\flutter-apk\app-qa-debug.apk'
+      if ($qaBuildExitCode -eq 0 -and (Test-Path -LiteralPath $qaApk)) {
+        Write-Host 'Restoring AquaCare QA on the phone after the integration test...' -ForegroundColor Cyan
+        & $adbCandidates[0] -s $phones[0].id install -r $qaApk
+        if ($LASTEXITCODE -ne 0) {
+          Write-Warning 'Could not keep AquaCare QA installed. Unlock the phone and accept the USB installation prompt, then install the QA APK manually.'
+        }
+      } else {
+        Write-Warning 'Could not build the normal QA app; AquaCare QA could not be restored automatically.'
+      }
+      if ($integrationTestExitCode -ne 0) { throw 'USB mobile integration test failed. Playwright UI was not opened.' }
+    } finally { Pop-Location }
+    }
+  }
+
 } catch {
   Write-Host "SAFETY STOP: $($_.Exception.Message)" -ForegroundColor Red
   $results.Add([pscustomobject]@{ Suite = 'Environment preflight'; Result = 'STOPPED'; Seconds = 0 })

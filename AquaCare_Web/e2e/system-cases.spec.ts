@@ -257,6 +257,10 @@ test('[DEMO-01] free V3 Demo shows simulator stock and enters the cart', async (
 test('[DEMO-02] web demo checkout retry with the same key keeps one order and one MAC', async ({ page, request }) => {
   test.setTimeout(60_000)
   const db = serviceDb()
+  const qaUser = await db.from('users').select('id').eq('email', 'qa_a@aquacare.test').single()
+  if (qaUser.error) throw qaUser.error
+  const clearCart = await db.from('cart_items').delete().eq('user_id', qaUser.data.id)
+  if (clearCart.error) throw clearCart.error
   let orderId: number | undefined
   let requestBody: { requestKey: string; quantity: number; fullName: string; note?: string } | undefined
   try {
@@ -266,6 +270,7 @@ test('[DEMO-02] web demo checkout retry with the same key keeps one order and on
     await expect(card).toBeVisible()
     await card.getByRole('button', { name: 'Thêm', exact: true }).click()
     await page.goto('/cart')
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').map((item: { id: string; quantity: number }) => ({ id: item.id, quantity: item.quantity })))).toEqual([{ id: 'v3-demo', quantity: 1 }])
     page.on('request', outgoing => {
       if (outgoing.method() === 'POST' && outgoing.url().includes('/api/orders/demo/checkout')) {
         requestBody = outgoing.postDataJSON()
@@ -310,6 +315,8 @@ test('[DEMO-02] web demo checkout retry with the same key keeps one order and on
       orderId = existing.data?.order_id
     }
     if (orderId) await cleanupDemoOrder(db, orderId)
+    const leftoverCart = await db.from('cart_items').delete().eq('user_id', qaUser.data.id)
+    if (leftoverCart.error) throw leftoverCart.error
   }
 })
 
