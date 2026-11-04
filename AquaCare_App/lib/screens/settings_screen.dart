@@ -108,9 +108,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -119,9 +119,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showCustomerDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.6),
-      builder: (ctx) => _ChangePasswordDialog(
-        userEmail: _userInfo?['email']?.toString(),
-      ),
+      builder: (ctx) =>
+          _ChangePasswordDialog(userEmail: _userInfo?['email']?.toString()),
     );
   }
 
@@ -191,7 +190,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Email hỗ trợ',
               detail: 'phamlenhatminh1609@gmail.com',
               color: const Color(0xFF4299E1),
-              onTap: () => _launchExternalUrl('mailto:phamlenhatminh1609@gmail.com'),
+              onTap: () =>
+                  _launchExternalUrl('mailto:phamlenhatminh1609@gmail.com'),
             ),
             const SizedBox(height: 12),
             _buildContactRow(
@@ -387,7 +387,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = _userInfo?['avatar_url']?.toString();
-    final fullName = _userInfo?['full_name']?.toString() ?? 'Người dùng AquaCare';
+    final fullName =
+        _userInfo?['full_name']?.toString() ?? 'Người dùng AquaCare';
     final email = _userInfo?['email']?.toString() ?? 'Chưa cập nhật email';
     final phone = _userInfo?['phone']?.toString();
     final role = _userInfo?['role']?.toString() ?? 'Khách hàng';
@@ -433,7 +434,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
                     children: [
                       // ── 1. THÔNG TIN NGƯỜI DÙNG TỔNG QUAN ────────
                       _buildSectionHeader('TÀI KHOẢN CỦA TÔI'),
@@ -443,7 +447,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: CustomerColors.card,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: CustomerColors.border.withValues(alpha: 0.25),
+                            color: CustomerColors.border.withValues(
+                              alpha: 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -464,16 +470,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   end: Alignment.bottomRight,
                                 ),
                                 border: Border.all(
-                                  color: CustomerColors.accentText.withValues(alpha: 0.4),
+                                  color: CustomerColors.accentText.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   width: 2,
                                 ),
                               ),
-                              child: avatarUrl != null && avatarUrl.trim().isNotEmpty
+                              child:
+                                  avatarUrl != null &&
+                                      avatarUrl.trim().isNotEmpty
                                   ? ClipOval(
                                       child: Image.network(
                                         avatarUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Center(
+                                        errorBuilder: (_, _, _) => Center(
                                           child: Text(
                                             _getInitials(fullName),
                                             style: GoogleFonts.inter(
@@ -525,14 +535,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         decoration: BoxDecoration(
                                           color: CustomerColors.accentText
                                               .withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           role == 'admin'
                                               ? 'Quản trị viên'
                                               : (role.startsWith('staff')
-                                                  ? 'Kỹ thuật viên'
-                                                  : 'Khách hàng'),
+                                                    ? 'Kỹ thuật viên'
+                                                    : 'Khách hàng'),
                                           style: GoogleFonts.inter(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
@@ -564,7 +576,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ),
                                     ],
                                   ),
-                                  if (phone != null && phone.trim().isNotEmpty) ...[
+                                  if (phone != null &&
+                                      phone.trim().isNotEmpty) ...[
                                     const SizedBox(height: 3),
                                     Row(
                                       children: [
@@ -599,7 +612,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: CustomerColors.card,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: CustomerColors.border.withValues(alpha: 0.25),
+                            color: CustomerColors.border.withValues(
+                              alpha: 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -624,7 +639,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: CustomerColors.card,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: CustomerColors.border.withValues(alpha: 0.25),
+                            color: CustomerColors.border.withValues(
+                              alpha: 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -634,7 +651,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               icon: Icons.support_agent_rounded,
                               iconBg: const Color(0xFF38B2AC),
                               title: 'Trung tâm hỗ trợ AquaCare',
-                              subtitle: 'Hotline, email và kênh tư vấn trực tuyến',
+                              subtitle:
+                                  'Hotline, email và kênh tư vấn trực tuyến',
                               onTap: _showSupportDialog,
                             ),
                             _buildDivider(),
@@ -643,7 +661,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               iconBg: const Color(0xFF4299E1),
                               title: 'Trang web liên hệ AquaCare',
                               subtitle: 'Gửi yêu cầu hỗ trợ hoặc tìm hiểu thêm',
-                              onTap: () => _launchExternalUrl('https://aqua-care2.vercel.app/'),
+                              onTap: () => _launchExternalUrl(
+                                'https://aqua-care2.vercel.app/',
+                              ),
                             ),
                           ],
                         ),
@@ -653,12 +673,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // ── 4. THÔNG TIN PHIÊN BẢN ───────────────────
                       _buildSectionHeader('ỨNG DỤNG'),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: CustomerColors.card,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: CustomerColors.border.withValues(alpha: 0.25),
+                            color: CustomerColors.border.withValues(
+                              alpha: 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -668,7 +693,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF9F7AEA).withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFF9F7AEA,
+                                ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -707,10 +734,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: CustomerColors.accentText.withValues(alpha: 0.12),
+                                color: CustomerColors.accentText.withValues(
+                                  alpha: 0.12,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: CustomerColors.accentText.withValues(alpha: 0.3),
+                                  color: CustomerColors.accentText.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   width: 0.8,
                                 ),
                               ),
@@ -746,7 +777,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: CustomerColors.card,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: CustomerColors.border.withValues(alpha: 0.25),
+                            color: CustomerColors.border.withValues(
+                              alpha: 0.25,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -766,7 +799,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     width: 40,
                                     height: 40,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
+                                      color: const Color(
+                                        0xFFFF6B6B,
+                                      ).withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: const Icon(
@@ -778,7 +813,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Đăng xuất',
@@ -950,7 +986,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     }
 
     if (newPass == oldPass) {
-      setState(() => _errorMessage = 'Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+      setState(
+        () => _errorMessage =
+            'Mật khẩu mới không được trùng với mật khẩu hiện tại.',
+      );
       return;
     }
 
@@ -959,7 +998,8 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       return;
     }
 
-    final email = widget.userEmail ?? Supabase.instance.client.auth.currentUser?.email;
+    final email =
+        widget.userEmail ?? Supabase.instance.client.auth.currentUser?.email;
     if (email == null || email.isEmpty) {
       setState(() => _errorMessage = 'Không xác định được email tài khoản.');
       return;
@@ -1041,10 +1081,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           child: TextField(
             controller: controller,
             obscureText: obscure,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: CustomerColors.text,
-            ),
+            style: GoogleFonts.inter(fontSize: 14, color: CustomerColors.text),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.inter(
@@ -1063,7 +1100,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   size: 18,
                   color: CustomerColors.secondaryText,
                 ),
@@ -1157,13 +1196,17 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               label: 'Xác nhận mật khẩu mới',
               hint: 'Nhập lại mật khẩu mới',
               obscure: _obscureConfirm,
-              onToggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
+              onToggleObscure: () =>
+                  setState(() => _obscureConfirm = !_obscureConfirm),
             ),
 
             if (_errorMessage != null) ...[
               const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -1208,10 +1251,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           ),
           child: Text(
             'Hủy',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ),
         ElevatedButton(

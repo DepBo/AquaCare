@@ -8838,10 +8838,6 @@
 		(uuid "896f80b3-b862-41ab-83b0-06beb49c1f91")
 	)
 	(no_connect
-		(at 187.96 45.72)
-		(uuid "92e9ccb1-79ba-4402-b0ac-153a90d1d691")
-	)
-	(no_connect
 		(at 90.17 67.31)
 		(uuid "935fe673-9fb3-46e9-8ddb-fe7398084c6c")
 	)
@@ -11751,6 +11747,16 @@
 	)
 	(wire
 		(pts
+			(xy 187.96 45.72) (xy 191.77 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "99388fea-e26e-4211-bbb9-bb8caf04e1cd")
+	)
+	(wire
+		(pts
 			(xy 21.59 39.37) (xy 21.59 40.64)
 		)
 		(stroke
@@ -14106,6 +14112,16 @@
 			(justify left bottom)
 		)
 		(uuid "6a78e9a1-269b-4a23-b9b3-b791766eaa8c")
+	)
+	(label "VBUS"
+		(at 191.77 45.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6ec1afcb-30a3-4220-aeb4-8a1fd79367c9")
 	)
 	(label "PB13{slash}RELAY2_CTRL"
 		(at 31.75 190.5 180)
