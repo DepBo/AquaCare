@@ -33,6 +33,7 @@ interface CartContextType {
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  refreshCartPrices: () => Promise<boolean>;
   totalItems: number;
   totalPrice: number;
   user: any;
@@ -91,6 +92,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             const existing = merged.find(i => i.id === dbItem.id);
             if (existing) {
               existing.quantity = Math.max(existing.quantity, dbItem.quantity);
+              existing.price = dbItem.price;
             } else {
               merged.push(dbItem);
             }
@@ -202,6 +204,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setCart([]);
 
+  const refreshCartPrices = async () => {
+    if (cart.length === 0) return false;
+    const { data, error } = await supabase.from('products').select('id,price').in('id', cart.map(item => item.id));
+    if (error || !data || data.length !== cart.length) throw new Error('Không thể kiểm tra giá sản phẩm hiện tại.');
+    const prices = new Map(data.map(product => [product.id, Number(product.price)]));
+    const changed = cart.some(item => prices.get(item.id) !== item.price);
+    if (changed) setCart(current => current.map(item => ({ ...item, price: prices.get(item.id) ?? item.price })));
+    return changed;
+  };
+
+  useEffect(() => {
+    if (isInitialized) refreshCartPrices().catch(error => console.error('Failed to refresh cart prices', error));
+  }, [isInitialized]);
+
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   const totalPrice = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
@@ -213,6 +229,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeFromCart,
         updateQuantity,
         clearCart,
+        refreshCartPrices,
         totalItems,
         totalPrice,
         user,

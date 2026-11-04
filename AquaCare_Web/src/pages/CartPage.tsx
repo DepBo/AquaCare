@@ -10,7 +10,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart()
+  const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart, refreshCartPrices } = useCart()
   const navigate = useNavigate()
 
   const [isCheckout, setIsCheckout] = useState(false)
@@ -91,6 +91,11 @@ export default function CartPage() {
     setIsSubmitting(true)
 
     try {
+      if (await refreshCartPrices()) {
+        alert('Giá sản phẩm vừa được cập nhật. Vui lòng kiểm tra lại giỏ hàng trước khi đặt đơn.')
+        setIsSubmitting(false)
+        return
+      }
       const { data: { session } } = await supabase.auth.getSession()
       if (cart.some(item => item.id === 'v3-demo') && cart.some(item => item.id !== 'v3-demo')) {
         alert('Vui lòng đặt V3 Demo thành đơn riêng để hệ thống cấp mã tự động.')
