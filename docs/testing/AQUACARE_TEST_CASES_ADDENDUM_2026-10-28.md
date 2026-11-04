@@ -18,7 +18,7 @@ Ngày rà soát: 28/10/2026. Các ca dưới đây bổ sung cho `AQUACARE_SYSTE
 | DEMO-07 | P0 W/M/D | Dùng MAC của A để tạo bể ở B, dùng MAC demo để thử relay | B bị từ chối; relay chỉ đi tới broker giả, không tới thiết bị thật | Chưa; cần local E2E |
 | GUIDE-01 | P2 W | Mở landing lần đầu trên desktop/mobile, đóng gợi ý, tải lại | Gợi ý xuất hiện đúng một lần theo localStorage; không che thao tác chính | Một phần: web smoke |
 | GUIDE-02 | P1 W | Video hướng dẫn: phát/tạm dừng, tốc độ, toàn màn hình, lỗi tải video | Điều khiển hoạt động; trên điện thoại không tràn ngang; có thông báo lỗi | Một phần: web smoke |
-| FEED-01 | P2 W | Kéo nút feedback, thu/phóng cửa sổ, tải lại trên desktop/mobile | Vị trí được nhớ và luôn nằm trong viewport; không cản nút quan trọng | Chưa |
+| FEED-01 | P2 W | Nút góp ý cố định: thu nhỏ/mở rộng, tải lại trên desktop/mobile | Nút hoạt động, luôn nằm trong viewport và dẫn tới form góp ý | Chưa |
 | FEED-02 | P1 W/M | Bấm feedback khi có/không có trình duyệt xử lý | Mở đúng form bên ngoài hoặc báo lỗi; không tự gửi dữ liệu khách hàng | Chưa |
 | SAFE-01 | P0 B/W | Đổi URL test sang Supabase production/Render, để sót khóa email/FCM thật | Runner/backend/web từ chối khởi động trước mọi thao tác | Một phần: backend safety unit và Vite guard |
 | SAFE-02 | P0 B/W/M | Chạy `RUN_SAFE_TESTS.cmd` khi production vẫn hoạt động | Chỉ endpoint local được gọi; không phát MQTT, email, FCM hoặc relay thật | Một phần: runner + web network block; cần quan sát mạng |

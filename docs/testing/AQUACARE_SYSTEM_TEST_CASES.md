@@ -89,10 +89,10 @@ Nguồn: `AquaCare_Web/src/pages/DashboardPage.tsx`, `components/CustomerOvervie
 
 | ID | Ưu tiên / nền tảng | Tiền điều kiện, dữ liệu và bước thực hiện | Kết quả mong đợi |
 |---|---|---|---|
-| TANK-01 | P1 W/M | A chưa có bể → mở tổng quan → thêm bể tên hợp lệ, chưa gán MAC | Empty state dùng được; tạo đúng chủ A; bể chưa có thiết bị không hiện dữ liệu của bể khác |
+| TANK-01 | P1 W/M | A chưa có bể → mở tổng quan → mở trang thêm bể toàn màn hình trên mobile → thêm bể tên hợp lệ, chọn Chưa gắn thiết bị | Trang mobile vừa màn hình, nút lưu luôn tới được; tạo đúng chủ A; bể chưa có thiết bị không hiện dữ liệu của bể khác |
 | TANK-02 | P1 W/M | Tên trống/chỉ dấu cách; thể tích âm/không phải số → lưu | [YC] Không lưu dữ liệu không hợp lệ; thông báo tại form |
-| TANK-03 | P1 W/M | Thêm bể với loài SPECIES và MAC rảnh | Bể/loài đúng; thiết bị gắn đúng tank_id, active; không tạo thêm thiết bị trùng MAC |
-| TANK-04 | P0 W/M/D | MAC không có, MAC thuộc B1 hoặc A2 → ghép vào A1 | Từ chối MAC không hợp lệ/đã ghép; bể cũ không bị chiếm thiết bị |
+| TANK-03 | P1 W/M | A có đơn delivered chứa MAC rảnh → tìm theo tên/phiên bản/MAC, chọn ô thiết bị và thêm bể với loài SPECIES | Chỉ hiện MAC được cấp cho A; bể/loài đúng; thiết bị gắn đúng tank_id, active; không tạo thêm thiết bị trùng MAC |
+| TANK-04 | P0 W/M/D | A xem MAC đã gắn bể và thử dùng lại; B thử dùng MAC thuộc đơn A; thử MAC không tồn tại | MAC đã dùng hiển thị mờ kèm tên bể và không chọn được; backend từ chối MAC không thuộc đơn delivered của tài khoản hoặc đã ghép; bể cũ không bị chiếm thiết bị |
 | TANK-05 | P0 W/M/D | Hai phiên cùng ghép một MAC rảnh vào hai bể | [YC] Chỉ một phiên thành công; không ghi đè âm thầm; UI thất bại khớp DB |
 | TANK-06 | P1 W/M | Sửa tên/thể tích/loài A1 → reload cả web/mobile | Giá trị lưu bền; ngưỡng và trạng thái cập nhật theo loài mới |
 | TANK-07 | P0 W/M/D | Đổi MAC A1 từ cũ sang rảnh mới → theo dõi cả hai thiết bị | MAC cũ tách/inactive; MAC mới gắn A1; không điều khiển nhầm MAC cũ |
@@ -207,7 +207,7 @@ Nguồn: `AquaCare_Web/src/pages/StaffPage.tsx`, `AdminPage.tsx`; `AquaCare_App/
 | STAFF-09 | P0 W/M/D | MAC active/đã ghép bể hoặc version khác sản phẩm | Không lấy thiết bị đang dùng/sai phiên bản để giao |
 | STAFF-10 | P0 W/M/D | Hai đơn cùng đóng gói một MAC rảnh | [YC] MAC chỉ được cấp cho một đơn; không chỉ kiểm tra bản snapshot cũ |
 | STAFF-11 | P0 W/M/D | Lỗi giữa cập nhật items, active device, done task, tạo delivery | [YC] Không báo toàn bộ thành công khi dở; retry không tạo task trùng; xác định được items/MAC đã xử lý |
-| STAFF-12 | P1 W/M/D | Shipper hoàn tất delivery_install | Task done và đơn delivered đúng; doanh thu chỉ bắt đầu tính khi đơn đủ điều kiện |
+| STAFF-12 | P1 W/M/D | Shipper hoàn tất delivery_install cho đơn có MAC; giả lập email thành công rồi thất bại | Task done và đơn delivered đúng; email chứa tên, phiên bản, MAC được gửi đúng khách hoặc báo đang thử lại; doanh thu chỉ bắt đầu tính khi đơn đủ điều kiện |
 | STAFF-13 | P1 W/M/D | Support trả lời phiếu → khách xem lịch sử | Nội dung staff_reply và status replied đúng; khách chỉ xem phiếu của mình |
 | STAFF-14 | P1 W/M/D | Chuyển phiếu sang bảo trì; có/không có đơn trước theo email/phone | Tạo maintenance task đúng nội dung; địa chỉ fallback theo code, không lấy nhầm khách; thiếu địa chỉ hiển thị rõ |
 | STAFF-15 | P1 W/M | Lịch sử rỗng/nhiều task; task_type legacy giao/lắp/bảo trì | Hiển thị và lọc đúng các kiểu được code hỗ trợ; không mất task vì tên cũ |
@@ -224,7 +224,7 @@ Nguồn: `AquaCare_Web/src/pages/AdminPage.tsx`; `AquaCare_App/lib/screens/admin
 | ADM-04 | P1 W/M | Thêm MAC theo dòng/dấu phẩy, có khoảng trắng và hoa/thường | Chuẩn hóa nhất quán; đúng số thiết bị/version; không dòng rỗng |
 | ADM-05 | P0 W/M/D | Batch có MAC trùng nội bộ/trùng DB và một phần hợp lệ | Không trùng inventory; báo rõ batch thất bại hay phần nào đã lưu; retry không nhân bản |
 | ADM-06 | P0 W/M/D | Sửa MAC thành MAC đã có; xóa thiết bị đang có bể/lịch/đơn | Không phá lịch sử hoặc điều khiển sai thiết bị; xung đột/FK được báo rõ |
-| ADM-07 | P1 W/M | Tra người mua từ thiết bị đã giao/chưa giao | Đúng đơn và người mua; trạng thái chưa có người mua không dùng thông tin dòng trước |
+| ADM-07 | P1 W/M | Tra người mua từ thiết bị trong kho, đã giao đang gắn bể và đã giao nhưng không còn gắn bể; lọc trạng thái trên trang admin | Đúng đơn và người mua; phân biệt Đang dùng, Đã được mua và Không hoạt động; trạng thái chưa có người mua không dùng thông tin dòng trước |
 | ADM-08 | P0 W/M/D | Admin tạo staff đầy đủ; ngay sau đó kiểm tra session admin | Staff role đúng; admin vẫn là admin, không bị signUp thay session sang nhân viên mới |
 | ADM-09 | P1 W/M | Tạo staff thiếu trường/trùng phone/email; sửa tên/phone/role | Validation và quyền cập nhật đúng; không tạo Auth mà thiếu profile hoặc ngược lại |
 | ADM-10 | P0 W/M/D | Xóa staff rồi thử token cũ và đăng nhập lại bằng Auth còn tồn tại | [YC] Không còn quyền staff. Phân biệt xóa users với xóa tài khoản Auth; không coi xóa profile là thu hồi session đầy đủ |

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -546,10 +549,23 @@ class _StaffScreenState extends State<StaffScreen> {
       if (nextStatus == 'done' &&
           task['task_type'] == 'delivery_install' &&
           task['order_id'] != null) {
-        await Supabase.instance.client
-            .from('orders')
-            .update({'status': 'delivered'})
-            .eq('id', task['order_id']);
+        final token = Supabase.instance.client.auth.currentSession?.accessToken;
+        if (token == null) throw Exception('Phiên đăng nhập đã hết hạn');
+        final response = await http.post(
+          Uri.parse('${ApiConfig.baseUrl}/api/orders/mac-email/${task['order_id']}/complete'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (response.statusCode != 200) throw Exception(body['error'] ?? 'Backend chưa xác nhận đơn và email');
+        final status = body['status'];
+        final message = {
+          'sent': 'Dịch vụ email đã chấp nhận gửi mã MAC cho khách.',
+          'pending': 'Đã giao. Email MAC đang chờ gửi.',
+          'failed': 'Đã giao nhưng gửi email thất bại. Backend sẽ tự thử lại.',
+        }[status] ?? 'Đã giao. Chưa xác định trạng thái email.';
+        if (mounted) _showSnackBar(message, isError: status != 'sent');
+        await _fetchTasks();
+        return;
       }
 
       _showSnackBar(
@@ -1716,6 +1732,8 @@ class _StaffScreenState extends State<StaffScreen> {
               ),
             ],
           ],
+          if (taskType == 'delivery_install' && (status == 'todo' || status == 'in_progress'))
+            _DeliveryMacs(key: ValueKey('mac-${task['id']}-$status'), items: (task['orders']?['order_items'] as List?) ?? [], color: textPrimary),
           const Divider(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3429,5 +3447,26 @@ class _StaffScreenState extends State<StaffScreen> {
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]}.',
     );
+  }
+}
+
+class _DeliveryMacs extends StatefulWidget {
+  final List items;
+  final Color color;
+  const _DeliveryMacs({super.key, required this.items, required this.color});
+  @override
+  State<_DeliveryMacs> createState() => _DeliveryMacsState();
+}
+class _DeliveryMacsState extends State<_DeliveryMacs> {
+  bool visible = false;
+  @override
+  Widget build(BuildContext context) {
+    final macs = widget.items.expand((item) => (item['device_macs'] as List?) ?? []).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Expanded(child: Text('Mã MAC thiết bị (${macs.length})', style: TextStyle(color: widget.color))),
+        if (macs.isNotEmpty) IconButton(tooltip: visible ? 'Ẩn mã MAC' : 'Hiện mã MAC', onPressed: () => setState(() => visible = !visible), icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: widget.color))]),
+      if (macs.isEmpty) Text('Chưa có mã MAC được gán.', style: TextStyle(color: widget.color)),
+      for (final mac in macs) Text(visible ? mac.toString() : '••:••:••:••:••:••', style: TextStyle(fontFamily: 'monospace', color: widget.color)),
+    ]);
   }
 }

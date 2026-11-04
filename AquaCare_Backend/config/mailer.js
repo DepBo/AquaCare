@@ -83,20 +83,39 @@ async function sendAlertEmail(toEmail, pondName, alertContent) {
   }
 }
 
-async function sendDemoMacEmail(toEmail, orderId, macs) {
+async function sendDemoMacEmail(toEmail, orderId, macs, physical = false, details = []) {
   if (!toEmail || !Array.isArray(macs) || macs.length === 0 || !macs.every(mac => /^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$/i.test(mac))) {
     console.error('[Demo email] Invalid recipient or MAC list');
     return false;
   }
   const from = process.env.EMAIL_USER || process.env.ALERT_EMAIL_FROM;
   if (!from) return false;
-  const subject = `AquaCare V3 Demo - mã thiết bị cho đơn #${orderId}`;
+  const subject = physical ? 'AquaCare - mã kết nối thiết bị của bạn' : `AquaCare V3 Demo - mã thiết bị cho đơn #${orderId}`;
   const macList = macs.map(mac => `<li><code>${mac}</code></li>`).join('');
-  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#183747">
-    <h2>AquaCare V3 Demo</h2>
-    <p>Đơn hàng #${orderId} của bạn đã được hệ thống hoàn tất. Đây là mã MAC simulator riêng để tạo bể:</p>
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const supportEmail = process.env.EMAIL_USER || from;
+  const physicalCards = details.map(device => `<div style="background:#f4faf9;border:1px solid #cde7e3;border-radius:12px;padding:20px 22px;margin:0 0 14px">
+    <div style="font-size:12px;color:#607b82;font-weight:700;letter-spacing:1px">THIẾT BỊ CỦA BẠN</div>
+    <div style="font-size:17px;font-weight:700;color:#173846;margin:10px 0 3px">${escapeHtml(device.name)}</div>
+    <div style="font-size:13px;color:#56767d">Phiên bản ${escapeHtml(device.version)}</div>
+    <div style="height:1px;background:#dcebe8;margin:16px 0"></div>
+    <div style="font-size:12px;color:#607b82;font-weight:700;letter-spacing:1px">MÃ MAC</div>
+    <div style="font-family:monospace;font-size:23px;font-weight:700;letter-spacing:2px;color:#0a555c;margin-top:10px;word-break:break-all">${escapeHtml(device.mac)}</div>
+  </div>`).join('');
+  const physicalHtml = `<div style="background:#eef4f5;padding:24px 12px;font-family:Arial,sans-serif;color:#173846"><div style="max-width:600px;margin:auto;background:#fff;border:1px solid #dce8e9;border-radius:16px;overflow:hidden">
+    <div style="height:5px;background:#0a9e9b"></div><div style="padding:30px 36px">
+    <div style="font-size:22px;font-weight:700;color:#123a4a">AquaCare</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.8px;color:#0b9691;margin:34px 0 10px">THIẾT BỊ CỦA BẠN ĐÃ SẴN SÀNG</div>
+    <h1 style="font-size:27px;line-height:1.2;color:#123a4a;margin:0 0 12px">Mã kết nối bể cá của bạn</h1>
+    <p style="font-size:15px;line-height:1.65;color:#526a74">Thiết bị AquaCare của bạn đã được giao thành công. Dùng mã MAC bên dưới để tạo bể và bắt đầu theo dõi.</p>
+    ${physicalCards}<div style="border-top:1px solid #e5eeee;padding-top:22px;color:#526a74;font-size:14px;line-height:1.8"><strong style="color:#183d4b">Bắt đầu sử dụng</strong><ol><li>Mở ứng dụng hoặc website AquaCare và đăng nhập.</li><li>Chọn <strong>Thêm bể</strong>, rồi nhập mã MAC ở trên.</li><li>Hoàn tất thông tin bể để bắt đầu theo dõi và điều khiển.</li></ol></div>
+    <p style="font-size:13px;color:#526a74;line-height:1.6">Nếu cần hỗ trợ, hãy liên hệ AquaCare qua <a href="mailto:${escapeHtml(supportEmail)}" style="color:#0b9691">${escapeHtml(supportEmail)}</a>.</p>
+    </div><div style="background:#f8fbfb;border-top:1px solid #e5eeee;text-align:center;padding:21px 24px;color:#81949a;font-size:12px">Email tự động từ AquaCare · Vui lòng giữ mã MAC cho thiết bị của bạn.</div></div></div>`;
+  const html = physical ? physicalHtml : `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#183747">
+    <h2>AquaCare${physical ? '' : ' V3 Demo'}</h2>
+    <p>Đơn hàng #${orderId} của bạn đã được hệ thống hoàn tất. ${physical ? 'Đơn đã giao thành công. Đây là mã MAC thiết bị của bạn để tạo bể:' : 'Đây là mã MAC simulator riêng để tạo bể:'}</p>
     <ul>${macList}</ul>
-    <p>Mở ứng dụng AquaCare, tạo bể và nhập một mã MAC ở trên. Đây là bản dùng thử; không có thiết bị vật lý được giao.</p>
+    <p>Mở ứng dụng AquaCare, tạo bể và nhập một mã MAC ở trên. ${physical ? 'Bạn cũng có thể tạo bể trên website AquaCare. Mỗi mã tương ứng một thiết bị trong đơn.' : 'Đây là bản dùng thử; không có thiết bị vật lý được giao.'}</p>
     <p>Vui lòng giữ mã trong tài khoản của bạn.</p></div>`;
   try {
     if (process.env.BREVO_API_KEY) {
@@ -119,4 +138,4 @@ async function sendDemoMacEmail(toEmail, orderId, macs) {
   }
 }
 
-module.exports = { sendAlertEmail, sendDemoMacEmail };
+module.exports = { sendAlertEmail, sendDemoMacEmail, sendOrderMacEmail: (email, id, macs, details) => sendDemoMacEmail(email, id, macs, true, details) };

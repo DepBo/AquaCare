@@ -26,6 +26,15 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  if (appFlavor == 'qa') {
+    runApp(const MaterialApp(
+      home: Scaffold(
+        body: Center(child: Text('AquaCare QA — chỉ chạy bài kiểm thử cục bộ')),
+      ),
+    ));
+    return;
+  }
+
   // Load service configuration before initializing Firebase and Supabase clients.
   await dotenv.load(fileName: ".env");
 

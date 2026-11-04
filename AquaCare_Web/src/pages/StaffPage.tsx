@@ -4,9 +4,10 @@ import {
   LogOut, CheckCircle, Clock, MapPin, Phone,
   Briefcase, History, Wrench, Truck,
   User, CalendarClock, ArrowLeft, ArrowRight, Layout,
-  MessageSquare, Mail, Send, AlertTriangle, Pin, Package, Scan, CheckCircle2, Eye, X, Tag, AlertCircle
+  MessageSquare, Mail, Send, AlertTriangle, Pin, Package, Scan, CheckCircle2, Eye, EyeOff, X, Tag, AlertCircle
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import { API_URL } from '../config/api'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
 import { clearVerifiedRole } from '../authRoleCache'
 
@@ -187,6 +188,9 @@ function parseMaintenanceDesc(desc?: string) {
 }
 
 function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => void }) {
+  const [showMacs, setShowMacs] = useState(false)
+  useEffect(() => setShowMacs(false), [task.id, task.status])
+  const macs = (task.orderItems || []).flatMap(item => item.device_macs || [])
   const typeEntry = TYPE_CONFIG[task.type || task.task_type] || { icon: Briefcase }
   const TypeIcon = typeEntry.icon
   const overdue = task.deadline ? isOverdue(task.deadline, task.status) : false
@@ -255,6 +259,15 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
         </div>
       </div>
 
+      {task.task_type === 'delivery_install' && ['todo', 'in_progress'].includes(task.status) && (
+        <div style={{padding: 10, borderRadius: 8, background: 'var(--sp-hover-bg)', color: 'var(--sp-text-primary)'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+            <span style={{fontSize: 12}}>Mã MAC thiết bị ({macs.length})</span>
+            {macs.length > 0 && <button type="button" aria-label={showMacs ? 'Ẩn mã MAC' : 'Hiện mã MAC'} aria-pressed={showMacs} onClick={() => setShowMacs(v => !v)} style={{background: 'transparent', border: 0, color: 'var(--sp-primary)', padding: 8, cursor: 'pointer'}}>{showMacs ? <EyeOff size={18}/> : <Eye size={18}/>}</button>}
+          </div>
+          {macs.length ? macs.map((mac, i) => <div key={i} style={{fontFamily: 'monospace', overflowWrap: 'anywhere', fontSize: 13, paddingTop: 4}}>{showMacs ? mac : '••:••:••:••:••:••'}</div>) : <small>Chưa có mã MAC được gán.</small>}
+        </div>
+      )}
       {/* Maintenance Request Content & CSKH Reply */}
       {task.task_type === 'maintenance' && (() => {
         const { customerRequest, cskhReply } = parsedMaint || parseMaintenanceDesc(task.description)
@@ -1285,7 +1298,7 @@ function PackingStationUI({ onTaskCompleted }: { onTaskCompleted?: () => void })
               </button>
             </form>
             <p style={{ marginTop: 16, fontSize: 12.5, color: 'var(--sp-text-muted)', textAlign: 'center' }}>
-              Nhập tay mã MAC in trên hộp sản phẩm tương ứng.
+              Nhập mã MAC của thiết bị trong kho tương ứng với sản phẩm. Khách hàng nhận mã qua email khi giao thành công.
             </p>
           </div>
         )}
@@ -1462,10 +1475,20 @@ export default function StaffPage() {
     } else {
       // Nếu hoàn thành task delivery_install → update orders thành 'delivered'
       if (nextStatus === 'done' && task.task_type === 'delivery_install' && task.order_id) {
-        await supabase
-          .from('orders')
-          .update({ status: 'delivered' })
-          .eq('id', task.order_id)
+        const token = (await supabase.auth.getSession()).data.session?.access_token
+        try {
+          const response = await fetch(`${API_URL}/api/orders/mac-email/${task.order_id}/complete`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+          const result = await response.json()
+          if (!response.ok) throw new Error(result.error || 'Không xử lý được đơn giao')
+          const messages: Record<string, string> = {
+            sent: 'Dịch vụ email đã chấp nhận gửi mã MAC cho khách.',
+            pending: 'Đã giao. Email MAC đang chờ gửi.',
+            failed: 'Đã giao nhưng gửi email thất bại. Backend sẽ tự thử lại.',
+          }
+          setToast({ message: messages[result.status] || 'Đã giao. Chưa xác định trạng thái email.', type: result.status === 'sent' ? 'success' : 'error' })
+        } catch (mailError) {
+          setToast({ message: 'Cập nhật công việc xong nhưng backend chưa xác nhận đơn và email: ' + String(mailError), type: 'error' })
+        }
       }
       fetchTasks()
     }

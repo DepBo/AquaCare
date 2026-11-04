@@ -225,6 +225,12 @@
   border-color: var(--ap-status-danger-border);
 }
 
+.admin-status--inactive {
+  color: var(--ap-text-secondary) !important;
+  background: var(--ap-hover-bg);
+  border-color: var(--ap-border);
+}
+
 .admin-page .admin-data-card--staff tbody td:nth-child(2),
 .admin-page .admin-data-card--staff tbody td:nth-child(3) {
   color: var(--ap-text-secondary);

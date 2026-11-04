@@ -157,7 +157,8 @@ export default function CartPage() {
       const { error: itemsError } = await supabase.from('order_items').insert(finalOrderItems)
 
       if (itemsError) {
-        alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message)
+        const { error: rollbackError } = await supabase.from('orders').delete().eq('id', order.id)
+        alert('Lỗi lưu chi tiết đơn hàng: ' + itemsError.message + (rollbackError ? '. Không thể hủy đơn vừa tạo; vui lòng liên hệ hỗ trợ.' : ''))
         setIsSubmitting(false)
         return
       }
@@ -412,7 +413,7 @@ export default function CartPage() {
                       <div style={{ position: 'relative' }}>
                         <Phone size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
                         <input
-                          type="tel" name="phone" required
+                          type="tel" name="phone" required pattern="(?:0|\+84)[0-9]{9}" title="Nhập số điện thoại 10 số bắt đầu bằng 0 hoặc +84"
                           value={formData.phone} onChange={handleInputChange}
                           placeholder="Nhập số điện thoại"
                           style={{

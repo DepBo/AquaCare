@@ -26,6 +26,19 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("production") {
+            dimension = "environment"
+            manifestPlaceholders["appLabel"] = "AquaCare"
+        }
+        create("qa") {
+            dimension = "environment"
+            applicationIdSuffix = ".qa"
+            manifestPlaceholders["appLabel"] = "AquaCare QA"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

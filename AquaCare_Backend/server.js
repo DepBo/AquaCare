@@ -8,7 +8,7 @@ const { createAdminDashboardRouter } = require('./routes/admin-dashboard.routes'
 const { getSpeciesThresholds } = require('./config/species_thresholds');
 const { createDemoOrdersRouter, startDemoEmailWorker } = require('./routes/demo-orders.routes');
 const demoSupabase = require('./config/demo-supabase');
-const { sendDemoMacEmail } = ISOLATED_TEST
+const { sendDemoMacEmail, sendOrderMacEmail } = ISOLATED_TEST
   ? { sendDemoMacEmail: async () => false }
   : require('./config/mailer');
 
@@ -59,6 +59,8 @@ if (ADMIN_DASHBOARD_ENABLED) {
 const demoEmailWorker = ISOLATED_TEST
   ? { processEmail: async () => {}, stop: () => {} }
   : startDemoEmailWorker({ supabase: demoSupabase, sendDemoMacEmail });
+const orderMacEmail = require('./routes/order-mac-email.routes').createOrderMacEmail({ supabase: demoSupabase, sendEmail: sendOrderMacEmail, enabled: !ISOLATED_TEST });
+app.use('/api/orders/mac-email', orderMacEmail.router);
 app.use('/api/orders/demo', createDemoOrdersRouter({ supabase: demoSupabase, processEmail: demoEmailWorker.processEmail }));
 
 // Route Health Check dành cho UptimeRobot
@@ -80,6 +82,24 @@ app.post('/api/device/relay', async (req, res) => {
     if (pin === undefined || state === undefined || !tank_id || !relay_field) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    const relayFieldsByPin = {
+      1: 'relay_light_state',
+      2: 'relay_aerator_state',
+      3: 'relay_pump_state',
+    };
+    if (typeof state !== 'boolean' || !Number.isInteger(pin) || relayFieldsByPin[pin] !== relay_field) {
+      return res.status(400).json({ error: "Invalid relay command" });
+    }
+
+    const token = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || '')?.[1];
+    if (!token) return res.status(401).json({ error: "Authentication required" });
+    const { data: auth, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !auth?.user) return res.status(401).json({ error: "Invalid session" });
+    const { data: tank, error: tankError } = await supabase.from('tanks')
+      .select('id').eq('id', tank_id).eq('user_id', auth.user.id).maybeSingle();
+    if (tankError) return res.status(500).json({ error: "Failed to verify tank" });
+    if (!tank) return res.status(403).json({ error: "Tank access denied" });
 
     // Lấy MAC Address từ DB
     const { data: device, error: fetchErr } = await supabase.from('devices').select('mac_address').eq('tank_id', tank_id).single();
