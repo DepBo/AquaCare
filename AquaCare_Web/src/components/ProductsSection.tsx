@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ShoppingCart, Star, Info, X } from 'lucide-react'
-import { useCart, type Product } from '../contexts/CartContext'
+import { ArrowUpRight, ShoppingCart, Star, Info, X } from 'lucide-react'
+import { isComingSoonProduct, useCart, type Product } from '../contexts/CartContext'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com'
@@ -63,7 +63,7 @@ export default function ProductsSection() {
   }, [])
 
   const handleAddToCart = (product: Product) => {
-    if (product.stock !== undefined && product.stock <= 0) return;
+    if (isComingSoonProduct(product.id) || (product.stock !== undefined && product.stock <= 0)) return;
     addToCart(product);
     setAddedItems({ ...addedItems, [product.id]: true });
     setTimeout(() => {
@@ -101,6 +101,10 @@ export default function ProductsSection() {
           .product-action-bar > div {
             justify-content: center;
           }
+          .hardware-trial-link {
+            width: 100%;
+            max-width: 320px;
+          }
         }
       `}</style>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px' }}>
@@ -120,6 +124,16 @@ export default function ProductsSection() {
           <p style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, maxWidth: 560, margin: '0 auto' }}>
             Nâng cấp hệ thống giám sát của bạn với các thiết bị thông minh, dễ dàng kết nối và quản lý.
           </p>
+          <a
+            className="hardware-trial-link"
+            href="https://forms.gle/P959X98n5GgoWfzP8"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Đăng ký dùng thử phần cứng AquaCare (mở biểu mẫu trong tab mới)"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, marginTop: 24, padding: '10px 18px', border: '1px solid rgba(99, 211, 203, 0.55)', borderRadius: 10, background: 'rgba(0, 168, 150, 0.12)', color: '#9CE9E3', fontSize: 14, fontWeight: 650, textDecoration: 'none' }}
+          >
+            Đăng ký dùng thử phần cứng <ArrowUpRight size={16} aria-hidden="true" />
+          </a>
         </div>
 
         {/* Grid */}
@@ -159,6 +173,11 @@ export default function ProductsSection() {
                 {product.id === 'v3-demo' && (
                   <span style={{ position: 'absolute', top: 14, left: 14, padding: '6px 10px', borderRadius: 999, background: '#0b9997', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>
                     DEMO · KHÔNG PHẦN CỨNG
+                  </span>
+                )}
+                {isComingSoonProduct(product.id) && (
+                  <span style={{ position: 'absolute', top: 14, left: 14, padding: '6px 10px', borderRadius: 999, background: 'rgba(15,32,56,0.92)', border: '1px solid rgba(255,255,255,0.28)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' }}>
+                    Coming soon
                   </span>
                 )}
               </div>
@@ -231,35 +250,35 @@ export default function ProductsSection() {
                     </button>
                     <button
                       onClick={() => handleAddToCart(product)}
-                      disabled={(product as any).stock <= 0}
+                      disabled={isComingSoonProduct(product.id) || (product.stock !== undefined && product.stock <= 0)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '8px 12px', borderRadius: 8,
                         fontSize: 12, fontWeight: 600,
-                        background: (product as any).stock <= 0
+                        background: isComingSoonProduct(product.id) || (product as any).stock <= 0
                           ? 'rgba(255,255,255,0.05)'
                           : addedItems[product.id] ? '#5AE87D' : 'rgba(77, 166, 255, 0.1)',
-                        color: (product as any).stock <= 0
+                        color: isComingSoonProduct(product.id) || (product as any).stock <= 0
                           ? 'rgba(255,255,255,0.3)'
                           : addedItems[product.id] ? '#000' : '#4DA6FF',
                         border: 'none',
-                        cursor: (product as any).stock <= 0 ? 'not-allowed' : 'pointer',
+                        cursor: isComingSoonProduct(product.id) || (product as any).stock <= 0 ? 'not-allowed' : 'pointer',
                         transition: 'all 200ms',
                         whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={e => {
-                        if (!addedItems[product.id] && (product as any).stock > 0) {
+                        if (!isComingSoonProduct(product.id) && !addedItems[product.id] && (product as any).stock > 0) {
                           e.currentTarget.style.background = 'rgba(77, 166, 255, 0.2)';
                         }
                       }}
                       onMouseLeave={e => {
-                        if (!addedItems[product.id] && (product as any).stock > 0) {
+                        if (!isComingSoonProduct(product.id) && !addedItems[product.id] && (product as any).stock > 0) {
                           e.currentTarget.style.background = 'rgba(77, 166, 255, 0.1)';
                         }
                       }}
                     >
                       <ShoppingCart size={16} />
-                      {(product as any).stock <= 0 ? product.id === 'v3-demo' ? 'Sắp mở' : 'Hết hàng' : addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
+                      {isComingSoonProduct(product.id) ? 'Sắp ra mắt' : (product as any).stock <= 0 ? product.id === 'v3-demo' ? 'Sắp mở' : 'Hết hàng' : addedItems[product.id] ? 'Đã thêm' : 'Thêm'}
                     </button>
                   </div>
                 </div>
@@ -339,23 +358,23 @@ export default function ProductsSection() {
               
               <div style={{ marginTop: 32, display: 'flex', gap: 16 }}>
                 <button
-                  disabled={selectedProduct.stock !== undefined && selectedProduct.stock <= 0}
+                  disabled={isComingSoonProduct(selectedProduct.id) || (selectedProduct.stock !== undefined && selectedProduct.stock <= 0)}
                   onClick={() => {
-                    if (selectedProduct.stock !== undefined && selectedProduct.stock <= 0) return;
+                    if (isComingSoonProduct(selectedProduct.id) || (selectedProduct.stock !== undefined && selectedProduct.stock <= 0)) return;
                     handleAddToCart(selectedProduct);
                     setSelectedProduct(null);
                   }}
                   style={{
                     flex: 1, padding: '14px 24px', borderRadius: 12,
-                    background: selectedProduct.stock !== undefined && selectedProduct.stock <= 0 ? '#475569' : '#FF8C42', color: '#fff', fontSize: 16, fontWeight: 600,
-                    border: 'none', cursor: selectedProduct.stock !== undefined && selectedProduct.stock <= 0 ? 'not-allowed' : 'pointer', transition: 'all 200ms',
+                    background: isComingSoonProduct(selectedProduct.id) || (selectedProduct.stock !== undefined && selectedProduct.stock <= 0) ? '#475569' : '#FF8C42', color: '#fff', fontSize: 16, fontWeight: 600,
+                    border: 'none', cursor: isComingSoonProduct(selectedProduct.id) || (selectedProduct.stock !== undefined && selectedProduct.stock <= 0) ? 'not-allowed' : 'pointer', transition: 'all 200ms',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#ff9d5c'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#FF8C42'}
+                  onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#ff9d5c' }}
+                  onMouseLeave={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#FF8C42' }}
                 >
                   <ShoppingCart size={20} />
-                  {selectedProduct.stock !== undefined && selectedProduct.stock <= 0
+                  {isComingSoonProduct(selectedProduct.id) ? 'Sắp ra mắt' : selectedProduct.stock !== undefined && selectedProduct.stock <= 0
                     ? selectedProduct.id === 'v3-demo' ? 'Sắp mở dùng thử' : 'Hết hàng'
                     : 'Thêm vào giỏ hàng'}
                 </button>

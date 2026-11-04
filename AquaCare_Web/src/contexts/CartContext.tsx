@@ -22,6 +22,9 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
+export const isComingSoonProduct = (productId: string) =>
+  productId === 'v1' || productId === 'v2' || productId === 'v4';
+
 const validQuantity = (quantity: number) => Number.isInteger(quantity) && quantity >= 1 && quantity <= 99;
 
 interface CartContextType {
@@ -49,7 +52,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved);
         return Array.isArray(parsed) ? parsed.filter((item): item is CartItem =>
-          item && validQuantity(item.quantity) && Number.isFinite(item.price) && item.price >= 0
+          item && !isComingSoonProduct(item.id) && validQuantity(item.quantity) && Number.isFinite(item.price) && item.price >= 0
         ) : [];
       } catch (e) {
         console.error('Failed to parse cart from localStorage', e);
@@ -84,7 +87,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         setCart(prevCart => {
           const merged = [...prevCart];
-          dbCart.forEach(dbItem => {
+          dbCart.filter(dbItem => !isComingSoonProduct(dbItem.id)).forEach(dbItem => {
             const existing = merged.find(i => i.id === dbItem.id);
             if (existing) {
               existing.quantity = Math.max(existing.quantity, dbItem.quantity);
@@ -168,7 +171,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [cart, isInitialized, user, isSyncingFromDb]);
 
   const addToCart = (product: Product, quantity = 1) => {
-    if (!validQuantity(quantity)) return;
+    if (isComingSoonProduct(product.id) || !validQuantity(quantity)) return;
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {

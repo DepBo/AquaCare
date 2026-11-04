@@ -9,7 +9,9 @@ import '../widgets/floating_role_nav.dart';
 import 'login_screen.dart';
 
 class StaffScreen extends StatefulWidget {
-  const StaffScreen({super.key});
+  const StaffScreen({super.key, this.isolatedTestPreview = false});
+
+  final bool isolatedTestPreview;
 
   @override
   State<StaffScreen> createState() => _StaffScreenState();
@@ -105,6 +107,13 @@ class _StaffScreenState extends State<StaffScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.isolatedTestPreview) {
+      if (!const bool.fromEnvironment('AQUACARE_TEST_MODE')) {
+        throw StateError('Isolated preview requires AQUACARE_TEST_MODE');
+      }
+      _isLoading = false;
+      return;
+    }
     _loadTheme();
     _loadProfile();
     _fetchData();

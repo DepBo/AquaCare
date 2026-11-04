@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, CheckCircle, CreditCard, Truck, User, MapPin, Phone, Mail, FileText, QrCode, X, Clock, ArrowRight } from 'lucide-react'
-import { useCart } from '../contexts/CartContext'
+import { isComingSoonProduct, useCart } from '../contexts/CartContext'
 import { createClient } from '@supabase/supabase-js'
 import { API_URL } from '../config/api'
 
@@ -84,6 +84,10 @@ export default function CartPage() {
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
+    if (cart.some(item => isComingSoonProduct(item.id))) {
+      alert('V1, V2 và V4 hiện chưa mở bán. Vui lòng xóa sản phẩm này khỏi giỏ hàng.')
+      return
+    }
     setIsSubmitting(true)
 
     try {

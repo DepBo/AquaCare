@@ -1,5 +1,8 @@
 import 'package:aquacare_app/screens/login_screen.dart';
+import 'package:aquacare_app/screens/signup_screen.dart';
 import 'package:aquacare_app/screens/dashboard_screen.dart';
+import 'package:aquacare_app/screens/admin_screen.dart';
+import 'package:aquacare_app/widgets/floating_role_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,6 +30,31 @@ void main() {
   Future<void> fillTankName(WidgetTester tester) async {
     await tester.enterText(find.byType(TextFormField).first, 'Bể thử QA');
   }
+
+  testWidgets('USB phone: admin sees the isolated species management screen', (tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: AdminScreen(isolatedTestPreview: true)));
+    await tester.pumpAndSettle();
+    expect(find.text('Quản trị AquaCare System'), findsOneWidget);
+    expect(find.text('Thêm cá'), findsOneWidget);
+    final nav = tester.widget<FloatingRoleNav>(find.byType(FloatingRoleNav));
+    expect(nav.items.map((item) => item.label), containsAll(['Loài cá', 'Thiết bị']));
+  });
+
+  testWidgets('USB phone: staff sees the isolated work navigation', (tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: StaffScreen(isolatedTestPreview: true)));
+    await tester.pumpAndSettle();
+    expect(find.text('Nhân viên Kho'), findsOneWidget);
+    expect(find.text('Không có đơn hàng cần đóng gói!'), findsOneWidget);
+    final nav = tester.widget<FloatingRoleNav>(find.byType(FloatingRoleNav));
+    expect(nav.items.map((item) => item.label), containsAll(['Đóng gói', 'Lịch sử']));
+    nav.items.last.onTap();
+    await tester.pumpAndSettle();
+    expect(find.text('Chưa có lịch sử công việc hoàn thành'), findsOneWidget);
+  });
 
   testWidgets('USB phone: login screen displays and validates locally', (
     tester,
@@ -193,5 +221,67 @@ void main() {
     expect(find.text('Chưa gắn thiết bị'), findsOneWidget);
     expect(find.text('Tìm tên, phiên bản hoặc mã MAC'), findsOneWidget);
     expect(find.text('Thêm bể'), findsOneWidget);
+  });
+
+  Future<void> openSignup(WidgetTester tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: SignupScreen()));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('USB phone: signup requires a customer name', (tester) async {
+    await openSignup(tester);
+    await tester.tap(find.text('TẠO TÀI KHOẢN'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vui lòng nhập họ tên'), findsOneWidget);
+  });
+
+  testWidgets('USB phone: signup rejects an invalid email', (tester) async {
+    await openSignup(tester);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Khách QA');
+    await tester.enterText(find.byType(TextFormField).at(1), 'email-sai');
+    await tester.tap(find.text('TẠO TÀI KHOẢN'));
+    await tester.pumpAndSettle();
+    expect(find.text('Email không hợp lệ'), findsOneWidget);
+  });
+
+  testWidgets('USB phone: signup rejects a short password', (tester) async {
+    await openSignup(tester);
+    await tester.enterText(find.byType(TextFormField).at(3), '123');
+    await tester.tap(find.text('TẠO TÀI KHOẢN'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mật khẩu ít nhất 6 ký tự'), findsOneWidget);
+  });
+
+  testWidgets('USB phone: signup rejects mismatched passwords', (tester) async {
+    await openSignup(tester);
+    await tester.enterText(find.byType(TextFormField).at(3), 'Pass1234');
+    await tester.enterText(find.byType(TextFormField).at(4), 'Pass9999');
+    await tester.tap(find.text('TẠO TÀI KHOẢN'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mật khẩu không khớp'), findsOneWidget);
+  });
+
+  testWidgets('USB phone: password recovery rejects an invalid email', (tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'email-sai');
+    await tester.tap(find.text('GỬI LINK ĐẶT LẠI'));
+    await tester.pumpAndSettle();
+    expect(find.text('Email không hợp lệ'), findsOneWidget);
+  });
+
+  testWidgets('USB phone: admin opens the add species form', (tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: AdminScreen(isolatedTestPreview: true)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Thêm cá'));
+    await tester.pumpAndSettle();
+    expect(find.text('Thêm loài cá mới'), findsOneWidget);
+    expect(find.text('Tên loài cá'), findsOneWidget);
   });
 }

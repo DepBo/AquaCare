@@ -14,7 +14,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: '../test-results/playwright-html' }], ['json', { outputFile: '../test-results/playwright.json' }]],
   use: {
     baseURL: 'http://127.0.0.1:5174',
-    channel: 'chrome',
+    channel: process.env.AQUACARE_BROWSER_CHANNEL === 'msedge' ? 'msedge' : 'chrome',
     serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },

@@ -14,7 +14,9 @@ import 'admin_dashboard_preview.dart';
 export 'staff_screen.dart';
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({super.key, this.isolatedTestPreview = false});
+
+  final bool isolatedTestPreview;
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
@@ -72,6 +74,14 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.isolatedTestPreview) {
+      if (!const bool.fromEnvironment('AQUACARE_TEST_MODE')) {
+        throw StateError('Isolated preview requires AQUACARE_TEST_MODE');
+      }
+      _isLoading = false;
+      _activeTab = 0;
+      return;
+    }
     _loadThemePreference();
     _loadUserProfile();
     _fetchData();

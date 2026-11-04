@@ -9,6 +9,14 @@ $results = [System.Collections.Generic.List[object]]::new()
 $backendProcess = $null
 $startedLocalSupabase = $false
 $uiSessionOpened = $false
+$backendCaseFile = Join-Path $reportDir 'backend-junit.xml'
+$flutterWidgetCaseFile = Join-Path $reportDir 'flutter-widget.json'
+$flutterUsbCaseFile = Join-Path $reportDir 'flutter-usb.json'
+if ($Core) {
+  foreach ($caseFile in @($backendCaseFile, $flutterWidgetCaseFile, $flutterUsbCaseFile, (Join-Path $reportDir 'playwright.json'), (Join-Path $reportDir 'suite-results.json'), (Join-Path $reportDir 'core-results.html'))) {
+    if (Test-Path -LiteralPath $caseFile) { Remove-Item -LiteralPath $caseFile }
+  }
+}
 
 if ($UsbMobile -and -not ($Ui -or $Core)) { throw 'USB mobile mode requires Playwright UI or Core mode.' }
 if ($ShowWeb -and (-not $Core -or $Ui)) { throw 'Visible automated web mode requires Core without interactive Playwright UI.' }
@@ -109,7 +117,13 @@ try {
 
   Run-Suite 'Backend unit and safety tests' {
     Push-Location (Join-Path $root 'AquaCare_Backend')
-    try { & npm.cmd run test:all } finally { Pop-Location }
+    try {
+      if ($Core) {
+        & node.exe --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=$backendCaseFile 'test/*.test.js' 'tests/*.test.js'
+      } else {
+        & npm.cmd run test:all
+      }
+    } finally { Pop-Location }
   }
   if (Get-NetTCPConnection -LocalPort 5051 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Port 5051 is already in use. Refusing to reuse an unknown backend.'
@@ -154,7 +168,10 @@ try {
   }
   Run-Suite 'Flutter mobile widget tests' {
     Push-Location (Join-Path $root 'AquaCare_App')
-    try { & flutter.bat test } finally { Pop-Location }
+    try {
+      if ($Core) { & flutter.bat test "--file-reporter=json:$flutterWidgetCaseFile" }
+      else { & flutter.bat test }
+    } finally { Pop-Location }
   }
 
   if ($UsbMobile) {
@@ -195,7 +212,7 @@ try {
         Write-Host 'AquaCare QA is not installed yet. Flutter will install it for the integration test.' -ForegroundColor Cyan
       }
       Write-Host "`nRunning isolated Flutter integration test on $($phones[0].name) ($($phones[0].id))..." -ForegroundColor Cyan
-      & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true
+      & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true "--file-reporter=json:$flutterUsbCaseFile"
       $integrationTestExitCode = $LASTEXITCODE
       Write-Host 'Building the normal AquaCare QA app to keep on the phone...' -ForegroundColor Cyan
       & flutter.bat build apk --debug --flavor qa
@@ -235,6 +252,10 @@ try {
   foreach ($row in $results) { $suiteState[$row.Suite] = $row.Result }
   $fullCaseResults = @{}
   $playwrightJson = Join-Path $reportDir 'playwright.json'
+  if (Test-Path $playwrightJson) {
+    & node.exe (Join-Path $root 'tools\testing\build-web-case-html.js')
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the web HTML case report.' }
+  }
   if (Test-Path $playwrightJson) {
     try {
       $playwrightReport = Get-Content -LiteralPath $playwrightJson -Raw | ConvertFrom-Json
@@ -315,6 +336,11 @@ try {
     $coreLines += @('', "Playwright: $($corePassed + $coreFailed) cases, $corePassed PASS, $coreFailed FAIL.", 'Evidence: test-results/playwright-html/index.html and test-results/evidence/.')
     Set-Content -LiteralPath (Join-Path $reportDir 'core-results.md') -Value $coreLines -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $reportDir 'latest.md') -Value $coreLines -Encoding UTF8
+    try {
+      $results | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $reportDir 'suite-results.json') -Encoding UTF8
+      & node.exe (Join-Path $root 'tools\testing\build-core-html.js')
+      if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not build the combined HTML case report.' }
+    } catch { Write-Warning 'Could not build the combined HTML case report.' }
   } else {
   try {
     & node.exe (Join-Path $root 'tools\testing\build-case-report.js')
@@ -327,6 +353,7 @@ try {
   }
   Write-Host "`nReport: $reportDir\latest.md"
   if ($Core) { Write-Host "Core report: $reportDir\core-results.md" }
+  if ($Core) { Write-Host "All cases HTML: $reportDir\core-results.html" }
   if ($results.Where({ $_.Result -ne 'PASS' }).Count -gt 0) { exit 1 }
   } else {
     if ($uiSessionOpened) {

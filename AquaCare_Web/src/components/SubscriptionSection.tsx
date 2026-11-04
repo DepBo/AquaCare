@@ -148,6 +148,15 @@ export default function SubscriptionSection() {
                       </span>
                     </div>
 
+                    {(plan.plan_type === 'free' || isPremium) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <CheckCircle size={18} color={isPremium ? '#4DA6FF' : '#5AE87D'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
+                          Nhận cảnh báo <strong>{isPremium ? 200 : 50} lần/tháng</strong>
+                        </span>
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       {plan.smart_device_setup ? (
                         <CheckCircle size={18} color={isPremium ? '#4DA6FF' : '#5AE87D'} style={{ flexShrink: 0 }} />
