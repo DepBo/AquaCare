@@ -214,18 +214,15 @@ try {
       Write-Host "`nRunning isolated Flutter integration test on $($phones[0].name) ($($phones[0].id))..." -ForegroundColor Cyan
       & flutter.bat test integration_test/login_ui_usb_test.dart -d $phones[0].id --flavor qa --dart-define=AQUACARE_TEST_MODE=true "--file-reporter=json:$flutterUsbCaseFile"
       $integrationTestExitCode = $LASTEXITCODE
-      Write-Host 'Building the normal AquaCare QA app to keep on the phone...' -ForegroundColor Cyan
-      & flutter.bat build apk --debug --flavor qa
-      $qaBuildExitCode = $LASTEXITCODE
       $qaApk = Join-Path (Get-Location) 'build\app\outputs\flutter-apk\app-qa-debug.apk'
-      if ($qaBuildExitCode -eq 0 -and (Test-Path -LiteralPath $qaApk)) {
-        Write-Host 'Restoring AquaCare QA on the phone after the integration test...' -ForegroundColor Cyan
+      if (Test-Path -LiteralPath $qaApk) {
+        Write-Host 'Restoring AquaCare QA on the phone from prebuilt APK...' -ForegroundColor Cyan
         & $adbCandidates[0] -s $phones[0].id install -r $qaApk
         if ($LASTEXITCODE -ne 0) {
           Write-Warning 'Could not keep AquaCare QA installed. Unlock the phone and accept the USB installation prompt, then install the QA APK manually.'
         }
       } else {
-        Write-Warning 'Could not build the normal QA app; AquaCare QA could not be restored automatically.'
+        Write-Warning 'Prebuilt QA APK not found; could not restore AquaCare QA automatically.'
       }
       if ($integrationTestExitCode -ne 0) { throw 'USB mobile integration test failed. Playwright UI was not opened.' }
     } finally { Pop-Location }

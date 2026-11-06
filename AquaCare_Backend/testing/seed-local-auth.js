@@ -38,15 +38,21 @@ async function tank(ownerId, name) {
   const b = await user('qa_b@aquacare.test', '0900000002');
   const admin = await user('qa_admin@aquacare.test', '0900000003');
   const staff = await user('qa_staff@aquacare.test', '0900000004');
+  const warehouse = await user('qa_warehouse@aquacare.test', '0900000005');
+  const shipper = await user('qa_shipper@aquacare.test', '0900000006');
   const role = await db.from('users').update({ role: 'admin' }).eq('id', admin);
   if (role.error) throw role.error;
   const staffRole = await db.from('users').update({ role: 'staff' }).eq('id', staff);
   if (staffRole.error) throw staffRole.error;
+  const warehouseRole = await db.from('users').update({ role: 'staff_warehouse' }).eq('id', warehouse);
+  if (warehouseRole.error) throw warehouseRole.error;
+  const shipperRole = await db.from('users').update({ role: 'staff_shipper' }).eq('id', shipper);
+  if (shipperRole.error) throw shipperRole.error;
   const tankA = await tank(a, 'QA A');
   const tankB = await tank(b, 'QA B');
   const assigned = await db.from('devices').update({ tank_id: tankB, is_active: true })
     .eq('mac_address', 'QA:00:00:00:00:02');
   if (assigned.error) throw assigned.error;
-  fs.writeFileSync(process.argv[2], JSON.stringify({ a, b, admin, staff, tankA, tankB }));
+  fs.writeFileSync(process.argv[2], JSON.stringify({ a, b, admin, staff, warehouse, shipper, tankA, tankB }));
   process.stdout.write('Local synthetic Auth fixtures ready\n');
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

@@ -199,6 +199,7 @@ function TaskCard({ task, onAdvance }: { task: Task; onAdvance: (id: string) => 
 
   return (
     <div
+      data-testid={`staff-task-${task.id}`}
       style={{
         background: 'var(--sp-bg-card)',
         border: '1px solid var(--sp-border-card)',
@@ -1164,6 +1165,7 @@ function PackingStationUI({ onTaskCompleted }: { onTaskCompleted?: () => void })
           {packingTasks.map(t => (
             <div
               key={t.id}
+              data-testid={`packing-task-${t.id}`}
               onClick={() => {
                 setSelectedTaskId(t.id)
                 setMacInputs({})

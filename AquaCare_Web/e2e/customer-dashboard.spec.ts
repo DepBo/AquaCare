@@ -53,7 +53,8 @@ test('[TANK-01] customer creates, edits and deletes a tank through the web UI', 
 
     await page.locator('[data-tour-target="pond-select"] > button').click()
     await page.getByTitle('Cấu hình').last().click()
-    await page.getByPlaceholder('VD: Bể Rồng Phòng Ngủ').fill(`${name} edited`)
+    const nameInput = page.getByPlaceholder('VD: Bể Koi Sân Vườn Simu').or(page.getByPlaceholder('VD: Bể Rồng Phòng Ngủ'))
+    await nameInput.fill(`${name} edited`)
     await page.getByRole('button', { name: 'Lưu thay đổi' }).click()
     await expect(page.locator('[data-tour-target="pond-select"] > button')).toContainText(`${name} edited`)
     const { data: edited } = await client.from('tanks').select('tank_name').eq('id', tankId).single()

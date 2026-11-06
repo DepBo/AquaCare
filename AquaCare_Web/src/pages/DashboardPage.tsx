@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import FeedbackButton from '../components/FeedbackButton'
 import '../components/SidebarNature.css'
@@ -13,6 +13,7 @@ import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle, HelpCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, ArrowLeft, ArrowRight,
+  Cpu, Layers, Smartphone, Mail, Monitor, ShieldCheck, Clock, Copy, Save, Info, Send, Search,
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { requestNotificationPermission, messaging } from '../config/firebase'
@@ -231,30 +232,42 @@ function statusLabel(val: number, good: number[], warn: number[], key?: string) 
 // ── Custom Dialog ────────────────────────────────────────────
 function Dialog({
   title, message, error, confirmText = 'Xác nhận', cancelText = 'Hủy',
-  confirmColor = '#00A896', onConfirm, onCancel, loading = false, children, wide = false
+  confirmColor = '#00A896', onConfirm, onCancel, loading = false, children, wide = false,
+  extraWide = false, hideDefaultHeader = false
 }: {
-  title: React.ReactNode | string; message?: string; error?: string; confirmText?: string; cancelText?: string
+  title?: React.ReactNode | string; message?: string; error?: string; confirmText?: React.ReactNode | string; cancelText?: string
   confirmColor?: string; onConfirm: () => void; onCancel: () => void; loading?: boolean; children?: React.ReactNode; wide?: boolean
+  extraWide?: boolean; hideDefaultHeader?: boolean
 }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
       background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px'
     }}>
-      <div style={{
-        background: 'var(--bg-dialog)',
+      <div className="custom-dialog-scrollbar" style={{ background: 'var(--bg-dialog)',
         border: '1px solid var(--border-color)',
-        borderRadius: 18, padding: '28px 32px', width: wide ? 600 : 360, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto',
+        borderRadius: (extraWide || wide) ? 22 : 18,
+        padding: extraWide ? '20px 24px' : (wide ? '16px 20px' : '28px 32px'),
+        width: extraWide ? 840 : (wide ? 580 : 360),
+        maxWidth: '100%',
+        maxHeight: 'calc(100dvh - 32px)',
+        overflowY: 'auto',
+        overflowX: 'hidden',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         animation: 'dialogIn 200ms cubic-bezier(0.34,1.56,0.64,1)',
+        position: 'relative',
+        boxSizing: 'border-box'
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
-          <button onClick={onCancel} disabled={loading} style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6, opacity: loading ? 0.5 : 1 }}>
-            <X size={16} />
-          </button>
-        </div>
+        {!hideDefaultHeader && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
+            <button onClick={onCancel} disabled={loading} style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6, opacity: loading ? 0.5 : 1 }}>
+              <X size={16} />
+            </button>
+          </div>
+        )}
         {message && (
           <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{message}</p>
         )}
@@ -262,17 +275,19 @@ function Dialog({
         {error && (
           <p style={{ margin: '16px 0 0', fontSize: 13, color: '#FF6B6B', fontWeight: 500, textAlign: 'center' }}>{error}</p>
         )}
-        <div style={{ display: 'flex', gap: 10, marginTop: error ? 16 : 24 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: error ? 12 : ((extraWide || wide) ? 14 : 24), justifyContent: (extraWide || wide) ? 'flex-end' : 'stretch' }}>
           <button onClick={onCancel} disabled={loading} style={{
-            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--border-color)',
-            background: 'var(--bg-btn-cancel)', color: 'var(--text-secondary)', fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
+            flex: (extraWide || wide) ? '0 0 auto' : 1, minWidth: (extraWide || wide) ? 100 : undefined,
+            padding: (extraWide || wide) ? '8px 18px' : '10px 20px', borderRadius: 9, border: '1px solid var(--border-color)',
+            background: 'var(--bg-btn-cancel)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
             transition: 'all 160ms', opacity: loading ? 0.5 : 1
           }}
             onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'var(--bg-btn-cancel-hover)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
             onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = 'var(--bg-btn-cancel)'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
           >{cancelText}</button>
           <button onClick={onConfirm} disabled={loading} style={{
-            flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+            flex: (extraWide || wide) ? '0 0 auto' : 1, minWidth: (extraWide || wide) ? 140 : undefined,
+            padding: (extraWide || wide) ? '8px 20px' : '10px 22px', borderRadius: 9, border: 'none',
             background: confirmColor, color: '#fff', fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: F,
             transition: 'all 160ms', boxShadow: `0 4px 16px ${confirmColor}40`, opacity: loading ? 0.7 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -1217,11 +1232,44 @@ export default function DashboardPage() {
   const [addVolume, setAddVolume] = useState<number | string>('')
   const [addSpeciesId, setAddSpeciesId] = useState<number>(0)
   const [addMacAddress, setAddMacAddress] = useState('')
-  const [ownedMacs, setOwnedMacs] = useState<Array<{mac: string; name: string; version?: string; tankName?: string | null}>>([])
+  const [ownedMacs, setOwnedMacs] = useState<Array<{mac: string; name: string; version?: string; tankName?: string | null}>>(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+      if (u.id) {
+        const cached = sessionStorage.getItem('aquacare_macs_' + u.id)
+        if (cached) return JSON.parse(cached)
+      }
+    } catch {}
+    return []
+  })
+  const [macLoading, setMacLoading] = useState(false)
   const [macSearch, setMacSearch] = useState('')
   const [macLoadError, setMacLoadError] = useState('')
+
+  const fetchOwnedMacs = useCallback(async (silent = false) => {
+    if (!silent) setMacLoading(true)
+    setMacLoadError('')
+    try {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) throw new Error('Vui lòng đăng nhập lại')
+      const response = await fetch(`${API_URL}/api/orders/mac-email/mine`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!response.ok) throw new Error('Không tải được danh sách thiết bị')
+      const items = await response.json()
+      setOwnedMacs(items)
+      const u = JSON.parse(localStorage.getItem('user_info') || '{}')
+      if (u.id) {
+        sessionStorage.setItem('aquacare_macs_' + u.id, JSON.stringify(items))
+      }
+    } catch (error) {
+      if (!silent) setMacLoadError(String(error))
+    } finally {
+      setMacLoading(false)
+    }
+  }, [])
   const [editDialog, setEditDialog] = useState<Pond | null>(null)
-  const [editTab, setEditTab] = useState<'general' | 'alerts'>('general')
   const [editName, setEditName] = useState('')
   const [editVolume, setEditVolume] = useState<number | string>('')
   const [editSpeciesId, setEditSpeciesId] = useState<number>(0)
@@ -1233,6 +1281,7 @@ export default function DashboardPage() {
   const [alertCooldown, setAlertCooldown] = useState<number>(0)
   const [alertSeverity, setAlertSeverity] = useState<string>('both')
   const [dialogError, setDialogError] = useState('')
+  const [copiedMac, setCopiedMac] = useState(false)
   const [tankSaving, setTankSaving] = useState(false)
 
   // Bảo vệ route & khôi phục Supabase session
@@ -1284,6 +1333,7 @@ export default function DashboardPage() {
 
   // ── Load Initial Data ─────────────────────────
   useEffect(() => {
+    void fetchOwnedMacs(true)
     supabase.from('fish_species').select('*').then(({ data }) => {
       if (data) setFishSpecies(data as FishSpecies[])
     })
@@ -1661,18 +1711,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!addDialog) return
-    let active = true
-    setMacLoadError('')
     setMacSearch('')
-    supabase.auth.getSession().then(async ({ data }) => {
-      const token = data.session?.access_token
-      if (!token) throw new Error('Vui lòng đăng nhập lại')
-      const response = await fetch(`${API_URL}/api/orders/mac-email/mine`, { headers: { Authorization: `Bearer ${token}` } })
-      if (!response.ok) throw new Error('Không tải được danh sách thiết bị')
-      if (active) setOwnedMacs(await response.json())
-    }).catch(error => { if (active) setMacLoadError(String(error)) })
-    return () => { active = false }
-  }, [addDialog])
+    void fetchOwnedMacs(ownedMacs.length > 0)
+  }, [addDialog, fetchOwnedMacs, ownedMacs.length])
 
   const handleAddConfirm = async () => {
     if (tankSaving) return
@@ -1717,6 +1758,7 @@ export default function DashboardPage() {
         }
         setPonds(prev => [...prev, newPond])
         setActiveDevice(newPond.id)
+        void fetchOwnedMacs(true)
       }
 
       setAddName('')
@@ -1804,6 +1846,7 @@ export default function DashboardPage() {
         setActiveDevice(remaining[0]?.id ?? null)
       }
       setDeleteDialog(null)
+      void fetchOwnedMacs(true)
     } finally {
       setTankSaving(false)
     }
@@ -2106,7 +2149,6 @@ export default function DashboardPage() {
 
                 onEdit={async pond => {
                   setEditDialog(pond);
-                  setEditTab('general');
                   setEditName(pond.name);
                   setEditVolume(pond.volume ?? '');
                   setEditSpeciesId(pond.species_id ?? 0);
@@ -2732,206 +2774,582 @@ export default function DashboardPage() {
       {/* ── Dialog: Thêm bể mới ── */}
       {addDialog && (
         <Dialog
-          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18} color="#00A896" /> Thêm bể cá mới</div>}
-          confirmText="Thêm bể"
           wide
+          hideDefaultHeader
+          confirmText={<><Plus size={15} aria-hidden="true" /> Thêm bể</>}
+          cancelText="Hủy"
           error={dialogError}
           loading={tankSaving}
           onConfirm={handleAddConfirm}
           onCancel={() => setAddDialog(false)}
         >
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Tên bể cá
-            </label>
-            <input
-              autoFocus
-              value={addName}
-              onChange={e => setAddName(e.target.value)}
-              placeholder="VD: Bể Rồng Phòng Ngủ"
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
-          </div>
-          <div className="add-tank-fields">
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Thể tích (Lít)
-            </label>
-            <input
-              type="number"
-              value={addVolume}
-              onChange={e => setAddVolume(e.target.value)}
-              placeholder="VD: 250"
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms',
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            />
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              Loài cá (Tùy chọn)
-            </label>
-            <select
-              value={addSpeciesId}
-              onChange={e => setAddSpeciesId(Number(e.target.value))}
-              style={{
-                width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box',
-                transition: 'border-color 200ms', appearance: 'none'
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}
-            >
-              <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
-              {fishSpecies.map(sp => (
-                <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
-              ))}
-            </select>
-          </div>
-          </div>
-          <div style={{ marginTop: 14, marginBottom: 4 }}>
-            <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:9}}><label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em' }}>CHỌN THIẾT BỊ</label><span style={{fontSize:12,color:'var(--text-muted)'}}>{ownedMacs.length} thiết bị</span></div>
-            <input value={macSearch} onChange={e => setMacSearch(e.target.value)} placeholder="Tìm tên, phiên bản hoặc mã MAC" aria-label="Tìm thiết bị" style={{ width: '100%', padding: '12px 14px', borderRadius: 10, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
-            {macLoadError && <p role="alert" style={{color:'#FF6B6B'}}>{macLoadError}</p>}
-            <div style={{maxHeight: 242, overflowY: 'auto', marginTop: 8, border:'1px solid var(--border-color)',borderRadius:12}}>
-              {ownedMacs.filter(item => `${item.name} ${item.version} ${item.mac} ${item.tankName || ''}`.toLowerCase().includes(macSearch.toLowerCase())).map(item => <button key={item.mac} type="button" disabled={!!item.tankName} onClick={() => setAddMacAddress(item.mac)} className="add-tank-device" style={{background:addMacAddress === item.mac ? 'rgba(0,168,150,.12)' : 'var(--bg-btn-cancel)',opacity:item.tankName?.55:1,cursor:item.tankName?'not-allowed':'pointer'}}><span className="add-tank-radio" aria-hidden="true">{addMacAddress === item.mac ? '●' : '○'}</span><span className="add-tank-device-copy"><strong>{item.name}</strong><small>{item.version || 'Không rõ phiên bản'} · {item.mac}</small></span><span className="add-tank-badge">{item.tankName ? `Đã dùng · ${item.tankName}` : 'Sẵn sàng'}</span></button>)}
-              <button type="button" onClick={() => setAddMacAddress('')} className="add-tank-device" style={{background:!addMacAddress?'rgba(0,168,150,.12)':'var(--bg-btn-cancel)'}}><span className="add-tank-radio" aria-hidden="true">{!addMacAddress ? '●' : '○'}</span><span className="add-tank-device-copy"><strong>Không gắn thiết bị</strong><small>Bạn có thể chọn thiết bị sau</small></span></button>
+          {/* ── Dialog Header ── */}
+          <div className="add-tank-dialog-header">
+            <div className="edit-tank-dialog-bg-art" style={{ width: 340 }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 9,
+                background: 'rgba(0, 168, 150, 0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#00A896', flexShrink: 0
+              }}>
+                <Plus size={19} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Thêm bể cá mới</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
+                  Khởi tạo hồ nuôi và liên kết thiết bị giám sát thông minh
+                </p>
+              </div>
             </div>
-            <p style={{fontSize:12,color:'var(--text-muted)',margin:'9px 0 0'}}>Thiết bị đã dùng vẫn hiển thị để bạn đối chiếu.</p>
+
+            <button
+              type="button"
+              onClick={() => setAddDialog(false)}
+              disabled={tankSaving}
+              style={{
+                background: 'transparent', border: 'none',
+                cursor: tankSaving ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)',
+                width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                alignSelf: 'flex-start', marginTop: -4, marginRight: -6,
+                position: 'relative', zIndex: 2, transition: 'all 160ms'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'rgba(0,0,0,0.06)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Card 1: Thông tin bể cá */}
+            <div className="edit-tank-card">
+              <div className="edit-tank-card-title">
+                <Layers size={17} color="#00A896" />
+                <span>Thông tin bể cá</span>
+              </div>
+
+              <div>
+                <label className="edit-tank-label">Tên bể cá *</label>
+                <input
+                  autoFocus
+                  value={addName}
+                  onChange={e => setAddName(e.target.value)}
+                  placeholder="VD: Bể Rồng Phòng Ngủ"
+                  className="edit-tank-input"
+                />
+              </div>
+
+              <div className="add-tank-fields">
+                <div>
+                  <label className="edit-tank-label">Thể tích (lít) *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="number"
+                      value={addVolume}
+                      onChange={e => setAddVolume(e.target.value)}
+                      placeholder="VD: 250"
+                      className="edit-tank-input"
+                      style={{ paddingRight: 48 }}
+                    />
+                    <span className="add-tank-unit-badge">Lít</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="edit-tank-label">Loài cá (tùy chọn)</label>
+                  <select
+                    value={addSpeciesId}
+                    onChange={e => setAddSpeciesId(Number(e.target.value))}
+                    className="edit-tank-select"
+                  >
+                    <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
+                    {fishSpecies.map(sp => (
+                      <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Thiết bị kết nối */}
+            <div className="edit-tank-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div className="edit-tank-card-title" style={{ marginBottom: 0 }}>
+                  <Cpu size={17} color="#00A896" />
+                  <span>Thiết bị kết nối</span>
+                </div>
+                {macLoading && ownedMacs.length === 0 ? (
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Đang kiểm tra...</span>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      fontSize: 11.5, fontWeight: 600, color: '#00A896',
+                      background: 'rgba(0, 168, 150, 0.12)', padding: '2px 9px', borderRadius: 999
+                    }}>
+                      {ownedMacs.filter(i => !i.tankName).length} sẵn sàng
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {ownedMacs.length} thiết bị</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="add-tank-search-wrap">
+                <Search size={13.5} className="add-tank-search-icon" />
+                <input
+                  value={macSearch}
+                  onChange={e => setMacSearch(e.target.value)}
+                  placeholder="Tìm tên, phiên bản hoặc mã MAC"
+                  aria-label="Tìm thiết bị"
+                  className="edit-tank-input"
+                  style={{ paddingLeft: 32 }}
+                />
+              </div>
+
+              {macLoadError && <p role="alert" style={{ color: '#FF6B6B', fontSize: 12, margin: 0 }}>{macLoadError}</p>}
+
+              <div className="add-tank-device-list">
+                {macLoading && ownedMacs.length === 0 ? (
+                  <>
+                    <div className="add-tank-skeleton-item">
+                      <div className="add-tank-skeleton-radio" />
+                      <div className="add-tank-skeleton-text">
+                        <div className="add-tank-skeleton-line1" />
+                        <div className="add-tank-skeleton-line2" />
+                      </div>
+                      <div className="add-tank-skeleton-badge" />
+                    </div>
+                    <div className="add-tank-skeleton-item">
+                      <div className="add-tank-skeleton-radio" />
+                      <div className="add-tank-skeleton-text">
+                        <div className="add-tank-skeleton-line1" style={{ width: 110 }} />
+                        <div className="add-tank-skeleton-line2" style={{ width: 170 }} />
+                      </div>
+                      <div className="add-tank-skeleton-badge" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {ownedMacs
+                      .filter(item => `${item.name} ${item.version} ${item.mac} ${item.tankName || ''}`.toLowerCase().includes(macSearch.toLowerCase()))
+                      .map(item => {
+                        const isSelected = addMacAddress === item.mac;
+                        const isUsed = !!item.tankName;
+                        return (
+                          <button
+                            key={item.mac}
+                            type="button"
+                            disabled={isUsed}
+                            onClick={() => setAddMacAddress(item.mac)}
+                            className={`add-tank-device ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}`}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0, flex: 1 }}>
+                              <div className="add-tank-device-icon">
+                                <Cpu size={16} />
+                              </div>
+                              <span className="add-tank-device-copy">
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <strong>{item.name}</strong>
+                                  <span className="add-tank-ver-tag">{item.version || 'V3'}</span>
+                                </span>
+                                <small>MAC: {item.mac}</small>
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              <span className={`add-tank-badge ${isUsed ? 'used' : 'ready'}`}>
+                                {isUsed ? `Đã dùng · ${item.tankName}` : '● Sẵn sàng'}
+                              </span>
+                              {!isUsed && (
+                                <span className={`add-tank-check-circle ${isSelected ? 'checked' : ''}`} aria-hidden="true">
+                                  {isSelected && <Check size={12} strokeWidth={3} />}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+
+                    <button
+                      type="button"
+                      onClick={() => setAddMacAddress('')}
+                      className={`add-tank-device ${!addMacAddress ? 'selected' : ''}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0, flex: 1 }}>
+                        <div className="add-tank-device-icon unattached">
+                          <X size={14} />
+                        </div>
+                        <span className="add-tank-device-copy">
+                          <strong>Không gắn thiết bị</strong>
+                          <small style={{ fontFamily: 'inherit' }}>Bạn có thể chọn thiết bị sau trong phần Cấu hình</small>
+                        </span>
+                      </div>
+                      <span className={`add-tank-check-circle ${!addMacAddress ? 'checked' : ''}`} aria-hidden="true">
+                        {!addMacAddress && <Check size={12} strokeWidth={3} />}
+                      </span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--text-muted)' }}>
+                <Info size={13.5} color="#00A896" style={{ flexShrink: 0 }} />
+                <span>Thiết bị đã dùng vẫn hiển thị để bạn đối chiếu.</span>
+              </div>
+            </div>
           </div>
         </Dialog>
       )}
 
       {/* ── Dialog: Cấu hình & Cảnh báo ── */}
-      {editDialog && (
-        <Dialog
-          title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#4DA6FF" /> Cấu hình & Cảnh báo</div>}
-          confirmText="Lưu thay đổi"
-          error={dialogError}
-          loading={tankSaving}
-          onConfirm={handleEditConfirm}
-          onCancel={() => setEditDialog(null)}
-        >
-          {/* Tabs header */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>
-            <button
-              onClick={() => setEditTab('general')}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: editTab === 'general' ? 600 : 400,
-                color: editTab === 'general' ? '#4DA6FF' : 'var(--text-muted)',
-                borderBottom: editTab === 'general' ? '2px solid #4DA6FF' : '2px solid transparent',
-                padding: '4px 8px', transition: 'all 200ms'
-              }}
-            >
-              Thông tin chung
-            </button>
-            <button
-              onClick={() => setEditTab('alerts')}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: editTab === 'alerts' ? 600 : 400,
-                color: editTab === 'alerts' ? '#00A896' : 'var(--text-muted)',
-                borderBottom: editTab === 'alerts' ? '2px solid #00A896' : '2px solid transparent',
-                padding: '4px 8px', transition: 'all 200ms'
-              }}
-            >
-              Cài đặt cảnh báo
-            </button>
-          </div>
+      {editDialog && (() => {
+        const currentAttachedDev = ownedMacs.find(m => m.mac === editMacAddress);
+        const displayDevName = currentAttachedDev?.name || (editMacAddress ? 'Thiết bị AquaCare' : 'Chưa gắn thiết bị');
+        const displayDevVersion = currentAttachedDev?.version || 'V3';
+        const hasActiveChannels = notifyViaAppNoti || notifyViaEmail || notifyViaWebPush;
 
-          {editTab === 'general' && (
-            <div style={{ animation: 'tabSlideInLeft 220ms cubic-bezier(0.25,0.46,0.45,0.94)' }}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Tên bể cá</label>
-                <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} placeholder="VD: Bể Rồng Phòng Ngủ" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
+        const handleCopyMac = () => {
+          if (!editMacAddress) return;
+          navigator.clipboard.writeText(editMacAddress);
+          setCopiedMac(true);
+          setTimeout(() => setCopiedMac(false), 2000);
+        };
+
+        return (
+          <Dialog
+            extraWide
+            hideDefaultHeader
+            confirmText={<><Save size={15} /> Lưu thay đổi</>}
+            cancelText="Hủy"
+            error={dialogError}
+            loading={tankSaving}
+            onConfirm={handleEditConfirm}
+            onCancel={() => setEditDialog(null)}
+          >
+            {/* ── Dialog Header ── */}
+            <div className="edit-tank-dialog-header">
+              {/* Decorative aquatic background on right */}
+              <div className="edit-tank-dialog-bg-art" />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: 'rgba(0, 168, 150, 0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#00A896', flexShrink: 0
+                }}>
+                  <Bell size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Cấu hình & Cảnh báo</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                    Quản lý thông tin bể cá, thiết bị kết nối và ngưỡng cảnh báo
+                  </p>
+                </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Thể tích (Lít)</label>
-                <input type="number" value={editVolume} onChange={e => setEditVolume(e.target.value)} placeholder="VD: 250" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Loài cá (Tùy chọn)</label>
-                <select value={editSpeciesId} onChange={e => setEditSpeciesId(Number(e.target.value))} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
-                  <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
-                  {fishSpecies.map(sp => (<option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>))}
-                </select>
-              </div>
-              <div style={{ marginTop: 12, marginBottom: 4 }}>
-                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Mã thiết bị (MAC Address)</label>
-                <p style={{fontSize: 12, color: 'var(--text-muted)'}}>Mã MAC được gửi đến email tài khoản sau khi giao hàng thành công. V3 Demo nhận mã khi đơn tự động hoàn tất.</p>
-                <input value={editMacAddress} onChange={e => setEditMacAddress(e.target.value)} placeholder="VD: 68:FE:71:16:A5:18 hoặc để trống" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'} />
-              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditDialog(null)}
+                disabled={tankSaving}
+                style={{
+                  background: 'transparent', border: 'none',
+                  cursor: tankSaving ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)',
+                  width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  alignSelf: 'flex-start', marginTop: -4, marginRight: -6,
+                  position: 'relative', zIndex: 2, transition: 'all 160ms'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'rgba(0,0,0,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent' }}
+              >
+                <X size={18} />
+              </button>
             </div>
-          )}
 
-          {editTab === 'alerts' && (
-            <div style={{ animation: 'tabSlideIn 220ms cubic-bezier(0.25,0.46,0.45,0.94)' }}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 12 }}>Kênh nhận thông báo</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                    <input type="checkbox" checked={notifyViaEmail} onChange={e => setNotifyViaEmail(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua Email
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                    <input type="checkbox" checked={notifyViaWebPush} onChange={async e => {
-                      const checked = e.target.checked;
-                      setNotifyViaWebPush(checked);
-                      if (checked) {
-                        const token = await requestNotificationPermission();
-                        if (token) {
-                          const userInfoStr = localStorage.getItem('user_info');
-                          if (userInfoStr) {
-                            const currentUser = JSON.parse(userInfoStr);
-                            if (currentUser.id) {
-                              const { error } = await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
-                              if (error) console.error("Lỗi lưu FCM Token:", error.message);
-                              else console.log("✅ Đã lưu FCM Token vào CSDL (bảng users).");
+            {/* ── 2-Column Layout ── */}
+            <div className="edit-tank-grid">
+              {/* ── Left Column: Thông tin bể cá & Thiết bị kết nối ── */}
+              <div className="edit-tank-col">
+                {/* Section: Thông tin bể cá */}
+                <div className="edit-tank-card">
+                  <div className="edit-tank-card-title">
+                    <Layers size={17} color="#00A896" />
+                    <span>Thông tin bể cá</span>
+                  </div>
+
+                  <div>
+                    <label className="edit-tank-label">Tên bể cá *</label>
+                    <input
+                      autoFocus
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      placeholder="VD: Bể Koi Sân Vườn Simu"
+                      className="edit-tank-input"
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                    <div>
+                      <label className="edit-tank-label">Thể tích (lít) *</label>
+                      <input
+                        type="number"
+                        value={editVolume}
+                        onChange={e => setEditVolume(e.target.value)}
+                        placeholder="VD: 250"
+                        className="edit-tank-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="edit-tank-label">Loài cá (tùy chọn)</label>
+                      <select
+                        value={editSpeciesId}
+                        onChange={e => setEditSpeciesId(Number(e.target.value))}
+                        className="edit-tank-select"
+                      >
+                        <option value={0} style={{ color: '#000' }}>-- Chọn loài cá --</option>
+                        {fishSpecies.map(sp => (
+                          <option key={sp.id} value={sp.id} style={{ color: '#000' }}>{sp.species_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Thiết bị kết nối */}
+                <div className="edit-tank-card">
+                  <div className="edit-tank-card-title">
+                    <Cpu size={17} color="#00A896" />
+                    <span>Thiết bị kết nối</span>
+                  </div>
+
+                  {/* Device Preview Card */}
+                  <div className="edit-tank-device-preview">
+                    <div className="edit-tank-device-avatar">
+                      <Cpu size={22} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{displayDevName}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2, fontFamily: 'monospace' }}>
+                        {displayDevVersion} {editMacAddress ? `· MAC: ${editMacAddress}` : '· Chưa gán thiết bị'}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                      background: editMacAddress ? 'rgba(0,168,150,0.12)' : 'rgba(255,255,255,0.06)',
+                      color: editMacAddress ? '#00A896' : 'var(--text-muted)',
+                      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0
+                    }}>
+                      <span style={{ fontSize: 9 }}>{editMacAddress ? '●' : '○'}</span>
+                      {editMacAddress ? 'Đã kết nối' : 'Chưa gắn'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Info size={13} color="#00A896" />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Mã thiết bị (MAC Address)</span>
+                    </div>
+                    <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '0 0 8px', lineHeight: 1.45 }}>
+                      Mã MAC được gửi đến email tài khoản sau khi giao hàng thành công. V3 Demo nhận mã khi đơn tự động hoàn tất.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div className="edit-tank-device-copybox" style={{ flex: 1 }}>
+                        <code>{editMacAddress || 'Chưa gắn mã MAC'}</code>
+                        {editMacAddress && (
+                          <button
+                            type="button"
+                            onClick={handleCopyMac}
+                            className="edit-tank-copy-btn"
+                            title="Sao chép mã MAC"
+                          >
+                            {copiedMac ? <Check size={14} color="#00A896" /> : <Copy size={14} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <select
+                      value={editMacAddress}
+                      onChange={e => setEditMacAddress(e.target.value)}
+                      className="edit-tank-select"
+                    >
+                      <option value="" style={{ color: '#000' }}>-- Không gắn thiết bị (Bỏ liên kết) --</option>
+                      {editMacAddress && !ownedMacs.some(m => m.mac === editMacAddress) && (
+                        <option value={editMacAddress} style={{ color: '#000' }}>Thiết bị hiện tại: {editMacAddress}</option>
+                      )}
+                      {ownedMacs
+                        .filter(m => !m.tankName || m.mac === editMacAddress)
+                        .map(m => (
+                          <option key={m.mac} value={m.mac} style={{ color: '#000' }}>
+                            {m.name} ({m.version || 'V3'}) - {m.mac} {m.mac === editMacAddress ? '(Đang dùng)' : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Right Column: Cài đặt cảnh báo & Kênh thông báo ── */}
+              <div className="edit-tank-col">
+                {/* Section: Cài đặt cảnh báo */}
+                <div className="edit-tank-card">
+                  <div className="edit-tank-card-title">
+                    <Bell size={17} color="#00A896" />
+                    <span>Cài đặt cảnh báo</span>
+                  </div>
+
+                  {/* Thời gian khóa Cooldown (Nhắc lại) */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Clock size={13.5} color="#00A896" />
+                      <span className="edit-tank-label" style={{ margin: 0 }}>Thời gian khóa Cooldown (Nhắc lại)</span>
+                    </div>
+                    <select
+                      value={alertCooldown}
+                      onChange={e => setAlertCooldown(Number(e.target.value))}
+                      className="edit-tank-select"
+                    >
+                      <option value={15} style={{ color: '#000' }}>15 phút (Khuyên dùng)</option>
+                      <option value={30} style={{ color: '#000' }}>30 phút</option>
+                      <option value={60} style={{ color: '#000' }}>1 tiếng (60 phút)</option>
+                      <option value={1} style={{ color: '#000' }}>1 phút (Dành cho thử nghiệm)</option>
+                      <option value={0} style={{ color: '#000' }}>Không nhắc lại (Chỉ báo 1 lần)</option>
+                    </select>
+                  </div>
+
+                  {/* Bộ lọc mức độ nghiêm trọng */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Sliders size={13.5} color="#00A896" />
+                      <span className="edit-tank-label" style={{ margin: 0 }}>Bộ lọc mức độ nghiêm trọng</span>
+                    </div>
+                    <select
+                      value={alertSeverity}
+                      onChange={e => setAlertSeverity(e.target.value)}
+                      className="edit-tank-select"
+                    >
+                      <option value="both" style={{ color: '#000' }}>Nhận tất cả cảnh báo (Warning & Critical)</option>
+                      <option value="critical_only" style={{ color: '#000' }}>Chỉ nhận khi Nguy kịch (Critical)</option>
+                      <option value="warning_only" style={{ color: '#000' }}>Chỉ nhận Cảnh báo sớm (Warning)</option>
+                      <option value="none" style={{ color: '#000' }}>Tắt nhận cảnh báo</option>
+                    </select>
+                  </div>
+
+                  {/* Ghi chú thông tin nhỏ */}
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '8px 10px', borderRadius: 8,
+                    background: 'rgba(0,168,150,0.05)', border: '1px solid rgba(0,168,150,0.15)'
+                  }}>
+                    <Info size={14} color="#00A896" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      Khi thông số vượt ngưỡng an toàn của loài cá đã chọn, hệ thống sẽ gửi cảnh báo theo các kênh bên dưới.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Section: Tùy chọn nhận thông báo */}
+                <div className="edit-tank-card">
+                  <div className="edit-tank-card-title">
+                    <Send size={16} color="#00A896" />
+                    <span>Tùy chọn nhận thông báo</span>
+                  </div>
+
+                  <div className="edit-tank-channels-row">
+                    <button
+                      type="button"
+                      onClick={() => setNotifyViaAppNoti(!notifyViaAppNoti)}
+                      className={`edit-tank-channel-btn ${notifyViaAppNoti ? 'active' : ''}`}
+                    >
+                      <div className="edit-tank-channel-content">
+                        <Smartphone size={17} color={notifyViaAppNoti ? '#00A896' : 'currentColor'} />
+                        <span>Thông báo app</span>
+                      </div>
+                      <span className="edit-tank-channel-check">
+                        {notifyViaAppNoti && <Check size={12} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNotifyViaEmail(!notifyViaEmail)}
+                      className={`edit-tank-channel-btn ${notifyViaEmail ? 'active' : ''}`}
+                    >
+                      <div className="edit-tank-channel-content">
+                        <Mail size={17} color={notifyViaEmail ? '#00A896' : 'currentColor'} />
+                        <span>Email</span>
+                      </div>
+                      <span className="edit-tank-channel-check">
+                        {notifyViaEmail && <Check size={12} strokeWidth={3} />}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const next = !notifyViaWebPush;
+                        setNotifyViaWebPush(next);
+                        if (next) {
+                          const token = await requestNotificationPermission();
+                          if (token) {
+                            const userInfoStr = localStorage.getItem('user_info');
+                            if (userInfoStr) {
+                              const currentUser = JSON.parse(userInfoStr);
+                              if (currentUser.id) {
+                                await supabase.from('users').update({ web_fcm_token: token }).eq('id', currentUser.id);
+                              }
                             }
                           }
                         }
-                      }
-                    }} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua Trình duyệt Web
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                    <input type="checkbox" checked={notifyViaAppNoti} onChange={e => setNotifyViaAppNoti(e.target.checked)} style={{ accentColor: '#00A896', width: 16, height: 16, cursor: 'pointer' }} /> Gửi qua App di động
-                  </label>
+                      }}
+                      className={`edit-tank-channel-btn ${notifyViaWebPush ? 'active' : ''}`}
+                    >
+                      <div className="edit-tank-channel-content">
+                        <Monitor size={17} color={notifyViaWebPush ? '#00A896' : 'currentColor'} />
+                        <span>Web</span>
+                      </div>
+                      <span className="edit-tank-channel-check">
+                        {notifyViaWebPush && <Check size={12} strokeWidth={3} />}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section: Trạng thái cảnh báo */}
+                <div
+                  className="edit-tank-status-card"
+                  style={{
+                    background: hasActiveChannels ? 'rgba(0,168,150,0.06)' : 'rgba(255,179,71,0.06)',
+                    border: `1px solid ${hasActiveChannels ? 'rgba(0,168,150,0.22)' : 'rgba(255,179,71,0.25)'}`
+                  }}
+                >
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    background: hasActiveChannels ? 'rgba(0,168,150,0.14)' : 'rgba(255,179,71,0.14)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  }}>
+                    <ShieldCheck size={22} color={hasActiveChannels ? '#00A896' : '#FFB347'} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Trạng thái cảnh báo</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {hasActiveChannels
+                        ? 'Bể cá đã được cấu hình đầy đủ.'
+                        : 'Chưa kích hoạt kênh nhận thông báo nào.'}
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                    background: hasActiveChannels ? 'rgba(0,168,150,0.15)' : 'rgba(255,179,71,0.15)',
+                    color: hasActiveChannels ? '#00A896' : '#FFB347',
+                    display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0
+                  }}>
+                    {hasActiveChannels ? '✓ Đã cấu hình' : 'Chưa bật kênh'}
+                  </span>
                 </div>
               </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Thời gian khóa Cooldown (Nhắc lại)</label>
-                <select value={alertCooldown} onChange={e => setAlertCooldown(Number(e.target.value))} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
-                  <option value={1} style={{ color: '#000' }}>1 phút (Dành cho Test)</option>
-                  <option value={15} style={{ color: '#000' }}>15 phút</option>
-                  <option value={30} style={{ color: '#000' }}>30 phút</option>
-                  <option value={60} style={{ color: '#000' }}>1 tiếng</option>
-                  <option value={0} style={{ color: '#000' }}>Không nhắc lại</option>
-                </select>
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>Bộ lọc mức độ nghiêm trọng</label>
-                <select value={alertSeverity} onChange={e => setAlertSeverity(e.target.value)} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13, background: 'var(--bg-btn-cancel)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontFamily: F, boxSizing: 'border-box', transition: 'border-color 200ms', appearance: 'none' }} onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--btn-border)'}>
-                  <option value="both" style={{ color: '#000' }}>Nhận tất cả cảnh báo</option>
-                  <option value="critical_only" style={{ color: '#000' }}>Chỉ nhận khi Nguy kịch (Critical)</option>
-                  <option value="warning_only" style={{ color: '#000' }}>Chỉ nhận Cảnh báo sớm (Warning)</option>
-                  <option value="none" style={{ color: '#000' }}>Tắt nhận thông báo</option>
-                </select>
-              </div>
             </div>
-          )}
-        </Dialog>
-      )}
+          </Dialog>
+        );
+      })()}
 
       {/* ── Dialog: Xác nhận xóa ── */}
       {deleteDialog && (

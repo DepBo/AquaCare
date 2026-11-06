@@ -1,5 +1,25 @@
 -- Synthetic fixture for the local Supabase container only. Never run on a linked project.
 BEGIN;
+-- The local schema snapshot may predate order MAC email delivery.
+DO $$
+DECLARE item text;
+BEGIN
+  FOREACH item IN ARRAY ARRAY[
+    'mac_email_sent_at timestamptz',
+    'mac_email_attempts integer NOT NULL DEFAULT 0',
+    'mac_email_retry_at timestamptz',
+    'mac_email_claim_until timestamptz',
+    'mac_email_last_error text'
+  ] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'orders'
+        AND column_name = split_part(item, ' ', 1)
+    ) THEN
+      EXECUTE 'ALTER TABLE public.orders ADD COLUMN ' || item;
+    END IF;
+  END LOOP;
+END $$;
 INSERT INTO public.products (id, name, description, price, image_url, version, is_available, details)
 VALUES ('v3-demo', 'AquaCare V3 Demo', 'Dùng thử hệ thống bằng mã MAC simulator, không giao thiết bị vật lý.', 0, '/images/Version3.png', 3, true,
         '["Mã MAC simulator riêng", "Không giao thiết bị vật lý", "Trải nghiệm giám sát và điều khiển"]'::jsonb)

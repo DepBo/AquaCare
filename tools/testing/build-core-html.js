@@ -84,7 +84,7 @@ addFlutter('flutter-widget.json', 'Flutter widget');
 addFlutter('flutter-usb.json', 'Flutter USB');
 
 const suiteRaw = read('suite-results.json');
-const suiteResults = suiteRaw ? JSON.parse(suiteRaw) : [];
+const suiteResults = suiteRaw ? JSON.parse(suiteRaw.replace(/^\uFEFF/, '')) : [];
 const suites = Array.isArray(suiteResults) ? suiteResults : [suiteResults];
 const counts = { PASS: 0, FAIL: 0, SKIP: 0 };
 for (const row of rows) counts[row.status]++;

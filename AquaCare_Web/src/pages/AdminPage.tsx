@@ -1383,7 +1383,7 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {filteredOrders.map(order => (
-                      <tr key={order.id} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
+                      <tr key={order.id} data-testid={`admin-order-${order.id}`} style={{ borderBottom: '1px solid var(--ap-border)', transition: 'background 140ms' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--ap-hover-bg)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >

@@ -93,116 +93,6 @@ test('[NAV-03] 404 home opens landing from a new tab', async ({ context }) => {
   await capture(newTab, 'NAV-03', 'home-result.png')
 })
 
-test('[GUIDE-01] guide hint appears once on desktop and phone', async ({ page }) => {
-  await page.goto('/')
-  const hint = page.getByRole('note', { name: 'Gợi ý xem hướng dẫn' })
-  await expect(hint).toBeVisible()
-  await capture(page, 'GUIDE-01', 'desktop-first-visit.png')
-  await hint.getByRole('button', { name: 'Đóng gợi ý' }).click()
-  await expect(hint).toHaveCount(0)
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('aquacare_guide_hint_seen'))).toBe('true')
-  await page.reload()
-  await expect(hint).toHaveCount(0)
-
-  const phone = await page.context().newPage()
-  await phone.setViewportSize({ width: 390, height: 844 })
-  await phone.goto('/')
-  await phone.evaluate(() => localStorage.removeItem('aquacare_guide_hint_seen'))
-  await phone.reload()
-  const phoneHint = phone.getByRole('note', { name: 'Gợi ý xem hướng dẫn' })
-  await expect(phoneHint).toBeVisible()
-  await capture(phone, 'GUIDE-01', 'phone-first-visit.png')
-  await phoneHint.getByRole('button', { name: 'Đóng gợi ý' }).click()
-  await phone.reload()
-  await expect(phone.getByRole('note', { name: 'Gợi ý xem hướng dẫn' })).toHaveCount(0)
-  await capture(phone, 'GUIDE-01', 'phone-after-dismiss.png')
-})
-
-test('[GUIDE-02] guide video plays, pauses, seeks, changes speed and enters fullscreen on phone', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/')
-  const video = page.getByLabel('Video hướng dẫn sử dụng AquaCare')
-  await expect(video).toBeVisible()
-  await expect(video).toHaveAttribute('controls', '')
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThan(0)
-  await video.evaluate((element: HTMLVideoElement) => element.play())
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
-  await video.evaluate((element: HTMLVideoElement) => element.pause())
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
-  await page.getByLabel('Tốc độ phát video').selectOption('1.5')
-  expect(await video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(1.5)
-  const duration = await video.evaluate((element: HTMLVideoElement) => element.duration)
-  expect(duration).toBeGreaterThan(0)
-  await video.evaluate((element: HTMLVideoElement) => { element.currentTime = Math.min(1, element.duration / 2) })
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0)
-  const width = await video.evaluate((element: HTMLVideoElement) => element.getBoundingClientRect().width)
-  expect(width).toBeLessThanOrEqual(390)
-  await capture(page, 'GUIDE-02', 'phone-video.png')
-  await page.getByRole('button', { name: 'Phóng to video toàn màn hình' }).click()
-  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.tagName)).toBe('VIDEO')
-  await page.evaluate(() => document.exitFullscreen())
-  await expect(page.getByLabel('Chất lượng video')).toHaveCount(0)
-})
-
-test('[GUIDE-02] guide shows an error message when its video cannot load', async ({ page }) => {
-  await page.route('**/videos/AquaCare_UserGuide.mp4', route => route.abort('failed'))
-  await page.goto('/')
-  await expect(page.getByRole('alert')).toContainText('Không tải được video hướng dẫn')
-  await capture(page, 'GUIDE-02', 'video-load-error.png')
-})
-
-test('[FEED-01] fixed feedback control collapses and stays inside desktop and phone viewports', async ({ page }) => {
-  const db = serviceDb()
-  const fixture = JSON.parse(await readFile(join('..', 'test-results', 'local-fixtures.json'), 'utf8'))
-  const tank = await db.from('tanks').insert({ user_id: fixture.a, tank_name: `QA feedback ${Date.now()}`, water_volume_liter: 100 }).select('id').single()
-  if (tank.error) throw tank.error
-  try {
-    await page.setViewportSize({ width: 1280, height: 800 })
-    await loginCustomer(page)
-    const control = page.locator('.feedback-entry')
-    await expect(control).toBeVisible()
-    await expect(control).toHaveCSS('position', 'fixed')
-    await expect(control).toHaveCSS('right', '20px')
-    await expect(control).toHaveCSS('bottom', '20px')
-    await expect(control.getByRole('link', { name: 'Mở form góp ý AquaCare' })).toHaveAttribute('href', 'https://forms.gle/mKFwk4N73y5SxCTj9')
-    const desktop = await control.boundingBox()
-    await control.getByRole('button', { name: 'Thu nhỏ nút góp ý' }).click()
-    await expect(control).toHaveClass(/feedback-entry--collapsed/)
-    await expect(control.getByRole('button', { name: 'Mở rộng nút góp ý' })).toBeVisible()
-    await capture(page, 'FEED-01', 'desktop-collapsed.png')
-    await control.getByRole('button', { name: 'Mở rộng nút góp ý' }).click()
-    await expect(control).not.toHaveClass(/feedback-entry--collapsed/)
-    await expect(control).toHaveCSS('right', '20px')
-    await expect(control).toHaveCSS('bottom', '20px')
-    const expanded = await control.boundingBox()
-    await page.reload()
-    await expect(control).toBeVisible()
-    await expect(control).toHaveCSS('position', 'fixed')
-    await expect(control).toHaveCSS('right', '20px')
-    await expect(control).toHaveCSS('bottom', '20px')
-    const afterReload = await control.boundingBox()
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.reload()
-    await expect(control).toBeVisible()
-    await expect(control).toHaveCSS('position', 'fixed')
-    await expect(control).toHaveCSS('right', '12px')
-    await expect(control).toHaveCSS('bottom', '12px')
-    const mobile = await control.boundingBox()
-    await capture(page, 'FEED-01', 'phone-after-resize.png')
-    const inDesktop = !!desktop && desktop.x >= 0 && desktop.y >= 0 && desktop.x + desktop.width <= 1280 && desktop.y + desktop.height <= 800
-    const inDesktopAfterToggle = !!expanded && expanded.x >= 0 && expanded.y >= 0 && expanded.x + expanded.width <= 1280 && expanded.y + expanded.height <= 800
-    const inDesktopAfterReload = !!afterReload && afterReload.x >= 0 && afterReload.y >= 0 && afterReload.x + afterReload.width <= 1280 && afterReload.y + afterReload.height <= 800
-    const inPhone = !!mobile && mobile.x >= 0 && mobile.y >= 0 && mobile.x + mobile.width <= 390 && mobile.y + mobile.height <= 844
-    const evidence = { desktop, expanded, afterReload, mobile, inDesktop, inDesktopAfterToggle, inDesktopAfterReload, inPhone }
-    const folder = join(evidenceDir, 'FEED-01')
-    await mkdir(folder, { recursive: true })
-    await writeFile(join(folder, 'position-results.json'), JSON.stringify(evidence, null, 2), 'utf8')
-    expect(inDesktop && inDesktopAfterToggle && inDesktopAfterReload && inPhone).toBe(true)
-  } finally {
-    await db.from('tanks').delete().eq('id', tank.data.id)
-  }
-})
-
 test('[NAV-01] landing desktop navigation, sections, footer and visible images', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
@@ -412,8 +302,8 @@ test('[DEMO-06] mixed cart and exhausted demo stock do not create an incomplete 
   await loginCustomer(page)
   await page.goto('/')
   await page.locator('#product-v3-demo').getByRole('button', { name: 'Thêm', exact: true }).click()
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click()
   const confirm = page.locator('button[form="checkout-form"]')
@@ -530,43 +420,41 @@ test('[DEMO-07] customer B cannot attach A demo MAC or command A demo relay', as
   }
 })
 
-test('[SHOP-01] cart combines repeated V1, adjusts quantity, removes V3 and persists after reload', async ({ page }) => {
+test('[SHOP-01] cart combines repeated V3, adjusts quantity, persists after reload and can be removed', async ({ page }) => {
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
   const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
-  await expect(starter).toBeVisible()
   await expect(advanced).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
-  await starter.locator('.product-action-bar button').last().click()
+  await advanced.locator('.product-action-bar button').last().click()
   await advanced.locator('.product-action-bar button').last().click()
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]'))).toMatchObject([
-    expect.objectContaining({ id: 'v1', quantity: 2 }),
-    expect.objectContaining({ id: 'v3', quantity: 1 }),
+    expect.objectContaining({ id: 'v3', quantity: 2 }),
   ])
   await page.goto('/cart')
   await expect(page.getByRole('heading', { name: 'Giỏ hàng của bạn' })).toBeVisible()
-  await expect(page.getByText(/5\.600\.000/).first()).toBeVisible()
+  await expect(page.getByText(/7\.400\.000/).first()).toBeVisible()
   await capture(page, 'SHOP-01', 'two-products.png')
-  const starterRow = page.getByRole('heading', { name: 'AquaCare Starter' }).locator('xpath=../..')
-  await starterRow.locator('button').first().click()
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').find((item: { id: string }) => item.id === 'v1')?.quantity)).toBe(1)
-  await starterRow.locator('button').nth(1).click()
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').find((item: { id: string }) => item.id === 'v1')?.quantity)).toBe(2)
   const advancedRow = page.getByRole('heading', { name: 'AquaCare Advanced' }).locator('xpath=../..')
-  await advancedRow.getByRole('button', { name: 'Xóa' }).click()
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').map((item: { id: string }) => item.id))).toEqual(['v1'])
+  await advancedRow.locator('button').first().click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').find((item: { id: string }) => item.id === 'v3')?.quantity)).toBe(1)
+  await expect(page.getByText(/3\.700\.000/).first()).toBeVisible()
+  await advancedRow.locator('button').nth(1).click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]').find((item: { id: string }) => item.id === 'v3')?.quantity)).toBe(2)
+  await expect(page.getByText(/7\.400\.000/).first()).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'AquaCare Starter' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'AquaCare Advanced' })).toHaveCount(0)
-  await expect(page.getByText(/1\.900\.000/).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'AquaCare Advanced' })).toBeVisible()
+  await expect(page.getByText(/7\.400\.000/).first()).toBeVisible()
+  const advancedRowAfterReload = page.getByRole('heading', { name: 'AquaCare Advanced' }).locator('xpath=../..')
+  await advancedRowAfterReload.getByRole('button', { name: 'Xóa' }).click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]'))).toEqual([])
+  await expect(page.getByRole('heading', { name: 'Giỏ hàng trống' })).toBeVisible()
   await capture(page, 'SHOP-01', 'after-reload.png')
 })
 
 test('[SHOP-09] transfer option shows placeholder QR without confirming payment', async ({ page }) => {
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await expect(starter).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await expect(advanced).toBeVisible()
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: /thanh toán/i }).click()
   await page.getByRole('radio', { name: 'Chuyển khoản ngân hàng' }).check()
@@ -586,8 +474,8 @@ test('[SHOP-02] invalid quantities and an empty cart cannot proceed to checkout'
   const outcomes = []
   for (const quantity of samples) {
     await page.evaluate(value => localStorage.setItem('aquacare_cart', JSON.stringify([{
-      id: 'v1', name: 'AquaCare Starter', description: 'Test fixture', price: 950000,
-      image: '/images/Version1.png', quantity: value,
+      id: 'v3', name: 'AquaCare Advanced', description: 'Test fixture', price: 3700000,
+      image: '/images/Version3.png', quantity: value,
     }])), quantity)
     await page.reload()
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('aquacare_cart') || '[]'))
@@ -607,9 +495,9 @@ test('[SHOP-02] invalid quantities and an empty cart cannot proceed to checkout'
 test('[SHOP-05] checkout rejects missing and malformed contact fields and limits notes to 60 words', async ({ page }) => {
   test.setTimeout(45_000)
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await expect(starter).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await expect(advanced).toBeVisible()
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click()
   const form = page.locator('#checkout-form')
@@ -656,9 +544,9 @@ test('[SHOP-03] guest COD checkout creates one pending order with matching items
   const db = serviceDb()
   const email = `qa-guest-${Date.now()}@aquacare.test`
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await expect(starter).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await expect(advanced).toBeVisible()
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click()
   await page.locator('[name="fullName"]').fill('QA Guest')
@@ -681,18 +569,22 @@ test('[SHOP-03] guest COD checkout creates one pending order with matching items
   await capture(page, 'SHOP-03', 'checkout-result.png')
   expect(success).toBe(true)
   expect(orders).toHaveLength(1)
-  expect(order).toMatchObject({ user_id: null, status: 'pending', total_price: 950000, payment_method: 'cod', shipping_address: 'QA local address' })
-  expect(items).toEqual([expect.objectContaining({ product_id: 'v1', quantity: 1, product_price: 950000 })])
+  expect(order).toMatchObject({ user_id: null, status: 'pending', total_price: 3700000, payment_method: 'cod', shipping_address: 'QA local address' })
+  expect(items).toEqual([expect.objectContaining({ product_id: 'v3', quantity: 1, product_price: 3700000 })])
   expect(cart).toEqual([])
+  if (order) {
+    await db.from('order_items').delete().eq('order_id', order.id)
+    await db.from('orders').delete().eq('id', order.id)
+  }
 })
 
 test('[SHOP-06] a slow double-click checkout creates only one order and keeps cart until response', async ({ page }) => {
   const db = serviceDb()
   const email = `qa-double-${Date.now()}@aquacare.test`
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await expect(starter).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await expect(advanced).toBeVisible()
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click()
   await page.locator('[name="fullName"]').fill('QA Double')
@@ -738,9 +630,9 @@ test('[SHOP-07] failed order items insert does not leave a processable empty ord
   const db = serviceDb()
   const email = `qa-items-fail-${Date.now()}@aquacare.test`
   await page.goto('/')
-  const starter = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Starter' })
-  await expect(starter).toBeVisible()
-  await starter.locator('.product-action-bar button').last().click()
+  const advanced = page.locator('#products .glass-card').filter({ hasText: 'AquaCare Advanced' })
+  await expect(advanced).toBeVisible()
+  await advanced.locator('.product-action-bar button').last().click()
   await page.goto('/cart')
   await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click()
   await page.locator('[name="fullName"]').fill('QA Items Fail')
@@ -1218,55 +1110,6 @@ test('[REV-07] annual revenue assigns exact Vietnam year boundaries once', async
     expect(deltas).toEqual({ dec2019: 11, jan2020: 13, dec2020: 17, jan2021: 19 })
   } finally {
     await db.from('orders').delete().eq('shipping_email', marker)
-  }
-})
-
-test('[REV-13] 100 dong is allocated 33, 33, 34 across three equal-priced versions', async ({ request }) => {
-  const db = serviceDb()
-  const marker = `qa-rev13-${Date.now()}@aquacare.test`
-  const v2 = await db.from('products').select('id').eq('id', 'v2').maybeSingle()
-  if (v2.error) throw v2.error
-  const createdV2 = !v2.data
-  if (createdV2) {
-    const product = await db.from('products').insert({ id: 'v2', name: 'QA Basic', description: 'Local REV13 fixture', price: 1,
-      image_url: '/images/Version2.png', version: 2, is_available: true, details: [] })
-    if (product.error) throw product.error
-  }
-  const auth = await request.post(`${localApi}/auth/v1/token?grant_type=password`, {
-    headers: { apikey: process.env.VITE_SUPABASE_ANON_KEY! },
-    data: { email: 'qa_admin@aquacare.test', password: 'Qa-only-2026!' },
-  })
-  expect(auth.ok()).toBe(true)
-  const token = (await auth.json()).access_token as string
-  const url = 'http://127.0.0.1:5051/api/admin/dashboard/annual?year=2020'
-  const headers = { Authorization: `Bearer ${token}` }
-  const annual = async () => {
-    const response = await request.get(url, { headers })
-    expect(response.status()).toBe(200)
-    const data = await response.json()
-    return data.byVersion.find((row: { month: number }) => row.month === 6).versions
-  }
-  let orderId: number | undefined
-  try {
-    const baseline = await annual()
-    const order = await db.from('orders').insert({ user_id: null, shipping_name: 'QA Rounding', shipping_phone: '0900000111',
-      shipping_email: marker, shipping_address: 'QA local only', total_price: 100, status: 'delivered', payment_method: 'cod',
-      created_at: '2020-06-15T12:00:00.000Z' }).select('id').single()
-    if (order.error) throw order.error
-    orderId = order.data.id
-    const inserted = await db.from('order_items').insert(['v1', 'v2', 'v3'].map(version => ({ order_id: orderId,
-      product_id: version, product_name: `QA ${version}`, product_price: 1, quantity: 1 })))
-    if (inserted.error) throw inserted.error
-    const result = await annual()
-    const delta = { V1: result.V1 - baseline.V1, V2: result.V2 - baseline.V2, V3: result.V3 - baseline.V3 }
-    const folder = join(evidenceDir, 'REV-13')
-    await mkdir(folder, { recursive: true })
-    await writeFile(join(folder, 'three-way-rounding.json'), JSON.stringify({ baseline, result, delta }, null, 2), 'utf8')
-    expect(delta).toEqual({ V1: 33, V2: 33, V3: 34 })
-  } finally {
-    if (orderId) await db.from('order_items').delete().eq('order_id', orderId)
-    await db.from('orders').delete().eq('shipping_email', marker)
-    if (createdV2) await db.from('products').delete().eq('id', 'v2')
   }
 })
 

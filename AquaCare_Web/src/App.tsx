@@ -19,6 +19,7 @@ import ProductsSection from './components/ProductsSection'
 import GuideSection from './components/GuideSection'
 import SubscriptionSection from './components/SubscriptionSection'
 import CartPage from './pages/CartPage'
+import OrderHistoryPage from './pages/OrderHistoryPage'
 import { CartProvider } from './contexts/CartContext'
 import AdminPage from './pages/AdminPage'
 import StaffPage from './pages/StaffPage'
@@ -220,6 +221,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ForgotPasswordPage />} />
         {/* <Route path="/game" element={<FishFarmGame />} /> */}
         <Route path="/dashboard" element={<RoleRoute role="customer"><DashboardPage /></RoleRoute>} />
+        <Route path="/orders" element={<OrderHistoryPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<RoleRoute role="admin"><AdminPage /></RoleRoute>} />
         <Route path="/staff" element={<RoleRoute role="staff"><StaffPage /></RoleRoute>} />

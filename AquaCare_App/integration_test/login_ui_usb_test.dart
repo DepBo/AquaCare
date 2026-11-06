@@ -31,26 +31,40 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, 'Bể thử QA');
   }
 
-  testWidgets('USB phone: admin sees the isolated species management screen', (tester) async {
+  testWidgets('USB phone: admin sees the isolated species management screen', (
+    tester,
+  ) async {
     expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
     GoogleFonts.config.allowRuntimeFetching = true;
-    await tester.pumpWidget(const MaterialApp(home: AdminScreen(isolatedTestPreview: true)));
+    await tester.pumpWidget(
+      const MaterialApp(home: AdminScreen(isolatedTestPreview: true)),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Quản trị AquaCare System'), findsOneWidget);
     expect(find.text('Thêm cá'), findsOneWidget);
     final nav = tester.widget<FloatingRoleNav>(find.byType(FloatingRoleNav));
-    expect(nav.items.map((item) => item.label), containsAll(['Loài cá', 'Thiết bị']));
+    expect(
+      nav.items.map((item) => item.label),
+      containsAll(['Loài cá', 'Thiết bị']),
+    );
   });
 
-  testWidgets('USB phone: staff sees the isolated work navigation', (tester) async {
+  testWidgets('USB phone: staff sees the isolated work navigation', (
+    tester,
+  ) async {
     expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
     GoogleFonts.config.allowRuntimeFetching = true;
-    await tester.pumpWidget(const MaterialApp(home: StaffScreen(isolatedTestPreview: true)));
+    await tester.pumpWidget(
+      const MaterialApp(home: StaffScreen(isolatedTestPreview: true)),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Nhân viên Kho'), findsOneWidget);
     expect(find.text('Không có đơn hàng cần đóng gói!'), findsOneWidget);
     final nav = tester.widget<FloatingRoleNav>(find.byType(FloatingRoleNav));
-    expect(nav.items.map((item) => item.label), containsAll(['Đóng gói', 'Lịch sử']));
+    expect(
+      nav.items.map((item) => item.label),
+      containsAll(['Đóng gói', 'Lịch sử']),
+    );
     nav.items.last.onTap();
     await tester.pumpAndSettle();
     expect(find.text('Chưa có lịch sử công việc hoàn thành'), findsOneWidget);
@@ -263,7 +277,9 @@ void main() {
     expect(find.text('Mật khẩu không khớp'), findsOneWidget);
   });
 
-  testWidgets('USB phone: password recovery rejects an invalid email', (tester) async {
+  testWidgets('USB phone: password recovery rejects an invalid email', (
+    tester,
+  ) async {
     expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
     GoogleFonts.config.allowRuntimeFetching = true;
     await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
@@ -277,11 +293,160 @@ void main() {
   testWidgets('USB phone: admin opens the add species form', (tester) async {
     expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
     GoogleFonts.config.allowRuntimeFetching = true;
-    await tester.pumpWidget(const MaterialApp(home: AdminScreen(isolatedTestPreview: true)));
+    await tester.pumpWidget(
+      const MaterialApp(home: AdminScreen(isolatedTestPreview: true)),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Thêm cá'));
     await tester.pumpAndSettle();
     expect(find.text('Thêm loài cá mới'), findsOneWidget);
     expect(find.text('Tên loài cá'), findsOneWidget);
   });
+
+  // Each case below drives the QA UI. Invalid input stops before any network write.
+  for (final (label, email) in <(String, String)>[
+    ('login rejects an email without at sign', 'invalid-email'),
+    ('login rejects whitespace-only email', '   '),
+  ]) {
+    testWidgets('USB phone: $label', (tester) async {
+      expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+      GoogleFonts.config.allowRuntimeFetching = true;
+      SharedPreferences.setMockInitialValues({'remember_login': true});
+      await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, email);
+      await tester.enterText(find.byType(TextFormField).last, 'Qa-only-2026!');
+      await tester.tap(find.text('ĐĂNG NHẬP').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          email.trim().isEmpty ? 'Vui lòng nhập email' : 'Email không hợp lệ',
+        ),
+        findsOneWidget,
+      );
+    });
+  }
+
+  for (final (label, field, value, error) in <(String, int, String, String)>[
+    ('signup rejects whitespace-only name', 0, '   ', 'Vui lòng nhập họ tên'),
+    ('signup requires email', 1, '', 'Vui lòng nhập email'),
+    ('signup requires phone number', 2, '', 'Vui lòng nhập số điện thoại'),
+    ('signup requires password', 3, '', 'Vui lòng nhập mật khẩu'),
+    (
+      'signup requires password confirmation',
+      4,
+      '',
+      'Vui lòng xác nhận mật khẩu',
+    ),
+    (
+      'signup rejects five-character password',
+      3,
+      '12345',
+      'Mật khẩu ít nhất 6 ký tự',
+    ),
+  ]) {
+    testWidgets('USB phone: $label', (tester) async {
+      await openSignup(tester);
+      await tester.enterText(find.byType(TextFormField).at(field), value);
+      await tester.tap(find.text('TẠO TÀI KHOẢN'));
+      await tester.pumpAndSettle();
+      expect(find.text(error), findsOneWidget);
+    });
+  }
+
+  testWidgets('USB phone: password recovery requires email', (tester) async {
+    expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+    GoogleFonts.config.allowRuntimeFetching = true;
+    await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GỬI LINK ĐẶT LẠI'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vui lòng nhập email'), findsOneWidget);
+  });
+
+  for (final (label, name, volume, error) in <(String, String, String, String)>[
+    ('tank rejects whitespace-only name', '   ', '250', 'Vui lòng nhập tên bể'),
+    (
+      'tank rejects negative volume',
+      'Bể thử QA',
+      '-1',
+      'Thể tích phải là số lớn hơn 0',
+    ),
+    (
+      'tank rejects missing name with valid volume',
+      '',
+      '250',
+      'Vui lòng nhập tên bể',
+    ),
+  ]) {
+    testWidgets('USB phone: $label', (tester) async {
+      await openAddTank(tester);
+      await tester.enterText(find.byType(TextFormField).first, name);
+      await tester.enterText(find.byType(TextFormField).last, volume);
+      await tester.tap(find.text('Tiếp tục'));
+      await tester.pumpAndSettle();
+      expect(find.text(error), findsOneWidget);
+      expect(find.text('1. Nhập thông tin bể'), findsOneWidget);
+    });
+  }
+
+  for (final (label, volume) in <(String, String)>[
+    ('tank accepts decimal comma volume', '12,5'),
+    ('tank accepts decimal dot volume', '12.5'),
+  ]) {
+    testWidgets('USB phone: $label', (tester) async {
+      await openAddTank(tester);
+      await fillTankName(tester);
+      await tester.enterText(find.byType(TextFormField).last, volume);
+      await tester.tap(find.text('Tiếp tục'));
+      await tester.pumpAndSettle();
+      expect(find.text('2. Chọn loài cá'), findsOneWidget);
+    });
+  }
+
+  testWidgets('USB phone: going back preserves tank volume', (tester) async {
+    await openAddTank(tester);
+    await fillTankName(tester);
+    await tester.enterText(find.byType(TextFormField).last, '250');
+    await tester.tap(find.text('Tiếp tục'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quay lại'));
+    await tester.pumpAndSettle();
+    expect(find.text('1. Nhập thông tin bể'), findsOneWidget);
+    expect(find.text('250'), findsOneWidget);
+  });
+
+  for (final (label, field, error) in <(String, int, String)>[
+    ('admin species requires name', 0, 'Vui lòng nhập tên loài cá'),
+    ('admin species requires minimum temperature', 1, 'Thiếu min'),
+    ('admin species requires maximum temperature', 2, 'Thiếu max'),
+    ('admin species requires minimum pH', 3, 'Thiếu min'),
+    ('admin species requires maximum pH', 4, 'Thiếu max'),
+    ('admin species requires minimum TDS', 5, 'Thiếu min'),
+    ('admin species requires maximum TDS', 6, 'Thiếu max'),
+  ]) {
+    testWidgets('USB phone: $label', (tester) async {
+      expect(const bool.fromEnvironment('AQUACARE_TEST_MODE'), isTrue);
+      GoogleFonts.config.allowRuntimeFetching = true;
+      await tester.pumpWidget(
+        const MaterialApp(home: AdminScreen(isolatedTestPreview: true)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thêm cá'));
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextFormField);
+      const values = ['Cá QA', '24', '30', '6.5', '7.5', '100', '300'];
+      for (var index = 0; index < values.length; index++) {
+        await tester.enterText(
+          fields.at(index),
+          index == field ? '' : values[index],
+        );
+      }
+      final submit = find.text('Thêm mới');
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(find.text(error), findsOneWidget);
+    });
+  }
 }

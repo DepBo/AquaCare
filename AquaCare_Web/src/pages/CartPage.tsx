@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, CheckCircle, CreditCard, Truck, User, MapPin, Phone, Mail, FileText, QrCode, X, Clock, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, CheckCircle, CreditCard, Truck, User, MapPin, Phone, Mail, FileText, QrCode } from 'lucide-react'
 import { isComingSoonProduct, useCart } from '../contexts/CartContext'
 import { createClient } from '@supabase/supabase-js'
 import { API_URL } from '../config/api'
@@ -28,10 +28,6 @@ export default function CartPage() {
   })
 
   const [userSession, setUserSession] = useState<any>(null)
-  const [showHistory, setShowHistory] = useState(false)
-  const [historyOrders, setHistoryOrders] = useState<any[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [detailsModal, setDetailsModal] = useState<{ show: boolean, order: any | null }>({ show: false, order: null })
 
   // Auto-fetch user details
   useEffect(() => {
@@ -53,15 +49,6 @@ export default function CartPage() {
     }
     fetchUser()
   }, [])
-
-  const fetchHistoryOrders = async (userId: string) => {
-    setHistoryLoading(true)
-    const { data: ordersData } = await supabase.from('orders').select('*, order_items(product_name, quantity, product_price)').eq('user_id', userId).order('created_at', { ascending: false })
-    if (ordersData) {
-      setHistoryOrders(ordersData)
-    }
-    setHistoryLoading(false)
-  }
 
   const noteWordsCount = formData.note.trim() === '' ? 0 : formData.note.trim().split(/\s+/).length;
   const isDemoCart = cart.length > 0 && cart.every(item => item.id === 'v3-demo')
@@ -205,18 +192,34 @@ export default function CartPage() {
               ? 'Đơn V3 Demo đã được xử lý tự động. Mã MAC simulator sẽ được gửi đến email tài khoản của bạn. Không có thiết bị vật lý được giao.'
               : 'Cảm ơn bạn đã mua hàng. Đơn hàng của bạn đang được xử lý và sẽ được giao trong thời gian sớm nhất.'}
           </p>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              display: 'inline-block', padding: '16px 32px', borderRadius: 12,
-              backgroundColor: '#4DA6FF', color: '#0a1628', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer',
-              transition: 'transform 200ms', width: '100%'
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            Quay về trang chủ
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={() => navigate('/orders')}
+              style={{
+                display: 'inline-block', padding: '15px 32px', borderRadius: 12,
+                backgroundColor: '#00A896', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer',
+                transition: 'transform 200ms', width: '100%',
+                boxShadow: '0 4px 14px rgba(0, 168, 150, 0.3)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Xem lịch sử đơn hàng
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                display: 'inline-block', padding: '13px 32px', borderRadius: 12,
+                backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: 600, fontSize: 15,
+                border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer',
+                transition: 'transform 200ms', width: '100%'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Quay về trang chủ
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -228,101 +231,28 @@ export default function CartPage() {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
-          <button onClick={() => showHistory ? setShowHistory(false) : isCheckout ? setIsCheckout(false) : navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'color 200ms', padding: 0 }}
+          <button onClick={() => isCheckout ? setIsCheckout(false) : navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'color 200ms', padding: 0 }}
             onMouseEnter={e => e.currentTarget.style.color = '#fff'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
           >
             <ArrowLeft size={20} />
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{showHistory ? 'Quay lại giỏ hàng' : isCheckout ? 'Quay lại giỏ hàng' : 'Quay lại cửa hàng'}</span>
+            <span style={{ fontSize: 14, fontWeight: 500 }}>{isCheckout ? 'Quay lại giỏ hàng' : 'Quay lại cửa hàng'}</span>
           </button>
           
-          {userSession && !showHistory && (
-            <button onClick={() => { setShowHistory(true); fetchHistoryOrders(userSession.id) }} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, transition: 'background 200ms' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
-              <FileText size={16} /> Đơn hàng của tôi
-            </button>
-          )}
+          <button onClick={() => navigate('/orders')} style={{ background: 'linear-gradient(135deg, rgba(0,168,150,0.2), rgba(77,166,255,0.2))', border: '1px solid rgba(77,166,255,0.35)', color: '#fff', padding: '10px 18px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, transition: 'all 200ms', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,168,150,0.35), rgba(77,166,255,0.35))'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,168,150,0.2), rgba(77,166,255,0.2))'; e.currentTarget.style.transform = 'translateY(0)' }}
+          >
+            <FileText size={16} color="#4DA6FF" /> Xem lịch sử đơn hàng
+          </button>
         </div>
 
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
-          {showHistory ? <FileText size={32} color="#4DA6FF" /> : isCheckout ? <CreditCard size={32} color="#FF8C42" /> : <ShoppingBag size={32} color="#FF8C42" />}
-          {showHistory ? 'Đơn hàng của tôi' : isCheckout ? 'Thanh toán' : 'Giỏ hàng của bạn'}
+          {isCheckout ? <CreditCard size={32} color="#FF8C42" /> : <ShoppingBag size={32} color="#FF8C42" />}
+          {isCheckout ? 'Thanh toán' : 'Giỏ hàng của bạn'}
         </h1>
 
-        {showHistory ? (
-          // History View
-          historyLoading ? (
-             <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.6)' }}>Đang tải lịch sử đơn hàng...</div>
-          ) : historyOrders.length === 0 ? (
-             <div style={{ textAlign: 'center', padding: '80px 0', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px dashed rgba(255,255,255,0.1)' }}>
-               <FileText size={64} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 24px' }} />
-               <h2 style={{ fontSize: 24, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 16 }}>Chưa có đơn hàng nào</h2>
-               <p style={{ color: 'rgba(255,255,255,0.5)' }}>Bạn chưa từng đặt hàng tại AquaCare.</p>
-             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 850, margin: '0 auto' }}>
-              {historyOrders.map(order => (
-                <div key={order.id} style={{ 
-                  backgroundColor: 'rgba(255,255,255,0.02)', 
-                  borderRadius: 20, 
-                  border: '1px solid rgba(255,255,255,0.06)', 
-                  padding: 24, 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  gap: 16,
-                  transition: 'transform 200ms, background-color 200ms, border-color 200ms',
-                  cursor: 'pointer'
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(77,166,255,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)' }}
-                  onClick={() => setDetailsModal({ show: true, order })}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>Đơn hàng <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>#{order.id}</span></span>
-                        {order.status === 'pending'
-                          ? <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 100, background: 'rgba(245,158,11,0.1)', color: '#FCD34D', fontSize: 12, fontWeight: 600 }}><Clock size={12} /> Đang xử lý</span>
-                          : <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 100, background: 'rgba(16,185,129,0.1)', color: '#6EE7B7', fontSize: 12, fontWeight: 600 }}><CheckCircle size={12} /> Đã hoàn thành</span>
-                        }
-                      </div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Đặt lúc {new Date(order.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#4DA6FF', marginBottom: 4 }}>{formatPrice(order.total_price)}</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{order.order_items?.length || 0} sản phẩm</div>
-                    </div>
-                  </div>
-
-                  {/* A tiny preview of products */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16, marginTop: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
-                      {order.order_items?.slice(0, 3).map((item: any, idx: number) => (
-                         <div key={idx} style={{ padding: '6px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>
-                           <span style={{ fontWeight: 600, color: '#fff' }}>{item.quantity}x</span> {item.product_name}
-                         </div>
-                      ))}
-                      {order.order_items?.length > 3 && (
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>+ {order.order_items.length - 3} sản phẩm khác</div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDetailsModal({ show: true, order }) }}
-                      style={{ background: 'none', border: 'none', color: '#4DA6FF', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'color 200ms' }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                      onMouseLeave={e => e.currentTarget.style.color = '#4DA6FF'}
-                    >
-                      Chi tiết <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        ) : cart.length === 0 && !isCheckout ? (
+        {cart.length === 0 && !isCheckout ? (
           <div style={{ textAlign: 'center', padding: '80px 0', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px dashed rgba(255,255,255,0.1)' }}>
             <ShoppingBag size={64} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 24px' }} />
             <h2 style={{ fontSize: 24, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 16 }}>Giỏ hàng trống</h2>
@@ -624,102 +554,7 @@ export default function CartPage() {
       `}</style>
 
       {/* Details Modal */}
-      {detailsModal.show && detailsModal.order && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <div style={{
-            background: '#0a1628',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 18, padding: '28px 32px', width: 500, maxWidth: '90vw',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            color: '#fff',
-            maxHeight: '90vh',
-            display: 'flex', flexDirection: 'column'
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Chi tiết đơn hàng</h3>
-              <button onClick={() => setDetailsModal({ show: false, order: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14, overflowY: 'auto', paddingRight: 8 }} className="custom-scrollbar">
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Mã đơn hàng:</span>
-                <span style={{ fontWeight: 700, fontFamily: 'monospace', color: '#4DA6FF' }}>{detailsModal.order.id}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Trạng thái:</span>
-                <span style={{ fontWeight: 600, color: detailsModal.order.status === 'pending' ? '#FCD34D' : '#6EE7B7' }}>
-                  {detailsModal.order.status === 'pending' ? 'Chờ duyệt'
-                    : detailsModal.order.status === 'delivered' ? 'Đã hoàn tất'
-                      : detailsModal.order.status === 'cancelled' ? 'Đã hủy' : 'Đang xử lý'}
-                </span>
-              </div>
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0 }}></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Người nhận:</span>
-                <span style={{ fontWeight: 600 }}>{detailsModal.order.shipping_name}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>SĐT / Email:</span>
-                <span>{detailsModal.order.shipping_phone} / {detailsModal.order.shipping_email}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Địa chỉ:</span>
-                <span>{detailsModal.order.shipping_address}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Thanh toán:</span>
-                <span>{detailsModal.order.payment_method === 'demo' ? 'V3 Demo miễn phí'
-                  : detailsModal.order.payment_method === 'transfer' ? 'Chuyển khoản' : 'COD (Thanh toán khi nhận hàng)'}</span>
-              </div>
-              {detailsModal.order.note && (
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>Ghi chú:</span>
-                  <span style={{ color: '#FCD34D', fontStyle: 'italic', background: 'rgba(245,158,11,0.1)', padding: '6px 10px', borderRadius: 6 }}>"{detailsModal.order.note}"</span>
-                </div>
-              )}
-              
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0 }}></div>
-              
-              <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>Sản phẩm ({detailsModal.order.order_items?.length || 0}):</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {detailsModal.order.order_items?.map((item: any, idx: number) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.05)', padding: '8px 12px', borderRadius: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{item.product_name}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Số lượng: {item.quantity}</div>
-                    </div>
-                    <div style={{ fontWeight: 600, color: '#4DA6FF' }}>{formatPrice(item.product_price * item.quantity)}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 16, borderTop: '1px dashed rgba(255,255,255,0.2)', flexShrink: 0 }}>
-                <span style={{ fontSize: 16, fontWeight: 600 }}>Tổng thanh toán:</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: '#5AE87D' }}>{formatPrice(detailsModal.order.total_price)}</span>
-              </div>
-            </div>
-
-            <button onClick={() => setDetailsModal({ show: false, order: null })} style={{
-              width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
-              background: '#4DA6FF', color: '#0a1628', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-              marginTop: 24, transition: 'filter 200ms', flexShrink: 0
-            }}
-              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-              onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
-      )}
-
-    </div>
+      </div>
   )
 }
 
