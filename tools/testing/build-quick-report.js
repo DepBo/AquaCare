@@ -50,7 +50,7 @@ for (const item of all) {
     `${item.id} — ${item.name}\nStatus: ${item.status}\nSource: ${item.source}\n\n${item.detail}\n`, 'utf8');
 }
 const counts = status => all.filter(item => item.status === status).length;
-const expectedBackend = isV2 ? 30 : 21;
+const expectedBackend = isV2 ? 33 : 24;
 const expectedFlutter = isV2 ? 83 : 76;
 const backendExit = Number(process.argv[2]);
 const flutterExit = Number(process.argv[3]);

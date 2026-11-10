@@ -41,7 +41,7 @@ function addPlaywright() {
         const status = finalStatuses.length === 0 ? 'SKIP'
           : finalStatuses.every(value => value === 'passed' || value === 'expected') ? 'PASS'
           : finalStatuses.every(value => value === 'skipped') ? 'SKIP' : 'FAIL';
-        const id = /^\[([A-Z]+-\d+)\]/.exec(spec.title)?.[1];
+        const id = /^\[([A-Z]+-[A-Z0-9-]+)\]/.exec(spec.title)?.[1];
         const evidence = [{ label: 'Playwright', href: 'playwright-html/index.html' }];
         if (id) {
           const evidenceDir = path.join(dir, 'evidence', id);

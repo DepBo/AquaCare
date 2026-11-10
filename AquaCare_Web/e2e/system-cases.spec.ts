@@ -1186,3 +1186,56 @@ test('[AUTH-14] guest and customer cannot enter admin or staff by direct URL or 
   expect(outcomes.every(item => item.sensitiveRequests.length === 0)).toBe(true)
   expect(privateResponse.status()).toBe(403)
 })
+
+test('[RELAY-01-HIGH-WATER] manual pump ON is blocked with 409 when Y26 hardware sensor reports high water', async ({ page }) => {
+  const db = serviceDb()
+  const fixture = JSON.parse(await readFile(join('..', 'test-results', 'local-fixtures.json'), 'utf8'))
+  const tankName = `QA High Water ${Date.now()}`
+  const mac = `02:HW:${Date.now().toString(16).slice(-8).toUpperCase().match(/.{1,2}/g)!.join(':')}`
+  let tankId: number | undefined
+  let deviceId: number | undefined
+  try {
+    const tank = await db.from('tanks').insert({
+      user_id: fixture.a, tank_name: tankName, water_volume_liter: 120,
+    }).select('id').single()
+    if (tank.error) throw tank.error
+    tankId = tank.data.id
+    const device = await db.from('devices').insert({
+      mac_address: mac, firmware_version: 'V3', is_simulator: false, is_active: true,
+      tank_id: tankId, relay_pump_state: false,
+    }).select('id').single()
+    if (device.error) throw device.error
+    deviceId = device.data.id
+    const telemetry = await db.from('telemetry_logs').insert({
+      device_id: deviceId, temperature: 26, ph_value: 7, tds_value: 200, water_level_ok: true,
+    })
+    if (telemetry.error) throw telemetry.error
+
+    await loginCustomer(page)
+    await page.locator('[data-tour-target="pond-select"] > button').click()
+    await page.locator('[data-tour-target="pond-select"]').getByRole('button', { name: tankName }).click()
+    await page.getByRole('button', { name: 'Điều khiển thiết bị' }).click()
+    const pumpSwitch = page.getByRole('switch', { name: 'Bật Máy bơm nước' })
+    await expect(pumpSwitch).toBeVisible()
+    await expect(pumpSwitch).toHaveAttribute('aria-checked', 'false')
+
+    const relayResponsePromise = page.waitForResponse(
+      response => response.url().includes('/api/device/relay') && response.request().method() === 'POST',
+    )
+    await pumpSwitch.click()
+    const relayResponse = await relayResponsePromise
+    expect(relayResponse.status()).toBe(409)
+    await expect(page.getByText('Mực nước đã đạt ngưỡng cao. Không thể bật máy bơm.')).toBeVisible()
+    await expect(pumpSwitch).toHaveAttribute('aria-checked', 'false')
+    const { data: afterDevice } = await db.from('devices').select('relay_pump_state').eq('id', deviceId).single()
+    expect(afterDevice?.relay_pump_state).toBe(false)
+    await capture(page, 'RELAY-01-HIGH-WATER', 'blocked-toast.png')
+  } finally {
+    if (deviceId) {
+      await db.from('relay_logs').delete().eq('device_id', deviceId)
+      await db.from('telemetry_logs').delete().eq('device_id', deviceId)
+      await db.from('devices').delete().eq('id', deviceId)
+    }
+    if (tankId) await db.from('tanks').delete().eq('id', tankId)
+  }
+})

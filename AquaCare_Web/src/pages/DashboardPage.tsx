@@ -1176,7 +1176,9 @@ export default function DashboardPage() {
         body: JSON.stringify({ pin, state: desired, tank_id: tankId, relay_field: relayField }),
         signal: controller.signal
       })
-      if (!response.ok) throw new Error(`Relay request failed: ${response.status}`)
+      if (!response.ok) throw new Error(response.status === 409
+        ? 'Mực nước đã đạt ngưỡng cao. Không thể bật máy bơm.'
+        : `Relay request failed: ${response.status}`)
       if (relayRequestsRef.current[kind] !== request || activeDeviceRef.current !== tankId) return
 
       setState(desired)
@@ -1199,7 +1201,9 @@ export default function DashboardPage() {
       console.error('Relay control error:', error)
       if (relayRequestsRef.current[kind] === request && activeDeviceRef.current === tankId) {
         clearRelayVisual(kind, request)
-        showNotification('Không xác nhận được lệnh. Vui lòng kiểm tra trạng thái thiết bị.', 'error')
+        showNotification(error instanceof Error && error.message.startsWith('Mực nước đã đạt ngưỡng cao')
+          ? error.message
+          : 'Không xác nhận được lệnh. Vui lòng kiểm tra trạng thái thiết bị.', 'error')
       }
     } finally {
       clearTimeout(timeout)

@@ -2,7 +2,7 @@
 
 Ngày soạn: **24/10/2026**. Cơ sở: mã nguồn trong working tree hiện tại, bao gồm thay đổi relay active-low chưa commit.
 
-**178 test case, 15 nhóm mã nghiệp vụ.** Một test case có thể có nhiều lượt chạy theo nền tảng, role hoặc dữ liệu biên.
+**180 test case, 15 nhóm mã nghiệp vụ.** Một test case có thể có nhiều lượt chạy theo nền tảng, role hoặc dữ liệu biên.
 
 **Trạng thái khi soạn: CHƯA CHẠY.** Đây là đặc tả kiểm thử, không phải báo cáo hệ thống đã đạt kiểm thử. Không chạy ứng dụng, API, SQL, MQTT, migration hay điều khiển thiết bị để lập tài liệu này.
 
@@ -134,13 +134,13 @@ Nguồn: `AquaCare_Backend/server.js`, `config/species_thresholds.js`, `config/f
 
 ## 6. Điều khiển relay và lịch thiết bị
 
-Nguồn: `AquaCare_Backend/server.js`, `timer_worker.js`; web `pages/DashboardPage.tsx`, `components/DeviceControlPanel.tsx`, `deviceScheduleTime.ts`; mobile `screens/control_screen.dart`, `services/supabase_service.dart`; hai migration trong `migrations/`.
+Nguồn: `AquaCare_Backend/server.js`, `timer_worker.js`, `pump_high_water.js`; web `pages/DashboardPage.tsx`, `components/DeviceControlPanel.tsx`, `deviceScheduleTime.ts`; mobile `screens/control_screen.dart`, `services/supabase_service.dart`; hai migration trong `migrations/`.
 
-**Hợp đồng hiện tại:** trạng thái nghiệp vụ `true=ON`, `false=OFF`; active-low chuyển ON thành MQTT `cmd: OFF`, OFF thành `cmd: ON`. Áp dụng cả lệnh tay và worker. Pump=pin3, Light=pin1, Aerator=pin2. Log vẫn dùng ON/OFF theo nghiệp vụ. Cần xác nhận tải vật lý riêng, vì publish thành công không đồng nghĩa relay đã tác động.
+**Hợp đồng hiện tại:** trạng thái nghiệp vụ `true=ON`, `false=OFF`; active-low chuyển ON thành MQTT `cmd: OFF`, OFF thành `cmd: ON`. Áp dụng cả lệnh tay và worker. Pump=pin3, Light=pin1, Aerator=pin2. Log vẫn dùng ON/OFF theo nghiệp vụ. Cần xác nhận tải vật lý riêng, vì publish thành công không đồng nghĩa relay đã tác động. Với thiết bị phần cứng (`is_simulator=false`), khi Y26 báo chạm mức nước cao (`water_level_ok=true`), backend tự ngắt bơm, chặn lệnh bật bơm thủ công (409) và bỏ qua lịch hẹn bật bơm.
 
 | ID | Ưu tiên / nền tảng | Tiền điều kiện, dữ liệu và bước thực hiện | Kết quả mong đợi |
 |---|---|---|---|
-| RELAY-01 | P0 W/M/B/I | Mỗi relay ban đầu OFF → bấm ON → đối chiếu API, MQTT, DB, tải | Đúng pin/MAC/bể; cmd OFF; DB true, UI ON, log USER ON; tải thử bật |
+| RELAY-01 | P0 W/M/B/I | Mỗi relay ban đầu OFF; cảm biến Y26 không chạm mức nước cao (hoặc thiết bị simulator) → bấm ON → đối chiếu API, MQTT, DB, tải | Đúng pin/MAC/bể; cmd OFF; DB true, UI ON, log USER ON; tải thử bật |
 | RELAY-02 | P0 W/M/B/I | Mỗi relay ban đầu ON → bấm OFF → đối chiếu các lớp | cmd ON; DB false, UI OFF, log USER OFF; tải thử tắt |
 | RELAY-03 | P0 W/M/I | Điều khiển A1 rồi đổi A2; giữ B1 kết nối | Chỉ thiết bị được chọn thay đổi; relay khác và bể khác không đổi |
 | RELAY-04 | P1 W/M/B | Bấm nhanh cùng nút nhiều lần lúc request pending | Không tạo chuỗi đảo trạng thái ngoài ý định; pending rõ; kết quả cuối khớp nguồn dữ liệu |
@@ -149,8 +149,10 @@ Nguồn: `AquaCare_Backend/server.js`, `timer_worker.js`; web `pages/DashboardPa
 | RELAY-07 | P0 B/D/I | Publish thành công nhưng update DB lỗi → thử lại từ UI | [YC] Báo lỗi và có cách đồng bộ lại; không đảo relay lần nữa chỉ vì retry; ghi nhận log/tải/DB lệch nếu có |
 | RELAY-08 | P1 W/M | API treo quá timeout rồi trả muộn | Loading kết thúc, có thông báo; phản hồi muộn không ghi đè thao tác mới; user kiểm tra trạng thái được |
 | RELAY-09 | P0 W/M/D | Hai máy cùng điều khiển một relay với ý định trái nhau | Trạng thái cuối nhất quán theo lệnh được xử lý sau; không log thành công cho lệnh thất bại; không nhấp nháy vô hạn |
+| RELAY-01-HIGH-WATER | P0 W/M/B/I | Thiết bị phần cứng (`is_simulator=false`) có telemetry gần nhất Y26 chạm mức nước cao (`water_level_ok=true`) → bấm ON máy bơm trên Web/Mobile | Backend trả 409 Conflict; không phát MQTT bật bơm; DB giữ `relay_pump_state=false`; UI hiện thông báo "Mực nước đã đạt ngưỡng cao. Không thể bật máy bơm." (Thiết bị simulator không bị chặn) |
+| RELAY-AUTO-OFF-HIGH-WATER | P0 B/D/I | Thiết bị phần cứng (`is_simulator=false`) đang bật bơm (`relay_pump_state=true`) → nhận telemetry MQTT có Y26 báo chạm mức nước cao (`pin5=1` / `water=true`) | Backend gửi ngay lệnh MQTT tắt bơm (`pin: 3, cmd: ON` theo active-low); cập nhật DB `relay_pump_state=false`; ghi `relay_logs` (`Pump, OFF, AUTO`); không gửi trùng lặp khi vẫn đang cao |
 | SCH-01 | P1 W/M/D | Tạo lịch một lần ngày tương lai ON08:00/OFF09:00 | Lưu device_schedules đúng device/relay/run_date; load lại đúng; không ghi sáu cột cũ |
-| SCH-02 | P1 W/M/B | Tạo lịch hàng ngày ON08:00/OFF09:00 → giả lập hai ngày | is_daily true, run_date null; mỗi mốc chạy một lần/ngày; ngày thứ hai vẫn chạy |
+| SCH-02 | P1 W/M/B | Tạo lịch hàng ngày ON08:00/OFF09:00 (với lịch bật Bơm phần cứng thì nước phải dưới ngưỡng cao Y26; khi Y26 đang cao thì lịch bật Bơm được bỏ qua) → giả lập hai ngày | is_daily true, run_date null; mỗi mốc hợp lệ chạy một lần/ngày; ngày thứ hai vẫn chạy; lịch bật Bơm khi Y26 cao bị bỏ qua, không phát MQTT |
 | SCH-03 | P0 B/I | Lịch đến hạn của từng relay → kiểm tra payload và tải | Cùng ánh xạ active-low như lệnh tay; relay_logs AUTO dùng trạng thái nghiệp vụ |
 | SCH-04 | P1 B/D | Worker tick nhiều lần cùng phút và sau restart | on/off_executed_on ngăn lặp; không thêm log/lệnh trùng cho mốc đã hoàn thành |
 | SCH-05 | P1 W/M/B | Lịch một lần ON23:59/OFF00:01 → qua nửa đêm | ON ngày chọn, OFF ngày sau theo Việt Nam; hoàn tất thì inactive |

@@ -102,11 +102,18 @@ app.post('/api/device/relay', async (req, res) => {
     if (!tank) return res.status(403).json({ error: "Tank access denied" });
 
     // Lấy MAC Address từ DB
-    const { data: device, error: fetchErr } = await supabase.from('devices').select('mac_address').eq('tank_id', tank_id).single();
+    const { data: device, error: fetchErr } = await supabase.from('devices').select('id, mac_address, is_simulator').eq('tank_id', tank_id).single();
     if (fetchErr || !device || !device.mac_address) {
       return res.status(404).json({ error: "Device not found" });
     }
     const mac = device.mac_address;
+
+    if (pin === 3 && state === true && device.is_simulator !== true) {
+      const { isHighWaterNow } = require('./pump_high_water');
+      if (await isHighWaterNow(supabase, device.id)) {
+        return res.status(409).json({ error: 'High water level: pump cannot be turned on' });
+      }
+    }
 
     // 1. Lập tức bắn lệnh MQTT để phần cứng nhận liền (0 delay)
     const command = { pin: pin, cmd: state ? "OFF" : "ON" }; // Active-low relay
@@ -207,6 +214,7 @@ if (ISOLATED_TEST) {
 }
 
 const { startTimerWorker } = require('./timer_worker');
+const { stopPumpAtHighWater } = require('./pump_high_water');
 if (!ISOLATED_TEST) startTimerWorker({ supabase, mqttClient });
 
 // Hàm kiểm tra và lưu cảnh báo (Tích hợp bộ lọc chống spam & gộp trạng thái)
@@ -414,6 +422,12 @@ mqttClient.on('message', async (topic, message) => {
     }
 
     console.log(`✅ Đã lưu dữ liệu phần cứng lên Supabase! (Temp: ${state.temp} | pH: ${state.ph} | TDS: ${state.tds} | Water: ${state.water_level_ok})`);
+
+    // Y26 is mounted at the upper water limit. Only an explicit wet reading
+    // from real hardware may stop the pump; missing readings must not trigger it.
+    if (water !== null) {
+      await stopPumpAtHighWater({ supabase, mqttClient, device, water });
+    }
 
     // TỰ ĐỘNG HÓA: Nếu thiết bị đang ở mode simulator, chuyển nó thành mode phần cứng (false)
     if (device.is_simulator === true) {

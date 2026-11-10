@@ -3,6 +3,7 @@ const RELAYS = {
   Light: { field: 'relay_light_state', pin: 1 },
   Aerator: { field: 'relay_aerator_state', pin: 2 },
 };
+const { isHighWaterNow } = require('./pump_high_water');
 
 function vietnamMinute(date) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
@@ -59,7 +60,7 @@ function createScheduleChecker({ supabase, mqttClient, now = () => new Date(), l
       for (const key of processed.keys()) if (!key.startsWith(`${minute}:`)) processed.delete(key);
 
       const { data: schedules, error } = await supabase.from('device_schedules')
-        .select('*, devices(id, tank_id, mac_address, is_active, relay_pump_state, relay_light_state, relay_aerator_state)')
+        .select('*, devices(id, tank_id, mac_address, is_active, is_simulator, relay_pump_state, relay_light_state, relay_aerator_state)')
         .eq('is_active', true);
       if (error) throw error;
 
@@ -74,6 +75,11 @@ function createScheduleChecker({ supabase, mqttClient, now = () => new Date(), l
         if (progress.complete) continue;
 
         try {
+          if (schedule.relay_name === 'Pump' && device.is_simulator === false && due.state === true &&
+              await isHighWaterNow(supabase, device.id)) {
+            logger.log(`Bỏ qua lịch bật bơm ${schedule.id}: Y26 đang chạm mức nước cao.`);
+            continue;
+          }
           const needsCommand = device[relay.field] !== due.state;
           if (needsCommand && !progress.published) {
             await publishCommand(mqttClient, `iras-rag/command/${device.mac_address}`, {

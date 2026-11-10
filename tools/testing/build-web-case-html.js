@@ -17,7 +17,7 @@ const rows = specs.map((spec, index) => {
   const runs = (spec.tests || []).flatMap(test => test.results || []);
   const passed = runs.length > 0 && runs.every(run => run.status === 'passed');
   const seconds = (runs.reduce((sum, run) => sum + (run.duration || 0), 0) / 1000).toFixed(2);
-  const id = /^\[([A-Z]+-\d+)\]/.exec(spec.title)?.[1];
+  const id = /^\[([A-Z]+-[A-Z0-9-]+)\]/.exec(spec.title)?.[1];
   const folder = id && path.join(results, 'evidence', id);
   const files = folder && fs.existsSync(folder) ? fs.readdirSync(folder).filter(file => /\.(png|jpg|jpeg)$/i.test(file)) : [];
   const evidence = files.map(file => `<a href="evidence/${encodeURIComponent(id)}/${encodeURIComponent(file)}">${escape(file)}</a>`).join(', ') || '<span>Chi tiết trong Playwright report</span>';

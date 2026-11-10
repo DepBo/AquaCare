@@ -2234,7 +2234,7 @@ TRANG THAI        : Ready for Testing
 NGUOI PHU TRACH   : QA / Tester Team
 ------------------------------------------------------------------------------------------
 1. DIEU KIEN TIEN QUYET (PRECONDITIONS):
-   Thiet bi dang online, relay_pump_state = false
+   Thiet bi dang online, relay_pump_state = false, cam bien muc nuoc cao Y26 chua cham nuoc (hoac thiet bi simulator)
 2. DU LIEU KIEM THU (TEST DATA / INPUT):
    Toggle switch: ON
 3. CAC BUOC THUC HIEN (TEST STEPS):

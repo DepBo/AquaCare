@@ -285,11 +285,12 @@ try {
     'GUIDE-02' = @{ Suite = 'Playwright web desktop and phone smoke tests'; Detail = 'video element on phone' }
     'MSET-02' = @{ Suite = 'Flutter mobile widget tests'; Detail = 'empty, short and reused password validation' }
     'SAFE-01' = @{ Suite = 'Backend unit and safety tests'; Detail = 'backend URL and credential guard' }
+    'RELAY-AUTO-OFF-HIGH-WATER' = @{ Suite = 'Backend unit and safety tests'; Detail = 'stopPumpAtHighWater unit test (simulated Supabase & MQTT)' }
   }
   $caseCount = 0
   foreach ($source in $caseSources) {
     foreach ($line in (Get-Content -LiteralPath $source.Path)) {
-      if ($line -match '^\| ([A-Z]+-\d+) \|') {
+      if ($line -match '^\| ([A-Z]+-[A-Z0-9-]+) \|') {
         $caseCount++
         $id = $matches[1]
         $state = 'NOT RUN IN FULL'

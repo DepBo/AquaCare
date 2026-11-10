@@ -18,7 +18,7 @@ const descriptions = new Map();
 for (const name of ['AQUACARE_SYSTEM_TEST_CASES.md', 'AQUACARE_TEST_CASES_ADDENDUM_2026-10-28.md']) {
   const source = read(path.join(root, 'docs', 'testing', name));
   for (const line of source.split(/\r?\n/)) {
-    const match = /^\|\s*([A-Z]+-\d+)\s*\|(.+)\|$/.exec(line);
+    const match = /^\|\s*([A-Z]+-[A-Z0-9-]+)\s*\|(.+)\|$/.exec(line);
     if (!match) continue;
     const columns = match[2].split('|').map(value => value.trim());
     descriptions.set(match[1], columns[1] || '');
@@ -27,7 +27,7 @@ for (const name of ['AQUACARE_SYSTEM_TEST_CASES.md', 'AQUACARE_TEST_CASES_ADDEND
 
 const cases = [];
 for (const line of matrix.split(/\r?\n/)) {
-  const match = /^\|\s*([A-Z]+-\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|/.exec(line);
+  const match = /^\|\s*([A-Z]+-[A-Z0-9-]+)\s*\|\s*([^|]+)\|\s*([^|]+)\|/.exec(line);
   if (!match) continue;
   const [, id, source, status] = match;
   const evidenceDir = path.join(resultsDir, 'evidence', id);

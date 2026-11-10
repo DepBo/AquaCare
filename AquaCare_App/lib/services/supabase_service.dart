@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/api_config.dart';
 
+class PumpHighWaterException implements Exception {
+  const PumpHighWaterException();
+}
+
 class SupabaseService {
   SupabaseService._privateConstructor() : client = Supabase.instance.client;
   @visibleForTesting
@@ -589,6 +593,10 @@ class SupabaseService {
         debugPrint(
           '✅ [MQTT API]: Đã gửi lệnh bật/tắt $relayType thành $newState cho bể $tankId (0-delay)',
         );
+      } else if (relayType == 'pump' &&
+          newState &&
+          response.statusCode == 409) {
+        throw PumpHighWaterException();
       } else {
         throw Exception(
           'API trả về lỗi ${response.statusCode}: ${response.body}',

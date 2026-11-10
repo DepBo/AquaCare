@@ -18,6 +18,7 @@ class _ControlScreenState extends State<ControlScreen> {
   Stream<List<Map<String, dynamic>>>? _scheduleStream;
   int? _scheduleDeviceId;
   bool _updatingDeviceActive = false;
+  final Set<String> _updatingRelays = {};
 
   @override
   void initState() {
@@ -118,6 +119,31 @@ class _ControlScreenState extends State<ControlScreen> {
       _showNotification('Không thể đổi trạng thái thiết bị. Vui lòng thử lại.', error: true);
     } finally {
       if (mounted) setState(() => _updatingDeviceActive = false);
+    }
+  }
+
+  Future<void> _changeRelayState(String relayType, bool value) async {
+    if (_updatingRelays.contains(relayType)) return;
+    final tankId = widget.tankId;
+    setState(() => _updatingRelays.add(relayType));
+    try {
+      await SupabaseService.instance.updateRelayState(tankId, relayType, value);
+    } on PumpHighWaterException {
+      if (mounted && widget.tankId == tankId) {
+        _showNotification(
+          'Mực nước đã đạt ngưỡng cao. Không thể bật máy bơm.',
+          error: true,
+        );
+      }
+    } catch (_) {
+      if (mounted && widget.tankId == tankId) {
+        _showNotification(
+          'Không xác nhận được lệnh. Vui lòng kiểm tra trạng thái thiết bị.',
+          error: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _updatingRelays.remove(relayType));
     }
   }
 
@@ -454,11 +480,9 @@ class _ControlScreenState extends State<ControlScreen> {
                 value: isOn,
                 activeThumbColor: activeColor,
                 activeTrackColor: activeColor.withValues(alpha: 0.3),
-                onChanged: (value) => SupabaseService.instance.updateRelayState(
-                  widget.tankId,
-                  relayType,
-                  value,
-                ),
+                onChanged: _updatingRelays.contains(relayType)
+                    ? null
+                    : (value) => _changeRelayState(relayType, value),
               ),
             ],
           ),

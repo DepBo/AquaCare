@@ -2,9 +2,9 @@
 
 Chạy từ thư mục gốc (Docker Desktop phải đang mở):
 
-- `RUN_CORE_TESTS.cmd`: 21 bài backend unit, 76 bài Flutter widget và 45 bài Playwright web trên Supabase local (tổng 142 bài); không cần USB.
+- `RUN_CORE_TESTS.cmd`: 24 bài backend unit, 76 bài Flutter widget và 42 bài Playwright web trên Supabase local (tổng 142 bài); không cần USB.
 - `RUN_CORE_TESTS_USB.cmd`: như trên, thêm 40 bài Flutter integration trực tiếp trên điện thoại Android cắm USB với flavor QA (tổng 182 bài).
-- `RUN_CORE_TESTS_DEMO.cmd`: như bản USB, nhưng 45 bài Playwright tự động mở cửa sổ Chrome để hội đồng xem thao tác web. Bài Flutter chạy trên điện thoại thật; có thể dùng scrcpy để chiếu màn hình điện thoại. Không cần bấm Run trong Playwright UI.
+- `RUN_CORE_TESTS_DEMO.cmd`: như bản USB, nhưng 42 bài Playwright tự động mở cửa sổ Chrome để hội đồng xem thao tác web. Bài Flutter chạy trên điện thoại thật; có thể dùng scrcpy để chiếu màn hình điện thoại. Không cần bấm Run trong Playwright UI.
 
 Playwright kiểm tra giao diện web, đơn hàng, backend, quyền truy cập và dữ liệu local. Bốn mươi bài Flutter USB kiểm tra giao diện admin/staff, form đăng nhập, đăng ký, đặt lại mật khẩu, hiện/ẩn mật khẩu, validation tên và thể tích bể, chọn loài cá, quay lại bước trước, bước thiết bị và validation loài cá trong admin; không ghi dữ liệu. Chưa thực hiện đăng nhập, tạo bể hoặc điều khiển relay thật trên điện thoại.
 

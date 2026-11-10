@@ -2,7 +2,7 @@ param([switch]$V2)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $reportDir = Join-Path $root $(if ($V2) { 'test-results\quick-v2' } else { 'test-results\quick' })
-$expectedBackend = if ($V2) { 30 } else { 21 }
+$expectedBackend = if ($V2) { 33 } else { 24 }
 $expectedFlutter = if ($V2) { 83 } else { 76 }
 New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
 $originalOutputEncoding = [Console]::OutputEncoding
