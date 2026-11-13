@@ -1207,7 +1207,7 @@ test('[RELAY-01-HIGH-WATER] manual pump ON is blocked with 409 when Y26 hardware
     if (device.error) throw device.error
     deviceId = device.data.id
     const telemetry = await db.from('telemetry_logs').insert({
-      device_id: deviceId, temperature: 26, ph_value: 7, tds_value: 200, water_level_ok: true,
+      device_id: deviceId, temp: 26, ph: 7, tds: 200, water_level_ok: true, recorded_at: new Date().toISOString(),
     })
     if (telemetry.error) throw telemetry.error
 

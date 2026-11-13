@@ -51,7 +51,7 @@ export default function SignupPage() {
         role,
       }))
 
-      navigate('/dashboard')
+      navigate(window.matchMedia('(max-width: 767px)').matches ? '/' : '/dashboard')
     }
 
     handleOAuthCallback()

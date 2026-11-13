@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { InnerMoonToggle } from '../components/InnerMoonToggle'
-import { clearVerifiedRole } from '../authRoleCache'
+import { clearLocalAuthSession } from '../authRoleCache'
 import AdminDashboardPreview from './AdminDashboardPreview'
 import './AdminHeader.css'
 import './AdminPage.css'
@@ -439,7 +439,7 @@ export default function AdminPage() {
   }, [])
 
   const handleLogout = async () => {
-    clearVerifiedRole()
+    clearLocalAuthSession()
     await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')

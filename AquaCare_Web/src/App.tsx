@@ -24,11 +24,11 @@ import { CartProvider } from './contexts/CartContext'
 import AdminPage from './pages/AdminPage'
 import StaffPage from './pages/StaffPage'
 import NotFoundPage from './pages/NotFoundPage'
-import { clearVerifiedRole, getVerifiedRole, rememberVerifiedRole } from './authRoleCache'
+import { clearLocalAuthSession, clearVerifiedRole, getVerifiedRole, rememberVerifiedRole } from './authRoleCache'
 
 const authClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL || 'https://aquacare-p78r.onrender.com',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+  import.meta.env.VITE_SUPABASE_URL || 'https://nwmeysspxfgqxtvxeuil.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_12KQiSNlKkwu435CF_qXZQ_ZXMlzU87'
 )
 
 type ProtectedRole = 'admin' | 'staff' | 'customer'
@@ -88,7 +88,29 @@ function RoleRoute({ role, children }: { role: ProtectedRole; children: ReactNod
     const checkRole = async () => {
       try {
         // The session supplies an ID for the lookup; only getUser verifies it.
-        const { data: { session }, error: sessionError } = await authClient.auth.getSession()
+        let { data: { session }, error: sessionError } = await authClient.auth.getSession()
+
+        // Thử khôi phục session nếu bị mất tạm thời nhưng localStorage vẫn còn refresh_token
+        if ((!session || sessionError) && localStorage.getItem('refresh_token')) {
+          const storedAccess = localStorage.getItem('access_token') || ''
+          const storedRefresh = localStorage.getItem('refresh_token') || ''
+          if (storedRefresh) {
+            try {
+              const { data: restored, error: restoreErr } = await authClient.auth.setSession({
+                access_token: storedAccess,
+                refresh_token: storedRefresh
+              })
+              if (!restoreErr && restored?.session) {
+                session = restored.session
+                sessionError = null
+                if (session.access_token) localStorage.setItem('access_token', session.access_token)
+                if (session.refresh_token) localStorage.setItem('refresh_token', session.refresh_token)
+              }
+            } catch (rErr) {
+              console.log('Không thể khôi phục phiên qua refresh_token:', rErr)
+            }
+          }
+        }
         if (sessionError || !session) throw sessionError || new Error('No session')
         const [authResult, roleResult] = await Promise.all([
           authClient.auth.getUser(),
@@ -106,6 +128,7 @@ function RoleRoute({ role, children }: { role: ProtectedRole; children: ReactNod
         rememberVerifiedRole(user.id, actualRole)
         setDecision({ role, destination: destinationForRole(actualRole, role) })
       } catch {
+        clearLocalAuthSession()
         if (!cancelled) setDecision({ role, destination: '/login' })
       }
     }
@@ -120,6 +143,20 @@ function RoleRoute({ role, children }: { role: ProtectedRole; children: ReactNod
   if (currentDecision?.role !== role) return <ProtectedPageSkeleton />
   if (currentDecision.destination) return <Navigate to={currentDecision.destination} replace />
   return <>{children}</>
+}
+
+function CustomerDashboardRoute() {
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)')
+    const update = () => setMobile(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+
+  if (mobile) return <Navigate to="/" replace />
+  return <RoleRoute role="customer"><DashboardPage /></RoleRoute>
 }
 
 function ScrollToHash() {
@@ -204,8 +241,13 @@ function AppRoutes() {
   useEffect(() => {
     const { data: { subscription } } = authClient.auth.onAuthStateChange((event, session) => {
       const cached = getVerifiedRole()
-      if (event === 'SIGNED_OUT' || (cached && session && cached.userId !== session.user.id)) {
+      if (event === 'SIGNED_OUT') {
+        clearLocalAuthSession()
+      } else if (cached && session && cached.userId !== session.user.id) {
         clearVerifiedRole()
+      } else if (session) {
+        if (session.access_token) localStorage.setItem('access_token', session.access_token)
+        if (session.refresh_token) localStorage.setItem('refresh_token', session.refresh_token)
       }
     })
     return () => subscription.unsubscribe()
@@ -220,7 +262,7 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ForgotPasswordPage />} />
         {/* <Route path="/game" element={<FishFarmGame />} /> */}
-        <Route path="/dashboard" element={<RoleRoute role="customer"><DashboardPage /></RoleRoute>} />
+        <Route path="/dashboard" element={<CustomerDashboardRoute />} />
         <Route path="/orders" element={<OrderHistoryPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<RoleRoute role="admin"><AdminPage /></RoleRoute>} />

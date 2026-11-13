@@ -70,6 +70,9 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
 
       localStorage.setItem('cs_auth', 'true')
       localStorage.setItem('access_token', session.access_token)
+      if (session.refresh_token) {
+        localStorage.setItem('refresh_token', session.refresh_token)
+      }
       localStorage.setItem('cs_role', role)
       localStorage.setItem('user_info', JSON.stringify({
         id: user.id,
@@ -78,12 +81,13 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
         avatar_url: meta.avatar_url || meta.picture || '',
         role,
       }))
+      window.dispatchEvent(new Event('aquacare:auth-changed'))
 
       if (roleVerified) onAuthenticated?.(user.id, role)
 
       if (role === 'admin') navigate('/admin')
       else if (role.startsWith('staff')) navigate('/staff')
-      else navigate('/dashboard')
+      else navigate(window.matchMedia('(max-width: 767px)').matches ? '/' : '/dashboard')
     }
 
     handleOAuthCallback()
@@ -136,11 +140,12 @@ export default function LoginPage({ onAuthenticated }: { onAuthenticated?: (user
       }
       localStorage.setItem('user_info', JSON.stringify(data.user_info))
       localStorage.setItem('cs_role', data.user_info.role)
+      window.dispatchEvent(new Event('aquacare:auth-changed'))
       if (sessionReady) onAuthenticated?.(data.user_info.id, data.user_info.role)
 
       if (data.user_info.role === 'admin') navigate('/admin')
       else if (data.user_info.role.startsWith('staff')) navigate('/staff')
-      else navigate('/dashboard')
+      else navigate(window.matchMedia('(max-width: 767px)').matches ? '/' : '/dashboard')
 
     } catch (err: any) {
       setError(err.message)

@@ -4,7 +4,7 @@ import FeedbackButton from '../components/FeedbackButton'
 import '../components/SidebarNature.css'
 import './AddTankPicker.css'
 import DeviceControlPanel from '../components/DeviceControlPanel'
-import { clearVerifiedRole } from '../authRoleCache'
+import { clearLocalAuthSession } from '../authRoleCache'
 import InnerMoonToggle from '../components/InnerMoonToggle'
 import { getSpeciesThresholds } from '../components/speciesThresholds'
 import type { SpeciesRanges } from '../components/speciesThresholds'
@@ -1699,12 +1699,12 @@ export default function DashboardPage() {
   }, [tick, activeDevice, ponds, fishSpecies])
 
   const handleLogout = async () => {
-    clearVerifiedRole()
+    clearLocalAuthSession()
     await supabase.auth.signOut()
     localStorage.removeItem('cs_auth')
     localStorage.removeItem('cs_role')
     localStorage.removeItem('user_info')
-    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     navigate('/login')
   }
 
@@ -3265,7 +3265,7 @@ export default function DashboardPage() {
                     >
                       <div className="edit-tank-channel-content">
                         <Smartphone size={17} color={notifyViaAppNoti ? '#00A896' : 'currentColor'} />
-                        <span>Thông báo app</span>
+                        <span>App</span>
                       </div>
                       <span className="edit-tank-channel-check">
                         {notifyViaAppNoti && <Check size={12} strokeWidth={3} />}

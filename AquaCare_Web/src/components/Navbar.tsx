@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, ShoppingCart } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 import { useCart } from '../contexts/CartContext'
+import { clearLocalAuthSession } from '../authRoleCache'
 interface NavbarProps {
   scrollY: number
 }
@@ -27,11 +29,57 @@ export default function Navbar({ scrollY }: NavbarProps) {
   const [userInfo, setUserInfo] = useState<any>(null)
 
   useEffect(() => {
-    setIsAuth(!!localStorage.getItem('cs_auth'))
-    setUserRole(localStorage.getItem('cs_role') || '')
-    const info = localStorage.getItem('user_info')
-    if (info) {
-      try { setUserInfo(JSON.parse(info)) } catch(e) {}
+    const syncAuth = () => {
+      const hasAuth = !!localStorage.getItem('cs_auth')
+      setIsAuth(hasAuth)
+      setUserRole(localStorage.getItem('cs_role') || '')
+      const info = localStorage.getItem('user_info')
+      if (info) {
+        try { setUserInfo(JSON.parse(info)) } catch(e) { setUserInfo(null) }
+      } else {
+        setUserInfo(null)
+      }
+    }
+
+    // 1. Đồng bộ tức thời từ localStorage
+    syncAuth()
+
+    // 2. Lắng nghe event khi auth thay đổi (login, logout, session expired)
+    window.addEventListener('aquacare:auth-changed', syncAuth)
+
+    // 3. Nếu localStorage có cs_auth: kiểm tra xác thực ngầm với Supabase để loại bỏ zombie state
+    if (localStorage.getItem('cs_auth')) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nwmeysspxfgqxtvxeuil.supabase.co'
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_12KQiSNlKkwu435CF_qXZQ_ZXMlzU87'
+      const navSupabase = createClient(supabaseUrl, supabaseAnonKey)
+
+      navSupabase.auth.getSession().then(async ({ data: { session }, error }) => {
+        if (error || !session) {
+          // Thử khôi phục nếu có refresh_token
+          const refreshToken = localStorage.getItem('refresh_token')
+          const accessToken = localStorage.getItem('access_token') || ''
+          if (refreshToken) {
+            try {
+              const { data: restored, error: restoreErr } = await navSupabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              })
+              if (!restoreErr && restored?.session) {
+                if (restored.session.access_token) localStorage.setItem('access_token', restored.session.access_token)
+                if (restored.session.refresh_token) localStorage.setItem('refresh_token', restored.session.refresh_token)
+                return
+              }
+            } catch (e) {}
+          }
+          // Cả session lẫn refresh_token đều không dùng được -> Phiên đã chết hoàn toàn!
+          console.warn('[Navbar] Phiên đăng nhập đã hết hạn, tự động dọn dẹp zombie state.')
+          clearLocalAuthSession()
+        }
+      }).catch(() => {})
+    }
+
+    return () => {
+      window.removeEventListener('aquacare:auth-changed', syncAuth)
     }
   }, [])
 
@@ -308,6 +356,11 @@ export default function Navbar({ scrollY }: NavbarProps) {
 
           {/* Mobile menu button */}
           <div className="flex xl:hidden" style={{ alignItems: 'center', gap: 12 }}>
+            {!isAuth && (
+              <Link to="/login" aria-label="Đăng nhập" style={{ color: '#fff', textDecoration: 'none', fontSize: 12, fontWeight: 700, border: '1px solid rgba(255,255,255,0.28)', borderRadius: 9, padding: '7px 9px', whiteSpace: 'nowrap' }}>
+                Đăng nhập
+              </Link>
+            )}
             <Link
               to="/cart"
               style={{
@@ -386,6 +439,12 @@ export default function Navbar({ scrollY }: NavbarProps) {
               {link.label}
             </a>
           ))}
+          {!isAuth && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <Link to="/login" onClick={() => setMobileOpen(false)} style={{ color: '#fff', padding: '10px 16px', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, textDecoration: 'none', fontWeight: 600 }}>Đăng nhập</Link>
+              <Link to="/signup" onClick={() => setMobileOpen(false)} style={{ color: '#fff', padding: '10px 16px', background: '#009c91', borderRadius: 10, textDecoration: 'none', fontWeight: 600 }}>Đăng ký</Link>
+            </div>
+          )}
           <a
             href="#contact"
             onClick={() => setMobileOpen(false)}
