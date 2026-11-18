@@ -40,7 +40,10 @@ function demoTelemetry(db) {
         .eq('devices.is_simulator', true).eq('devices.firmware_version', 'V3 Demo').maybeSingle();
       if (result.error) throw result.error;
       if (!result.data) return res.sendStatus(404);
-      const active = result.data.devices.some(device => device.is_active);
+      const devices = Array.isArray(result.data.devices)
+        ? result.data.devices
+        : [result.data.devices];
+      const active = devices.some(device => device?.is_active === true);
       return res.json(active ? samples(result.data, Date.now(), options) : []);
     } catch (error) {
       console.error('[demo telemetry]', error.message);
