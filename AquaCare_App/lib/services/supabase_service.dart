@@ -396,12 +396,69 @@ class SupabaseService {
     await client.from('users').delete().eq('id', id);
   }
 
+  static bool isDemoDevice(Map<String, dynamic> device) =>
+      device['firmware_version'] == 'V3 Demo' && device['is_simulator'] == true;
+
+  Future<List<Map<String, dynamic>>> demoTelemetry(
+    String tankId, {
+    int limit = 24,
+    DateTime? from,
+    DateTime? until,
+  }) async {
+    final uri =
+        Uri.parse(
+          '${ApiConfig.baseUrl}/api/tanks/$tankId/demo-telemetry',
+        ).replace(
+          queryParameters: {
+            'limit': limit.toString(),
+            if (from != null) 'from': from.toUtc().toIso8601String(),
+            if (until != null) 'until': until.toUtc().toIso8601String(),
+          },
+        );
+    final response = await http
+        .get(
+          uri,
+          headers: {
+            'Authorization':
+                'Bearer ${client.auth.currentSession?.accessToken ?? ''}',
+          },
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) {
+      throw StateError('Demo telemetry: HTTP ${response.statusCode}');
+    }
+    return List<Map<String, dynamic>>.from(jsonDecode(response.body) as List);
+  }
+
+  Future<List<Map<String, dynamic>>> demoHistory(
+    String tankId, DateTime start, DateTime end,
+  ) async {
+    final descending = <Map<String, dynamic>>[];
+    var until = end;
+    while (!until.isBefore(start)) {
+      final rows = await demoTelemetry(tankId, from: start, until: until, limit: 1000);
+      descending.addAll(rows.reversed);
+      if (rows.length < 1000) break;
+      until = DateTime.parse(rows.first['recorded_at'] as String)
+          .subtract(const Duration(milliseconds: 1));
+    }
+    return descending;
+  }
+
   Future<List<Map<String, dynamic>>> getTelemetry(
     String tankId, {
     int limit = 30,
   }) async {
     debugPrint('🔍 [DB QUERY]: Fetching telemetry for tankId: $tankId');
     try {
+      final devices = await client
+          .from('devices')
+          .select('firmware_version,is_simulator')
+          .eq('tank_id', tankId)
+          .limit(1);
+      if (devices.isNotEmpty && isDemoDevice(devices.first)) {
+        return (await demoTelemetry(tankId, limit: limit)).reversed.toList();
+      }
       final response = await client
           .from('telemetry_logs')
           .select('*, devices!inner(*)')
@@ -419,14 +476,14 @@ class SupabaseService {
 
   Stream<List<Map<String, dynamic>>> getTelemetryStream(
     String tankId, {
-    int limit = 10,
+    int? limit,
   }) async* {
     debugPrint('🔍 [DB QUERY]: Init realtime stream for tankId: $tankId');
 
     // Do stream() không hỗ trợ JOIN, ta phải lấy device_id trước
     final devices = await client
         .from('devices')
-        .select('id')
+        .select('id,firmware_version,is_simulator')
         .eq('tank_id', tankId);
     if (devices.isEmpty) {
       debugPrint('⚠️ [DB DATA]: Không tìm thấy thiết bị nào cho bể $tankId');
@@ -434,6 +491,39 @@ class SupabaseService {
       return;
     }
 
+    if (isDemoDevice(devices.first)) {
+      final demoLimit = limit ?? 720;
+      final recent = <Map<String, dynamic>>[];
+      Future<List<Map<String, dynamic>>> refresh() async {
+        final from = recent.isEmpty
+            ? null
+            : DateTime.parse(
+                recent.last['recorded_at'] as String,
+              );
+        final rows = await demoTelemetry(tankId, from: from, limit: demoLimit);
+        if (rows.isEmpty) {
+          recent.clear();
+        } else if (recent.isNotEmpty && recent.last['id'] == rows.first['id']) {
+          recent.removeLast();
+        }
+        recent.addAll(rows);
+        if (recent.length > demoLimit) recent.removeRange(0, recent.length - demoLimit);
+        return recent.reversed.toList();
+      }
+
+      // Keep polling after a transient network failure.
+      try {
+        yield await refresh();
+      } catch (error) {
+        debugPrint('Demo telemetry: $error');
+        yield [];
+      }
+      yield* Stream.periodic(
+        const Duration(minutes: 1),
+        (tick) => tick,
+      ).asyncMap((_) => refresh());
+      return;
+    }
     final deviceId = devices[0]['id'];
     debugPrint('📡 [REALTIME]: Bắt đầu lắng nghe device_id: $deviceId');
 
@@ -442,7 +532,7 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .eq('device_id', deviceId)
         .order('recorded_at', ascending: false)
-        .limit(limit);
+        .limit(limit ?? 10);
   }
 
   /// Stream realtime từ bảng alerts_history, filter trực tiếp theo tank_id

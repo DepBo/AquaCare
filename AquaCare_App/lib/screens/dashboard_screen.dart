@@ -350,6 +350,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _updateStream() {
     _currentSensors = sensorsFromTelemetry([]);
+    _trendSensors = _currentSensors;
     if (_activePondId.isNotEmpty) {
       _telemetryStream = SupabaseService.instance.getTelemetryStream(
         _activePondId,
@@ -383,6 +384,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<SensorData> _currentSensors = sensorsFromTelemetry([]);
+  List<SensorData> _trendSensors = sensorsFromTelemetry([]);
 
   final List<String> _tabTitles = [
     'Tổng quan',
@@ -1017,12 +1019,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         );
                                       }
 
+                                      final rows = snapshot.data ?? <Map<String, dynamic>>[];
                                       _currentSensors = sensorsFromTelemetry(
-                                        snapshot.hasError
-                                            ? []
-                                            : (snapshot.data ?? []),
-                                        species: _activeSpecies,
+                                        rows.take(24).toList(), species: _activeSpecies,
                                       );
+                                      _trendSensors = rows.length <= 24
+                                          ? _currentSensors
+                                          : sensorsFromTelemetry(rows, species: _activeSpecies);
 
                                       return _buildTabContent();
                                     },
@@ -2326,7 +2329,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SensorDetailCard(
-              sensor: _currentSensors[_selectedSensorIndex],
+              sensor: _trendSensors[_selectedSensorIndex],
             ),
           ),
         ),
@@ -3574,7 +3577,7 @@ class SparklineChart extends StatelessWidget {
 
     final minY = data.reduce(min);
     final maxY = data.reduce(max);
-    final padding = (maxY - minY) * 0.3;
+    final padding = max((maxY - minY) * 0.3, 0.01);
 
     return LineChart(
       LineChartData(
@@ -3582,7 +3585,7 @@ class SparklineChart extends StatelessWidget {
         titlesData: FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
         minX: 0,
-        maxX: (data.length - 1).toDouble(),
+        maxX: max(1, data.length - 1).toDouble(),
         minY: minY - padding,
         maxY: maxY + padding,
         lineTouchData: LineTouchData(enabled: false),
@@ -3594,7 +3597,7 @@ class SparklineChart extends StatelessWidget {
             color: color,
             barWidth: 2,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
+            dotData: FlDotData(show: data.length == 1),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(

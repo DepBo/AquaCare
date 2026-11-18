@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../screens/dashboard_screen.dart'; // To import SensorData
 import '../utils/species_thresholds.dart';
+import '../services/supabase_service.dart';
 
 class SensorHistoryDrillDown extends StatefulWidget {
   final String activePondId;
@@ -115,7 +116,7 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
     try {
       final devices = await _supabase
           .from('devices')
-          .select('id')
+          .select('id,firmware_version,is_simulator')
           .eq('tank_id', widget.activePondId);
       if (devices.isEmpty) {
         setState(() => _isLoadingL1 = false);
@@ -159,13 +160,15 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
 
       final dbField = _mapSensorToDbField(widget.sensor.name);
 
-      final data = await _supabase
-          .from('telemetry_logs')
-          .select('recorded_at, $dbField')
-          .eq('device_id', deviceId)
-          .gte('recorded_at', start.toUtc().toIso8601String())
-          .lte('recorded_at', end.toUtc().toIso8601String())
-          .order('recorded_at', ascending: false);
+      final data = SupabaseService.isDemoDevice(devices.first)
+          ? await SupabaseService.instance.demoHistory(widget.activePondId, start, end)
+          : await _supabase
+                .from('telemetry_logs')
+                .select('recorded_at, $dbField')
+                .eq('device_id', deviceId)
+                .gte('recorded_at', start.toUtc().toIso8601String())
+                .lte('recorded_at', end.toUtc().toIso8601String())
+                .order('recorded_at', ascending: false);
 
       Map<String, List<num>> groups = {};
       for (var row in data) {
@@ -268,7 +271,7 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
     try {
       final devices = await _supabase
           .from('devices')
-          .select('id')
+          .select('id,firmware_version,is_simulator')
           .eq('tank_id', widget.activePondId);
       if (devices.isEmpty) return;
       final deviceId = devices[0]['id'];
@@ -278,13 +281,20 @@ class _SensorHistoryDrillDownState extends State<SensorHistoryDrillDown> {
 
       final dbField = _mapSensorToDbField(widget.sensor.name);
 
-      final data = await _supabase
-          .from('telemetry_logs')
-          .select('recorded_at, $dbField')
-          .eq('device_id', deviceId)
-          .gte('recorded_at', start.toUtc().toIso8601String())
-          .lt('recorded_at', end.toUtc().toIso8601String())
-          .order('recorded_at', ascending: true);
+      final data = SupabaseService.isDemoDevice(devices.first)
+          ? await SupabaseService.instance.demoTelemetry(
+              widget.activePondId,
+              from: start,
+              until: end.subtract(const Duration(milliseconds: 1)),
+              limit: 1000,
+            )
+          : await _supabase
+                .from('telemetry_logs')
+                .select('recorded_at, $dbField')
+                .eq('device_id', deviceId)
+                .gte('recorded_at', start.toUtc().toIso8601String())
+                .lt('recorded_at', end.toUtc().toIso8601String())
+                .order('recorded_at', ascending: true);
 
       List<Map<String, dynamic>> l2 = [];
       for (var row in data) {

@@ -65,6 +65,33 @@ type TelemetryTrendRow = {
   recorded_at: string
 }
 
+function isDemoDevice(device: { firmware_version?: string; is_simulator?: boolean }) {
+  return device.firmware_version === 'V3 Demo' && device.is_simulator === true
+}
+
+async function demoRows(tankId: number, params = new URLSearchParams()): Promise<TelemetryTrendRow[]> {
+  const { data } = await supabase.auth.getSession()
+  const response = await fetch(`${API_URL}/api/tanks/${tankId}/demo-telemetry?${params}`, {
+    headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+  })
+  if (!response.ok) throw new Error(`Demo telemetry: HTTP ${response.status}`)
+  return response.json()
+}
+
+async function demoHistory(tankId: number, start: Date, end: Date) {
+  const descending: TelemetryTrendRow[] = [];
+  let until = end;
+  while (until >= start) {
+    const rows = await demoRows(tankId, new URLSearchParams({
+      from: start.toISOString(), until: until.toISOString(), limit: '1000',
+    }));
+    descending.push(...rows.reverse());
+    if (rows.length < 1000) break;
+    until = new Date(Date.parse(rows[rows.length - 1].recorded_at) - 1);
+  }
+  return descending;
+}
+
 type RelayKind = 'pump' | 'light' | 'aerator'
 type ScheduleRow = {
   id: number
@@ -453,7 +480,7 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
     if (!activeDevice) return;
     const fetchL1 = async () => {
       setLoadingL1(true);
-      const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+      const { data: devices } = await supabase.from('devices').select('id, firmware_version, is_simulator').eq('tank_id', activeDevice);
       if (!devices || devices.length === 0) {
         setLoadingL1(false);
         return;
@@ -484,12 +511,14 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
         end.setHours(23, 59, 59, 999);
       }
 
-      const { data } = await supabase.from('telemetry_logs')
+      const data: any[] | null = isDemoDevice(devices[0])
+        ? await demoHistory(activeDevice, start, end)
+        : (await supabase.from('telemetry_logs')
         .select(`recorded_at, temp, ph, tds, water_level_ok`)
         .eq('device_id', deviceId)
         .gte('recorded_at', start.toISOString())
         .lte('recorded_at', end.toISOString())
-        .order('recorded_at', { ascending: false });
+        .order('recorded_at', { ascending: false })).data;
 
       if (data) {
         const groups: Record<string, any[]> = {};
@@ -558,12 +587,12 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
       }
       setLoadingL1(false);
     };
-    fetchL1();
+    fetchL1().catch(error => { console.error(error); setLoadingL1(false); });
   }, [filter, activeDevice, selectedSensor, customStart, customEnd, selectedCfg]);
 
   const fetchL2 = async (time: string) => {
     setLoadingL2(prev => ({ ...prev, [time]: true }));
-    const { data: devices } = await supabase.from('devices').select('id').eq('tank_id', activeDevice);
+    const { data: devices } = await supabase.from('devices').select('id, firmware_version, is_simulator').eq('tank_id', activeDevice);
     if (!devices || devices.length === 0) return;
     const deviceId = devices[0].id;
 
@@ -575,12 +604,14 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
     const end = new Date(start);
     end.setHours(start.getHours() + 1);
 
-    const { data } = await supabase.from('telemetry_logs')
+    const data: any[] | null = isDemoDevice(devices[0])
+      ? await demoRows(activeDevice!, new URLSearchParams({ from: start.toISOString(), until: new Date(end.getTime() - 1).toISOString() }))
+      : (await supabase.from('telemetry_logs')
       .select(`recorded_at, temp, ph, tds, water_level_ok`)
       .eq('device_id', deviceId)
       .gte('recorded_at', start.toISOString())
       .lt('recorded_at', end.toISOString())
-      .order('recorded_at', { ascending: true });
+      .order('recorded_at', { ascending: true })).data;
 
     if (data) {
       const l2 = data.map(row => {
@@ -612,7 +643,10 @@ function DrillDownHistory({ selectedSensor, activeDevice, selectedCfg }: { selec
     } else {
       setExpanded([...expanded, time]);
       if (!dataL2[time]) {
-        fetchL2(time);
+        fetchL2(time).catch(error => {
+          console.error(error);
+          setLoadingL2(prev => ({ ...prev, [time]: false }));
+        });
       }
     }
   };
@@ -1406,6 +1440,7 @@ export default function DashboardPage() {
       .order('recorded_at', { ascending: false })
       .limit(24)
 
+    if (activeDeviceRef.current !== activeDevice) return
     if (telemetries) {
       const rev = telemetries.reverse()
       const mapData = (parseFn: (d: any) => number) => rev.map(d => ({
@@ -1532,18 +1567,56 @@ export default function DashboardPage() {
     let channel: any;
     let scheduleChannel: any;
     let disposed = false;
+    let demo = false;
+    let refreshing = false;
+    let history: TelemetryTrendRow[] = [];
+    const refreshDemo = async () => {
+      if (refreshing || disposed) return;
+      refreshing = true;
+      try {
+        const params = new URLSearchParams();
+        const latest = history.at(-1);
+        if (latest) params.set('from', latest.recorded_at);
+        const rows = await demoRows(activeDevice, params);
+        if (disposed) return;
+        if (!rows.length) history = [];
+        else {
+          if (latest && rows[0].id === latest.id) history.pop();
+          history = [...history, ...rows].slice(-720);
+        }
+        const recent = history.slice(-24);
+        const series = (key: 'ph' | 'temp' | 'tds' | 'water_level_ok') => recent.map(row => ({
+          time: new Date(row.recorded_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          value: Number(row[key]),
+        }));
+        setSensorData({ ph: series('ph'), temp: series('temp'), tds: series('tds'), waterLevel: series('water_level_ok') });
+        setHourlySensorData({ ph: buildNumericTrend(history, 'ph'), temp: buildNumericTrend(history, 'temp'),
+          tds: buildNumericTrend(history, 'tds'), waterLevel: buildWaterTrend(history) });
+        setLoading(false);
+      } catch (error) {
+        if (!disposed) console.error('Không tải được dữ liệu V3 Demo', error);
+      } finally {
+        refreshing = false;
+      }
+    };
+    setSensorData(emptySensor());
+    setHourlySensorData(emptySensor());
     setDeviceRecordId(null);
     setDeviceActive(null);
     applySchedules([]);
 
     const setupRealtime = async () => {
-      // 1. Load 24 điểm dữ liệu lịch sử ban đầu
-      await fetchSensorData();
-
-      // 2. Lấy device_id tương ứng với bể cá
-      const { data: devices } = await supabase.from('devices').select('id, is_active, relay_pump_state, relay_light_state, relay_aerator_state').eq('tank_id', activeDevice);
-      if (disposed || !devices || devices.length === 0) return;
+      const { data: devices } = await supabase.from('devices').select('id, firmware_version, is_simulator, is_active, relay_pump_state, relay_light_state, relay_aerator_state').eq('tank_id', activeDevice);
+      if (disposed) return;
+      if (!devices?.length) {
+        setAlerts([]);
+        return;
+      }
       const deviceId = devices[0].id;
+      demo = isDemoDevice(devices[0]);
+      if (demo) await refreshDemo();
+      else await fetchSensorData();
+      if (disposed) return;
       setDeviceRecordId(deviceId);
       setDeviceActive(devices[0].is_active === true);
       syncRelayState('pump', Boolean(devices[0].relay_pump_state), activeDevice, setPumpState);
@@ -1588,6 +1661,7 @@ export default function DashboardPage() {
           },
           (payload) => {
             const newData = payload.new as any;
+            if (demo || disposed) return;
             const timeStr = new Date(newData.recorded_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
             setSensorData(prev => {
@@ -1662,7 +1736,12 @@ export default function DashboardPage() {
     }
 
     setupRealtime();
-    const trendRefresh = window.setInterval(() => { void fetchHourlyData() }, 5 * 60 * 1000);
+    let minutes = 0;
+    const trendRefresh = window.setInterval(() => {
+      minutes++;
+      if (demo) void refreshDemo();
+      else if (minutes % 5 === 0) void fetchHourlyData();
+    }, 60_000);
 
     // 4. Dọn dẹp (Cleanup) khi đổi bể khác hoặc unmount
     return () => {

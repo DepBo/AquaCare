@@ -124,6 +124,13 @@ security/private-audit.md
 AquaCare_App/CHANGELOG.md
 test-results/
 
+# Local user activity reports
+/TruongLuongReport.html
+/TruongLuongReport.jsx
+/AquaCare-V3-Demo-Users.html
+/AquaCare_Backend/v3-demo-report-server.js
+/RUN_V3_DEMO_REPORT.cmd
+
 # Local database migrations, exports and credentials
 /migrations/
 /supabase/migrations/

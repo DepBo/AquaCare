@@ -53,6 +53,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.get('/api/tanks/:id/demo-telemetry', require('./routes/demo-telemetry').demoTelemetry(demoSupabase));
 if (ADMIN_DASHBOARD_ENABLED) {
   app.use('/api/admin/dashboard', createAdminDashboardRouter({ supabase: require('./config/supabase') }));
 }
