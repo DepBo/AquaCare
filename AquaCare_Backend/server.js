@@ -54,6 +54,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.get('/api/tanks/:id/demo-telemetry', require('./routes/demo-telemetry').demoTelemetry(demoSupabase));
+app.get('/api/tanks/:id/demo-alerts', require('./routes/demo-telemetry').demoTelemetry(demoSupabase, true));
 if (ADMIN_DASHBOARD_ENABLED) {
   app.use('/api/admin/dashboard', createAdminDashboardRouter({ supabase: require('./config/supabase') }));
 }
@@ -218,132 +219,38 @@ const { startTimerWorker } = require('./timer_worker');
 const { stopPumpAtHighWater } = require('./pump_high_water');
 if (!ISOLATED_TEST) startTimerWorker({ supabase, mqttClient });
 
+const { createTankNotifier } = require('./tank_notifier');
+const notifyTank = createTankNotifier({ supabase, sendAlertEmail, sendWebPush });
+const { startSimulatorAlertWorker } = require('./simulator_alert_worker');
+if (!ISOLATED_TEST) startSimulatorAlertWorker({ supabase, notifyTank });
+
 // Hàm kiểm tra và lưu cảnh báo (Tích hợp bộ lọc chống spam & gộp trạng thái)
-async function checkAndInsertAlerts(device, state) {
+async function checkAndInsertAlerts(device, state, recordedAt) {
   if (!device.tank_id) return;
   const thresholds = await getSpeciesThresholds(supabase, device.tank_id);
-  const alerts = [];
-  const rawAlerts = [];
-
-  const checkSeverity = (val, good, warn) => {
-    if (val < warn[0] || val > warn[1]) return 'Danger';
-    if (val < good[0] || val > good[1]) return 'Warn';
-    return 'Good';
-  };
-
-  const phSev = checkSeverity(state.ph, thresholds.ph.good, thresholds.ph.warn);
-  if (phSev !== 'Good') {
-    const msg = `pH ở mức ${state.ph.toFixed(2)}`;
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'pH', actual_value: Number(state.ph.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
-    rawAlerts.push({ label: 'pH', severity: phSev, msg });
+  const metrics = [];
+  for (const [key, label, unit] of [['ph', 'pH', ''], ['temp', 'Nhiệt độ', '°C'], ['tds', 'TDS', ' ppm']]) {
+    const value = state[key];
+    if (!Number.isFinite(value)) continue;
+    const threshold = thresholds[key];
+    const deviation = Math.max(0, threshold.good[0] - value, value - threshold.good[1]);
+    const dangerous = value < threshold.warn[0] || value > threshold.warn[1];
+    const severity = dangerous ? 'Nguy hiểm' : deviation > 0 ? 'Cảnh báo' : null;
+    metrics.push({ label, value, threshold, deviation, severity, message: label + ' ở mức ' + value + unit });
   }
-
-  const tempSev = checkSeverity(state.temp, thresholds.temp.good, thresholds.temp.warn);
-  if (tempSev !== 'Good') {
-    const msg = `Nhiệt độ ở mức ${state.temp.toFixed(2)}°C`;
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Nhiệt độ', actual_value: Number(state.temp.toFixed(2)), alert_message: `Cảnh báo: ${msg}` });
-    rawAlerts.push({ label: 'Nhiệt độ', severity: tempSev, msg });
+  if (typeof state.water_level_ok === 'boolean') {
+    const low = !state.water_level_ok;
+    metrics.push({ label: 'Mực nước', value: Number(!low), severity: low ? 'Nguy hiểm' : null,
+      deviation: Number(low), threshold: { water_level_ok: true }, message: 'Bể bị cạn nước' });
   }
-
-  const tdsSev = checkSeverity(state.tds, thresholds.tds.good, thresholds.tds.warn);
-  if (tdsSev !== 'Good') {
-    const msg = `TDS ở mức ${state.tds.toFixed(0)} ppm`;
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'TDS', actual_value: Number(state.tds.toFixed(0)), alert_message: `Cảnh báo: ${msg}` });
-    rawAlerts.push({ label: 'TDS', severity: tdsSev, msg });
-  }
-
-  if (!state.water_level_ok) {
-    alerts.push({ tank_id: device.tank_id, device_id: device.id, alert_type: 'Mực nước', actual_value: 0, alert_message: `Cảnh báo: Bể cạn nước!` });
-    rawAlerts.push({ label: 'Mực nước', severity: 'Danger', msg: 'Bể bị cạn nước' });
-  }
-
-  if (alerts.length > 0) {
-    // Luôn ghi dữ liệu thô vào lịch sử hiển thị trên Web
-    const { error: insertAlertErr } = await supabase.from('alerts_history').insert(alerts);
-    if (insertAlertErr) console.error('❌ Lỗi lưu lịch sử cảnh báo:', insertAlertErr.message);
-    else console.log(`[!] Đã tự động lưu ${alerts.length} cảnh báo cho thiết bị (MAC: ${device.mac_address}).`);
-
-    // 1. Đọc chính xác dữ liệu cấu hình thông báo và mốc thời gian gửi cũ từ DB
-    const { data: config } = await supabase.from('tank_notification_settings').select('*').eq('tank_id', device.tank_id).single();
-    const { data: tankData, error: tankErr } = await supabase.from('tanks').select('last_alert_sent_at, tank_name, users(email, web_fcm_token, app_fcm_token)').eq('id', device.tank_id).single();
-    if (tankErr) { console.error('❌ Lỗi lấy dữ liệu bể:', tankErr.message); return; }
-
-    if (config && config.alert_severity_preference !== 'none') {
-      const hasDanger = rawAlerts.some(a => a.severity === 'Danger');
-
-      // 2. Bộ lọc Mức độ nghiêm trọng (Alert Severity Filter)
-      if (config.alert_severity_preference === 'critical_only' && !hasDanger) {
-        return; 
-      }
-      if (config.alert_severity_preference === 'warning_only' && hasDanger) {
-        return;
-      }
-
-      // 3. Thuật toán kiểm tra Cooldown sử dụng dữ liệu vừa fetch từ tankData
-      let canSend = true;
-      if (tankData && tankData.last_alert_sent_at && Number(config.alert_cooldown_minutes) > 0) {
-        const lastSent = new Date(tankData.last_alert_sent_at).getTime();
-        const now = Date.now();
-        const diffMinutes = (now - lastSent) / (1000 * 60);
-        
-        if (diffMinutes < Number(config.alert_cooldown_minutes)) {
-          canSend = false;
-        }
-      }
-
-      // 4. Logic Gộp thông báo và kích hoạt gửi
-      if (canSend) {
-        const aggregatedDetails = rawAlerts.map(a => `${a.label} đang ${a.severity === 'Danger' ? 'Nguy hiểm' : 'Cảnh báo'} (${a.msg})`).join(' đồng thời ');
-        const aggregatedMsg = `Hồ cá của bạn đang có sự cố song song: ${aggregatedDetails}.`;
-        
-        console.log(`\n========================================`);
-        console.log(`🔔 KÍCH HOẠT THÔNG BÁO CHO BỂ [${device.tank_id}]`);
-        console.log(`Nội dung: ${aggregatedMsg}`);
-        
-        let emailDelivered = !config.notify_via_email;
-        if (config.notify_via_email && tankData && tankData.users && tankData.users.email) {
-          console.log(`[Email] -> Đang tiến hành gửi email tới ${tankData.users.email}...`);
-          emailDelivered = await sendAlertEmail(tankData.users.email, tankData.tank_name, aggregatedMsg);
-        } else if (config.notify_via_email) {
-          console.error(`[Email] -> Bể ${device.tank_id} đã bật email nhưng không tìm thấy địa chỉ nhận.`);
-        }
-        if (config.notify_via_web_push) {
-          if (tankData && tankData.users && tankData.users.web_fcm_token) {
-            console.log(`[Web Push] -> Đang tiến hành gửi Push Notification tới Trình duyệt...`);
-            await sendWebPush(tankData.users.web_fcm_token, tankData.tank_name, aggregatedMsg);
-          } else {
-            console.log(`[Web Push] -> Trình duyệt chưa cấp quyền FCM Token.`);
-          }
-        }
-        if (config.notify_via_app_noti) {
-          if (tankData && tankData.users && tankData.users.app_fcm_token) {
-            console.log(`[App Notification] -> Đang tiến hành gửi Push Notification tới App di động...`);
-            await sendWebPush(tankData.users.app_fcm_token, tankData.tank_name, aggregatedMsg);
-          } else {
-            console.log(`[App Notification] -> App chưa đăng ký FCM Token.`);
-          }
-        }
-        console.log(`========================================\n`);
-
-        if (!emailDelivered) {
-          console.error(`[Email] -> Email của bể ${device.tank_id} chưa gửi thành công; kiểm tra cấu hình và log trước lần cảnh báo tiếp theo.`);
-        }
-
-        // Cooldown chung vẫn giới hạn các kênh khác, tránh gửi Web Push liên tục khi email lỗi.
-        const currentMilli = new Date().toISOString();
-        const { error: updateTankErr } = await supabase
-          .from('tanks')
-          .update({ last_alert_sent_at: currentMilli })
-          .eq('id', device.tank_id);
-
-        if (updateTankErr) {
-          console.error('❌ Lỗi cập nhật mốc thời gian last_alert_sent_at trên bảng tanks:', updateTankErr.message);
-        }
-      } else {
-        console.log(`⏳ Đang trong thời gian Cooldown chặn Spam (${config.alert_cooldown_minutes} phút), hệ thống chỉ lưu DB, KHÔNG bắn thông báo ra ngoài.`);
-      }
-    }
-  }
+  const { data: accepted, error } = await supabase.rpc('record_hardware_alert_sample', {
+    p_device: device.id, p_tank: device.tank_id, p_at: recordedAt, p_metrics: metrics
+  });
+  if (error) throw new Error('Lỗi ghi đợt cảnh báo: ' + error.message);
+  const rawAlerts = metrics.filter(metric => accepted.includes(metric.label)).map(metric => ({
+    label: metric.label, severity: metric.severity === 'Nguy hiểm' ? 'Danger' : 'Warn', msg: metric.message
+  }));
+  await notifyTank(device.tank_id, rawAlerts);
 }
 
 // Lắng nghe sự kiện kết nối
@@ -439,7 +346,8 @@ mqttClient.on('message', async (topic, message) => {
     }
 
     // Xử lý lưu cảnh báo nếu có
-    await checkAndInsertAlerts(device, state);
+    await checkAndInsertAlerts(device, { temp: temp === null ? null : state.temp, ph: ph === null ? null : state.ph,
+      tds: tds === null ? null : state.tds, water_level_ok: water }, recordedAt);
 
   } catch (error) {
     // try-catch bọc quanh toàn bộ logic async để tránh Crash server Express

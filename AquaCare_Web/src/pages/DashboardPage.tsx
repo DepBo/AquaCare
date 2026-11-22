@@ -66,7 +66,7 @@ type TelemetryTrendRow = {
 }
 
 function isDemoDevice(device: { firmware_version?: string; is_simulator?: boolean }) {
-  return device.firmware_version === 'V3 Demo' && device.is_simulator === true
+  return device.is_simulator === true
 }
 
 async function demoRows(tankId: number, params = new URLSearchParams()): Promise<TelemetryTrendRow[]> {
@@ -1026,7 +1026,6 @@ export default function DashboardPage() {
   const [activeDevice, setActiveDevice] = useState<number | null>(null)
   const activeDeviceRef = useRef(activeDevice)
   activeDeviceRef.current = activeDevice
-  const [tick, setTick] = useState(0)
   const [loading, setLoading] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('dashboard_theme') as 'dark' | 'light') || 'dark')
   const [hourlySensorData, setHourlySensorData] = useState<TrendData>(emptySensor())
@@ -1455,7 +1454,6 @@ export default function DashboardPage() {
         waterLevel: mapData(d => d.water_level_ok ? 1 : 0),
       })
     }
-    setTick(t => t + 1)
     setLoading(false)
     await fetchHourlyData()
   }
@@ -1533,8 +1531,30 @@ export default function DashboardPage() {
     })
   }
 
+  const simulatorTank = useRef<number | null>(null)
   const fetchAlertHistoryPage = async (pageIndex: number, deviceId: number) => {
     setHistoryLoading(true);
+    if (simulatorTank.current === deviceId) {
+      try {
+        const { data } = await supabase.auth.getSession()
+        const response = await fetch(`${API_URL}/api/tanks/${deviceId}/demo-alerts`, {
+          headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` }
+        })
+        if (!response.ok) throw new Error('Không tải được lịch sử mô phỏng')
+        const rows: any[] = await response.json()
+        if (activeDeviceRef.current !== deviceId) return
+        const counts = new Map<string, number>()
+        for (const row of rows) counts.set(row.alert_type, (counts.get(row.alert_type) ?? 0) + 1)
+        const page = Math.min(pageIndex, Math.max(0, Math.ceil(rows.length / 10) - 1))
+        setAlertStats(Array.from(counts, ([name, value]) => ({ name, value })))
+        setAlertHistory(rows.slice(page * 10, page * 10 + 10))
+        setHistoryTotalRecords(rows.length)
+        setHistoryHasNext((page + 1) * 10 < rows.length)
+        setCurrentHistoryPage(page)
+      } catch (error) { console.error(error) }
+      finally { setHistoryLoading(false) }
+      return
+    }
     const startIndex = pageIndex * 10;
     let query = supabase.from('alerts_history')
       .select('*')
@@ -1614,6 +1634,7 @@ export default function DashboardPage() {
       }
       const deviceId = devices[0].id;
       demo = isDemoDevice(devices[0]);
+      simulatorTank.current = demo ? activeDevice : null;
       if (demo) await refreshDemo();
       else await fetchSensorData();
       if (disposed) return;
@@ -1637,7 +1658,7 @@ export default function DashboardPage() {
         .subscribe();
 
       // Lấy tất cả loại cảnh báo để thống kê
-      const { data: statsData } = await supabase.from('alerts_history').select('alert_type').eq('tank_id', activeDevice)
+      const { data: statsData } = demo ? { data: null } : await supabase.from('alerts_history').select('alert_type').eq('tank_id', activeDevice)
       if (statsData) {
         const counts = statsData.reduce((acc, h) => {
           acc[h.alert_type] = (acc[h.alert_type] || 0) + 1;
@@ -1684,19 +1705,24 @@ export default function DashboardPage() {
                 waterLevel: appendLiveTrend(prev.waterLevel, timeStr, newData.water_level_ok ? 1 : 0, 48),
               }
             })
-            setTick(t => t + 1); // Trigger check cảnh báo
           }
         )
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'alerts_history',
             filter: `tank_id=eq.${activeDevice}`
           },
           (payload) => {
+            if (demo || disposed) return;
+            if (payload.eventType === 'DELETE') return;
             const newAlert = payload.new as any;
+            if (payload.eventType === 'UPDATE') {
+              setAlertHistory(prev => prev.map(row => row.id === newAlert.id ? newAlert : row));
+              return;
+            }
             setAlertStats(prev => {
               const existing = prev.find(p => p.name === newAlert.alert_type);
               if (existing) {
@@ -1739,7 +1765,7 @@ export default function DashboardPage() {
     let minutes = 0;
     const trendRefresh = window.setInterval(() => {
       minutes++;
-      if (demo) void refreshDemo();
+      if (demo) { void refreshDemo(); void fetchAlertHistoryPage(currentHistoryPageRef.current, activeDevice); }
       else if (minutes % 5 === 0) void fetchHourlyData();
     }, 60_000);
 
@@ -1756,13 +1782,13 @@ export default function DashboardPage() {
 
   // Tạo cảnh báo
   useEffect(() => {
-    if (!sensorData.ph.length) return
     const newAlerts: AlertItem[] = []
     const pond = ponds.find(item => item.id === activeDevice)
     const selectedSpecies = pond?.fish_species ?? fishSpecies.find(species => species.id === pond?.species_id)
     const speciesThresholds = getSpeciesThresholds(selectedSpecies)
     SENSOR_CFG.forEach(cfg => {
-      const latest = sensorData[cfg.key].at(-1)?.value ?? 0
+      const latest = sensorData[cfg.key].at(-1)?.value
+      if (latest == null) return
       const limits = cfg.key === 'waterLevel' ? cfg : speciesThresholds[cfg.key]
       if (cfg.key === 'waterLevel') {
         if (latest === 0) newAlerts.push({ key: cfg.key, label: cfg.label, val: latest, unit: cfg.unit, msg: `Mực nước bể cá đang ở mức thấp, vui lòng châm thêm nước!`, level: 'danger' })
@@ -1775,7 +1801,7 @@ export default function DashboardPage() {
       }
     })
     setAlerts(newAlerts)
-  }, [tick, activeDevice, ponds, fishSpecies])
+  }, [sensorData, activeDevice, ponds, fishSpecies])
 
   const handleLogout = async () => {
     clearLocalAuthSession()
@@ -2644,7 +2670,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div>
-                      <h3 style={{ fontSize: 12, fontWeight: 600, color: theme === 'dark' ? 'var(--text-muted)' : '#000', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
+                      <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Hướng dẫn xử lý</h3>
                       {alerts.length === 0 ? (
                         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có cảnh báo nào cần xử lý.</div>
                       ) : (
@@ -2697,7 +2723,7 @@ export default function DashboardPage() {
                               <AlertIcon size={24} color={iconColor} style={{ flexShrink: 0, marginTop: 2 }} />
                               <div>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{title}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{desc}</div>
+                                <div style={{ fontSize: 12, color: theme === 'dark' ? '#CBD5E1' : '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{desc}</div>
                               </div>
                             </div>
                           )
@@ -2755,7 +2781,7 @@ export default function DashboardPage() {
                     {/* Widget Lịch sử */}
                     <div style={{ padding: 20, borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-                        <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo</h3>
+                        <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Lịch sử cảnh báo{activeDevice && simulatorTank.current === activeDevice ? ' mô phỏng · 12 giờ qua' : ''}</h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>
                           <button
                             onClick={() => { if (activeDevice) fetchAlertHistoryPage(currentHistoryPage - 1, activeDevice) }}
@@ -2832,10 +2858,10 @@ export default function DashboardPage() {
                               {alertHistory.map(h => (
                                 <tr key={h.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                   <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{new Date(h.created_at).toLocaleString('vi-VN')}</td>
-                                  <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{h.alert_type}</td>
+                                  <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{h.alert_type}{h.severity && ' · Mô phỏng'}</td>
                                   <td style={{ padding: '12px 16px', color: '#FF8C00', fontWeight: 500 }}>{h.actual_value}</td>
                                   <td style={{ padding: '12px 16px', color: h.is_read ? '#00A896' : '#FF6B6B' }}>
-                                    {h.is_read ? 'Đã xem' : 'Mới'}
+                                    {h.severity ? h.severity + (h.ended_at ? ' · Kết thúc ' + new Date(h.ended_at).toLocaleTimeString('vi-VN') : ' · Đang diễn ra') : h.is_read ? 'Đã xem' : 'Mới'}
                                   </td>
                                 </tr>
                               ))}

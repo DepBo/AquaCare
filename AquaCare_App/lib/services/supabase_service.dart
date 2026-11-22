@@ -397,7 +397,7 @@ class SupabaseService {
   }
 
   static bool isDemoDevice(Map<String, dynamic> device) =>
-      device['firmware_version'] == 'V3 Demo' && device['is_simulator'] == true;
+      device['is_simulator'] == true;
 
   Future<List<Map<String, dynamic>>> demoTelemetry(
     String tankId, {
@@ -535,6 +535,19 @@ class SupabaseService {
         .limit(limit ?? 10);
   }
 
+  Future<bool> _simulatedTank(String tankId) async {
+    final devices = await client.from('devices').select('is_simulator').eq('tank_id', tankId).limit(1);
+    return devices.isNotEmpty && isDemoDevice(devices.first);
+  }
+
+  Future<List<Map<String, dynamic>>> _demoAlerts(String tankId) async {
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/tanks/$tankId/demo-alerts'),
+        headers: {'Authorization': 'Bearer ${client.auth.currentSession?.accessToken ?? ''}'})
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) throw StateError('Demo alerts: HTTP ${response.statusCode}');
+    return List<Map<String, dynamic>>.from(jsonDecode(response.body) as List);
+  }
+
   /// Stream realtime từ bảng alerts_history, filter trực tiếp theo tank_id
   Stream<List<Map<String, dynamic>>> getAlertsStream(
     String tankId, {
@@ -543,6 +556,12 @@ class SupabaseService {
     debugPrint('🔔 [ALERTS]: Init alerts stream for tankId: $tankId');
 
     // alerts_history đã có cột tank_id trực tiếp, không cần JOIN
+    if (await _simulatedTank(tankId)) {
+      Future<List<Map<String, dynamic>>> load() async => (await _demoAlerts(tankId)).take(limit).toList();
+      yield await load();
+      yield* Stream.periodic(const Duration(minutes: 1), (i) => i).asyncMap((_) => load());
+      return;
+    }
     yield* client
         .from('alerts_history')
         .stream(primaryKey: ['id'])
@@ -562,6 +581,11 @@ class SupabaseService {
       '🔍 [DB QUERY]: Fetching alerts for tankId: $tankId, type: $type, offset: $offset',
     );
     try {
+      if (await _simulatedTank(tankId)) {
+        final rows = await _demoAlerts(tankId);
+        return rows.where((row) => type == null || type.isEmpty || type == 'Tất cả' || row['alert_type'] == type)
+            .skip(offset).take(limit).toList();
+      }
       var query = client
           .from('alerts_history')
           .select('*')
@@ -588,7 +612,7 @@ class SupabaseService {
       '🔍 [DB QUERY]: Fetching alert distribution for tankId: $tankId',
     );
     try {
-      final response = await client
+      final response = await _simulatedTank(tankId) ? await _demoAlerts(tankId) : await client
           .from('alerts_history')
           .select('alert_type')
           .eq('tank_id', int.parse(tankId));

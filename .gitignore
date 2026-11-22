@@ -133,7 +133,8 @@ test-results/
 
 # Local database migrations, exports and credentials
 /migrations/
-/supabase/migrations/
+/supabase/migrations/*
+!/supabase/migrations/20261122000100_hardware_alert_incidents.sql
 *.dump
 *.backup
 *.sql.gz

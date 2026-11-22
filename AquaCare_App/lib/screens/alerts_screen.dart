@@ -348,7 +348,11 @@ class _AlertCardWidget extends StatelessWidget {
     final color = Color(config['color'] as int);
     final icon = config['icon'] as IconData;
     final guidance = config['guidance'] as String;
-    final message = alert['alert_message'] as String? ?? 'Cảnh báo hệ thống';
+    final description = alert['alert_message'] as String? ?? 'Cảnh báo hệ thống';
+    final end = DateTime.tryParse(alert['ended_at']?.toString() ?? '')?.toLocal();
+    final message = alert['severity'] == null ? description : end == null
+        ? '$description · Đang diễn ra'
+        : '$description · Kết thúc lúc ${TimeOfDay.fromDateTime(end).format(context)}';
     final actualValue = alert['actual_value'];
     final isRead = alert['is_read'] == true;
     final timeStr = _timeAgo(alert['created_at'] as String?);
