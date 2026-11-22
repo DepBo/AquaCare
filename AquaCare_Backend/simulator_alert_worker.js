@@ -1,4 +1,4 @@
-const { samples, incidents } = require('./routes/demo-telemetry');
+const { samples, incidents, dailyEvent } = require('./routes/demo-telemetry');
 const { getSpeciesThresholds } = require('./config/species_thresholds');
 
 function startSimulatorAlertWorker({ supabase, notifyTank, now = Date.now, intervalMs = 60000 }) {
@@ -20,13 +20,19 @@ function startSimulatorAlertWorker({ supabase, notifyTank, now = Date.now, inter
           if (!tank || seen.has(tank.id)) continue;
           seen.add(tank.id);
           try {
+            const currentTime = now();
+            const origin = Date.parse(tank.created_at);
+            if (!Number.isFinite(origin) || currentTime < origin) continue;
+            const latest = origin + Math.floor((currentTime - origin) / 60000) * 60000;
+            const event = dailyEvent(tank.id, latest);
+            if (!event) continue;
             const thresholds = await getSpeciesThresholds(supabase, tank.id);
-            // Evaluate only the latest minute. Past missed notifications are never replayed.
-            const alerts = incidents(samples(tank, now(), { limit: 1 }), thresholds).map(event => ({
+            const rows = samples(tank, latest, { limit: 1 }, thresholds);
+            const alerts = incidents(rows, thresholds).map(event => ({
               label: event.alert_type, severity: event.severity === 'Nguy hiểm' ? 'Danger' : 'Warn',
               msg: event.alert_type + ' ở mức ' + event.actual_value,
             }));
-            await notifyTank(tank.id, alerts, { simulator: true });
+            await notifyTank(tank.id, alerts, { simulator: true, incidentStart: event.start });
           } catch (error) {
             console.error('[Simulator alerts] Tank', tank.id, error.message);
           }

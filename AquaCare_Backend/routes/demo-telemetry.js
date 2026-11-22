@@ -1,6 +1,21 @@
 const MINUTE = 60_000;
 
-function samples(tank, now, { from = -Infinity, until = Infinity, limit = 720 } = {}) {
+// Two non-overlapping windows within the Vietnamese calendar day.
+function dailyEvent(tankId, timestamp) {
+  const localMinute = Math.floor(timestamp / MINUTE) + 420;
+  const day = Math.floor(localMinute / 1440);
+  const minute = localMinute % 1440;
+  const slot = Math.floor(minute / 720);
+  const seed = Math.imul(Number(tankId), 2654435761) ^ Math.imul(day, 2246822519);
+  const hash = Math.imul(seed ^ (seed >>> 16) ^ slot, 1597334677) >>> 0;
+  if (slot >= (seed >>> 0) % 3) return null;
+  const elapsed = minute % 720 - (10 + hash % 680);
+  if (elapsed < 0 || elapsed >= 5) return null;
+  return { metric: ['ph','temp','tds','water_level_ok'][(hash >>> 12) % 4],
+    danger: (hash >>> 16) % 3 === 0, start: timestamp - elapsed * MINUTE };
+}
+
+function samples(tank, now, { from = -Infinity, until = Infinity, limit = 720 } = {}, thresholds) {
   const origin = Date.parse(tank.created_at);
   if (!Number.isFinite(origin)) throw new Error('Invalid tank creation time');
   const last = Math.floor((Math.min(now, until) - origin) / MINUTE);
@@ -10,13 +25,20 @@ function samples(tank, now, { from = -Infinity, until = Infinity, limit = 720 } 
   for (let i = first; i <= last; i++) {
     const wave = Math.sin(i / 53 + phase);
     const ripple = Math.sin(i / 7 + phase * 3);
-    rows.push({
-      id: i, recorded_at: new Date(origin + i * MINUTE).toISOString(),
-      ph: Number((7.2 + 0.22 * wave + 0.07 * ripple).toFixed(2)),
-      temp: Number((25 + 0.9 * Math.sin(i / 190 + phase) + 0.18 * ripple).toFixed(2)),
-      tds: Math.round(245 + 22 * wave + 6 * ripple),
-      water_level_ok: Math.sin(i / 47 + phase) > -0.96,
-    });
+    const timestamp = origin + i * MINUTE;
+    const event = dailyEvent(tank.id, timestamp);
+    const row = { id: i, recorded_at: new Date(timestamp).toISOString(), water_level_ok: event?.metric !== 'water_level_ok' };
+    for (const [index, key] of ['ph', 'temp', 'tds'].entries()) {
+      const { good: [min, max], warn } = thresholds[key];
+      const mid = (min + max) / 2;
+      const variation = (0.15 * wave + 0.05 * ripple + 0.05 * Math.sin(i / 23 + index)) * (max - min);
+      const value = event?.metric === key
+        ? (event.danger ? warn[1] + (key === 'tds' ? 5 : 0.2) : (max + warn[1]) / 2)
+        : mid + variation;
+      const rounded = Number(value.toFixed(key === 'tds' ? 0 : 2));
+      row[key] = event?.metric === key ? rounded : Math.min(max, Math.max(min, rounded));
+    }
+    rows.push(row);
   }
   return rows;
 }
@@ -79,12 +101,10 @@ function demoTelemetry(db, alerts = false) {
         ? result.data.devices
         : [result.data.devices];
       const active = devices.some(device => device?.is_active === true);
-      if (alerts) {
-        if (!active) return res.json([]);
-        const thresholds = await require('../config/species_thresholds').getSpeciesThresholds(db, req.params.id);
-        return res.json(incidents(samples(result.data, Date.now()), thresholds));
-      }
-      return res.json(active ? samples(result.data, Date.now(), options) : []);
+      if (!active) return res.json([]);
+      const thresholds = await require('../config/species_thresholds').getSpeciesThresholds(db, req.params.id);
+      const rows = samples(result.data, Date.now(), alerts ? {} : options, thresholds);
+      return res.json(alerts ? incidents(rows, thresholds) : rows);
     } catch (error) {
       console.error('[demo telemetry]', error.message);
       return res.sendStatus(500);
@@ -92,4 +112,4 @@ function demoTelemetry(db, alerts = false) {
   };
 }
 
-module.exports = { demoTelemetry, samples, incidents };
+module.exports = { demoTelemetry, samples, incidents, dailyEvent };

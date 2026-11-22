@@ -1,5 +1,5 @@
 function createTankNotifier({ supabase, sendAlertEmail, sendWebPush, now = Date.now }) {
-  return async function notifyTank(tankId, alerts, { simulator = false } = {}) {
+  return async function notifyTank(tankId, alerts, { simulator = false, incidentStart } = {}) {
     if (!alerts.length) return;
     const { data: config, error: configError } = await supabase.from('tank_notification_settings')
       .select('*').eq('tank_id', tankId).maybeSingle();
@@ -22,6 +22,7 @@ function createTankNotifier({ supabase, sendAlertEmail, sendWebPush, now = Date.
     ].filter(([destination]) => destination);
     if (!channels.length) return;
     const time = now();
+    if (simulator && Date.parse(tank.last_alert_sent_at) >= incidentStart) return;
     const cooldown = Math.max(simulator ? 1 : 0, Number(config.alert_cooldown_minutes) || 0) * 60000;
     if (tank.last_alert_sent_at && time - Date.parse(tank.last_alert_sent_at) < cooldown) return;
     // Compare-and-set also protects against two backend instances reading the same cooldown.
