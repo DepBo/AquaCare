@@ -75,6 +75,10 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!agree) return setError('Vui lòng đồng ý với Điều khoản dịch vụ')
+    const cleanedPhone = form.phone.trim()
+    if (!/^0[35789]\d{8}$/.test(cleanedPhone)) {
+      return setError('Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 chữ số (VD: 0902943981)')
+    }
     if (form.password !== form.confirm) return setError('Mật khẩu xác nhận không khớp')
     setError('')
     setLoading(true)
@@ -86,7 +90,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           fullName: form.name,
           email: form.email,
-          phone: form.phone,
+          phone: cleanedPhone,
           password: form.password
         })
       })
@@ -211,9 +215,17 @@ export default function SignupPage() {
               <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 8 }}>Số điện thoại</label>
               <div style={{ position: 'relative' }}>
                 <Phone size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.2)' }} />
-                <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+84 xxx xxx xxx" style={INPUT_STYLE}
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="VD: 0902943981"
+                  style={INPUT_STYLE}
                   onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,229,160,0.3)'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'} />
+                  onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                />
               </div>
             </div>
 

@@ -22,12 +22,17 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Vui lòng cung cấp đầy đủ fullName, email, phone, password' });
     }
 
+    const normalizedPhone = String(phone).trim();
+    if (!/^0[35789]\d{8}$/.test(normalizedPhone)) {
+      return res.status(400).json({ error: 'Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 chữ số (VD: 0902943981)' });
+    }
+
     // Bước 1: Tạo tài khoản Auth (dùng client tách biệt để không làm bẩn session của admin client)
     const authClient = createEphemeralAuthClient();
     const { data: authData, error: authError } = await authClient.auth.signUp({
       email,
       password,
-      phone
+      phone: normalizedPhone
     });
 
     if (authError) {
@@ -42,7 +47,7 @@ exports.register = async (req, res) => {
     // Bước 2: Cập nhật thông tin vào bảng users (vì trigger db đã tự động tạo)
     const { error: dbError } = await supabase.from('users').update({
       full_name: fullName,
-      phone: phone
+      phone: normalizedPhone
     }).eq('id', user.id);
 
     if (dbError) {
