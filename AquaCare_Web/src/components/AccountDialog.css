@@ -1,0 +1,49 @@
+.account-dialog{position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:26px;border:1px solid var(--border-color,#dce7ec);border-radius:20px;background:var(--bg-card,#fff);color:var(--text-primary,#11243b);box-shadow:0 24px 80px #001b3040;font-family:Inter,system-ui,sans-serif;overflow:auto}
+.account-dialog::backdrop{background:#091d3866;backdrop-filter:blur(3px)}
+.account-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.account-dialog h2{font-size:23px;font-weight:700;letter-spacing:-.025em;margin:0}
+.account-dialog button,.account-dialog input{font:inherit;box-sizing:border-box}
+.account-dialog button{cursor:pointer}
+.account-dialog button:disabled{opacity:.6;cursor:wait}
+.account-icon{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-secondary,#486077);width:36px;height:36px;border-radius:8px}
+.account-icon:hover{background:var(--bg-nav-hover,#eaf5f4)}
+.account-tabs{display:flex;margin:22px 0;padding:4px;gap:4px;border-radius:12px;background:var(--bg-btn-cancel,#edf4f5)}
+.account-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;border:0;border-radius:9px;background:transparent;color:var(--text-secondary,#486077);padding:12px 4px;font-size:14px}
+.account-tabs button[aria-selected=true]{color:var(--text-primary,#11243b);background:var(--bg-card,#fff);box-shadow:0 1px 4px #00333324;font-weight:650}
+.account-dialog fieldset{border:0;padding:0;margin:0;min-width:0}
+.account-dialog label{display:block;font-size:14px;font-weight:600;margin:18px 0 8px}
+.account-dialog input{width:100%;min-width:0;padding:12px 13px;border:1px solid var(--border-color,#cedbe3);border-radius:9px;background:var(--bg-input,var(--bg-card,#fff));color:var(--text-primary,#11243b);font-size:15px}
+.account-dialog input:focus{outline:2px solid #00a896;outline-offset:1px}
+.account-dialog button:focus-visible,.account-dialog a:focus-visible{outline:2px solid #00a896;outline-offset:3px}
+.account-dialog .account-readonly{background:var(--bg-btn-cancel,#f0f4f7);color:var(--text-secondary,#486077)}
+.account-identity{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--border-color,#dce7ec);border-radius:14px;background:linear-gradient(105deg,#00a89618,transparent);margin:6px 0 22px;overflow-wrap:anywhere}
+.account-identity img,.account-identity>span{width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.account-identity>span{display:grid;place-items:center;background:#00a896;color:white;font-size:27px;font-weight:700}
+.account-identity small{display:block;margin-top:5px;color:var(--text-secondary,#486077)}
+.account-password{position:relative}
+.account-password input{padding-right:47px}
+.account-password .account-icon{position:absolute;right:5px;top:5px}
+.account-forgot{display:inline-block;color:#008c80;margin-top:9px;font-size:13px;text-decoration:none}
+.account-intro,.account-hint{color:var(--text-secondary,#486077);font-size:13px;line-height:1.5}
+.account-hint{display:block;margin-top:6px}
+.account-error,.account-success{padding:11px 13px;border-radius:9px;font-size:14px;line-height:1.5}
+.account-error{background:#fff0f0;color:#a52121}
+.account-success{background:#e6f8ef;color:#12683b}
+.account-dialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:26px}
+.account-dialog footer button{padding:11px 18px;border-radius:9px;font-size:14px;font-weight:650}
+.account-cancel{border:1px solid var(--border-color,#cedbe3);background:var(--bg-btn-cancel,#f5f7f9);color:var(--text-primary,#11243b)}
+.account-save{border:1px solid #00a896;background:#00a896;color:#fff}
+@media(max-width:480px){.account-dialog{padding:20px}.account-tabs button{font-size:13px}.account-save{flex:1}}
+
+.account-avatar{position:relative;display:block;flex-shrink:0;width:60px;height:60px;padding:0;border:0;border-radius:50%;overflow:hidden;background:#00a896;color:#fff}
+.account-avatar img,.account-avatar>span{width:100%;height:100%;object-fit:cover;display:grid;place-items:center;font-size:27px;font-weight:700}
+.account-avatar .account-avatar-camera{position:absolute;inset:0;background:#062c38a6;opacity:0;transition:opacity .18s ease}
+.account-avatar:hover .account-avatar-camera,.account-avatar:focus-visible .account-avatar-camera{opacity:1}
+@media(hover:none){.account-avatar .account-avatar-camera{inset:auto 0 0;height:24px;opacity:1}.account-avatar-camera svg{width:17px;height:17px}}
+
+
+.account-dialog .account-error,.account-dialog .account-success{display:flex;align-items:flex-start;gap:10px;margin:20px 0 0;padding:14px 16px;border:1px solid;border-radius:12px;font-size:14px;font-weight:600;line-height:1.55}
+.account-dialog .account-error svg,.account-dialog .account-success svg{flex-shrink:0;margin-top:1px}
+.account-dialog .account-success{background:#d9f5e8;color:#125837;border-color:#83cbaa}
+.account-dialog .account-error{background:#ffeded;color:#942424;border-color:#efa8a8}
+

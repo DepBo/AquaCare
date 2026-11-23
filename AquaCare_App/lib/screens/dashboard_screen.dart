@@ -328,10 +328,54 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   static const _onboardingPreferenceKey = 'hide_onboarding_v2';
 
   int _selectedTab = 0;
+  Timer? _chartViewTimer;
+  int _chartViewSeconds = 0;
+  int _chartViewTab = -1;
+  bool _chartViewPending = false;
+  String _recordedChartDay = '';
+  AppLifecycleState _chartLifecycle = AppLifecycleState.resumed;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _chartLifecycle = state;
+    _chartViewSeconds = 0;
+  }
+
+  Future<void> _recordChartViewTick() async {
+    if (!mounted) return;
+    if (_selectedTab != _chartViewTab) {
+      _chartViewTab = _selectedTab;
+      _chartViewSeconds = 0;
+    }
+    if (_chartLifecycle != AppLifecycleState.resumed ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        (_selectedTab != 0 && _selectedTab != 1)) {
+      _chartViewSeconds = 0;
+      return;
+    }
+    if (++_chartViewSeconds < 5 || _chartViewPending) return;
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) return;
+    final day = DateTime.now().toUtc().add(const Duration(hours: 7)).toIso8601String().substring(0, 10);
+    final key = user.id + day;
+    if (_recordedChartDay == key) return;
+    _chartViewPending = true;
+    try {
+      await client.rpc('record_chart_view', params: {'p_source': 'app'});
+      _recordedChartDay = key;
+    } catch (error) {
+      debugPrint('Không ghi nhận được lượt xem biểu đồ: $error');
+      _chartViewSeconds = 0;
+    } finally {
+      _chartViewPending = false;
+    }
+  }
+
   late Timer _clockTimer;
   String _currentTime = '';
   bool _isLoading = false;
@@ -398,6 +442,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _chartLifecycle = WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+    _chartViewTimer = Timer.periodic(const Duration(seconds: 1), (_) => _recordChartViewTick());
     debugPrint('🚀 DashboardScreen đã khởi tạo');
     _updateTime();
     _clockTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateTime());
@@ -953,6 +1000,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _chartViewTimer?.cancel();
     _clockTimer.cancel();
     super.dispose();
   }

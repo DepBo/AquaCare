@@ -1,3 +1,4 @@
+import AccountDialog from '../components/AccountDialog'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import CustomerOverview from '../components/CustomerOverview'
 import FeedbackButton from '../components/FeedbackButton'
@@ -13,7 +14,7 @@ import {
   Droplets, Thermometer, Zap, Fish, Bell, AlertCircle, HelpCircle,
   LogOut, Home, Activity, AlertTriangle, CheckCircle,
   Pencil, Trash2, Plus, ChevronDown, X, Check, Sliders, ArrowLeft, ArrowRight,
-  Cpu, Layers, Smartphone, Mail, Monitor, ShieldCheck, Clock, Copy, Save, Info, Send, Search,
+  Cpu, Layers, Smartphone, Mail, Monitor, UserRound, ShieldCheck, Clock, Copy, Save, Info, Send, Search,
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { requestNotificationPermission, messaging } from '../config/firebase'
@@ -969,6 +970,7 @@ function OnboardingArrows() {
 export default function DashboardPage() {
   const navigate = useNavigate()
   const userInfoStr = localStorage.getItem('user_info')
+  const [accountOpen, setAccountOpen] = useState(false)
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(userInfoStr ? JSON.parse(userInfoStr) : {})
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [pondsLoaded, setPondsLoaded] = useState(false)
@@ -1000,6 +1002,44 @@ export default function DashboardPage() {
   }, [currentHistoryPage])
 
   const [activeTab, setActiveTab] = useState<'overview' | 'control' | 'sensors' | 'alerts' | 'calibration'>('overview')
+  useEffect(() => {
+    if (activeTab !== 'overview' && activeTab !== 'sensors') return;
+    let timer: ReturnType<typeof setTimeout>;
+    let disposed = false;
+    let completed = '';
+    let pending = false;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (disposed || document.hidden) return;
+      timer = setTimeout(async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          const user = data.session?.user;
+          const day = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+          const key = user?.id + day;
+          if (user && completed !== key && !pending) {
+            pending = true;
+            const { error } = await supabase.rpc('record_chart_view', { p_source: 'web' });
+            if (error) throw error;
+            completed = key;
+          }
+        } catch (error) {
+          console.warn('Không ghi nhận được lượt xem biểu đồ', error);
+        } finally {
+          pending = false;
+          schedule();
+        }
+      }, 5000);
+    };
+    document.addEventListener('visibilitychange', schedule);
+    schedule();
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', schedule);
+    };
+  }, [activeTab]);
+
   const [pumpState, setPumpState] = useState(false)
   const [lightState, setLightState] = useState(false)
   const [oxyState, setOxyState] = useState(false)
@@ -2148,7 +2188,7 @@ export default function DashboardPage() {
                 }}
               >
                 <Pencil size={9} />
-                <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingAvatar} onChange={async (e) => {
+                <input id="account-avatar-upload" type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingAvatar} onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
                   try {
@@ -2199,6 +2239,13 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          <button type="button" onClick={() => setAccountOpen(true)} title="Tài khoản"
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+              border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 14, fontWeight: 600,
+              background: accountOpen ? 'rgba(0,168,150,0.12)' : 'transparent', color: 'var(--text-primary)' }}>
+            <UserRound size={18} style={{ flexShrink: 0 }} />
+            {sidebarOpen && 'Tài khoản'}
+          </button>
           <Link to="/" title="Về trang chủ" style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
             textDecoration: 'none', color: 'var(--text-primary)', fontSize: 14, fontWeight: 600,
@@ -2878,6 +2925,14 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {accountOpen && <AccountDialog supabase={supabase} user={currentUserInfo} onAvatarChange={() => document.getElementById("account-avatar-upload")?.click()}
+        onClose={() => setAccountOpen(false)}
+        onSaved={name => {
+          const updated = { ...currentUserInfo, full_name: name, name };
+          setCurrentUserInfo(updated);
+          localStorage.setItem('user_info', JSON.stringify(updated));
+          window.dispatchEvent(new Event('aquacare:auth-changed'));
+        }} />}
       {!showFullOverlay && <FeedbackButton />}
 
       {/* ── Dialog: Thêm bể mới ── */}

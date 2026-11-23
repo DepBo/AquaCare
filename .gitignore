@@ -152,3 +152,5 @@ test-results/
 # KiCad temporary files
 *.kicad_prl
 *.lck
+
+!/supabase/migrations/20261123000100_chart_view_days.sql
