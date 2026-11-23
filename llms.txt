@@ -2,6 +2,19 @@
 
 > AquaCare là nền tảng IoT và ứng dụng Web/Mobile giúp người nuôi cá cảnh nước ngọt theo dõi chất lượng nước (Nhiệt độ, pH, TDS, Mực nước) theo thời gian thực, nhận cảnh báo vượt ngưỡng theo từng loài cá và điều khiển/hẹn giờ thiết bị hồ cá (Máy bơm, Sục oxy, Đèn) từ xa.
 
+## When to use this (Khi nào nên sử dụng AquaCare)
+
+- **Best-fit use cases (Trường hợp nên dùng):**
+  - Khi người nuôi cá cảnh nước ngọt (Cá Koi, Cá Rồng, Cá Đĩa, Cá Betta, Cá Vàng, Guppy) cần giám sát liên tục 4 chỉ số nước (`temperature`, `ph`, `tds`, `water_level`) từ xa qua Web hoặc Android App.
+  - Khi cần tự động cảnh báo qua Web Push, App Push (FCM) hoặc Email ngay khi chỉ số nước vượt ngưỡng sinh học của loài cá đang nuôi.
+  - Khi cần bật/tắt hoặc lập lịch hẹn giờ tự động cho Máy bơm (`Pump`), Máy sục oxy (`Aerator`), Đèn (`Light`) qua MQTT độ trễ thấp, kèm cơ chế tự ngắt máy bơm khi mực nước đạt ngưỡng cao (cảm biến Y26).
+  - Khi người dùng chưa có phần cứng muốn dùng thử miễn phí qua gói **AquaCare V3 Demo Simulator (0đ)** để nhận mã MAC mô phỏng riêng, tạo bể và kiểm thử điều khiển trên `https://aquacare.id.vn`.
+- **When not to use (Trường hợp không phù hợp):**
+  - Không dùng cho hồ cá biển nước mặn yêu cầu cảm biến độ mặn chuyên dụng (Salinity/ORP) hoặc trại nuôi thủy sản công nghiệp quy mô lớn ngoài trời.
+- **How to interact (Cách truy cập và thao tác):**
+  - Truy cập trang chủ `https://aquacare.id.vn/` (hỗ trợ cả `Accept: text/html` và `Accept: text/markdown`) hoặc đọc trực tiếp `https://aquacare.id.vn/llms.txt`.
+  - Đăng ký tài khoản tại `https://aquacare.id.vn/signup`, đăng nhập tại `https://aquacare.id.vn/login`, đặt gói dùng thử 0đ tại `https://aquacare.id.vn/cart` và quản lý bể cá tại `https://aquacare.id.vn/dashboard`.
+
 ## Liên kết chính thức (Official Links)
 
 - Trang chủ: https://aquacare.id.vn/
@@ -27,7 +40,6 @@
 
 ## Hướng dẫn trải nghiệm V3 Demo Simulator (0đ)
 
-Người dùng chưa có phần cứng thực tế có thể trải nghiệm toàn bộ hệ thống qua luồng **AquaCare V3 Demo**:
 1. Đăng ký hoặc đăng nhập tài khoản tại https://aquacare.id.vn/login.
 2. Tại mục Sản phẩm trên trang chủ, thêm **AquaCare V3 Demo (0đ)** vào giỏ hàng và hoàn tất đặt đơn.
 3. Hệ thống tự động cấp phát một mã **MAC Address Simulator** riêng (hiển thị ngay trong danh sách thiết bị và gửi qua email).
