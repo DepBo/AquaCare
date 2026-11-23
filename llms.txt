@@ -1,0 +1,41 @@
+# AquaCare – Hệ thống IoT Giám sát & Nuôi Cá Cảnh Thông Minh
+
+> AquaCare là nền tảng IoT và ứng dụng Web/Mobile giúp người nuôi cá cảnh nước ngọt theo dõi chất lượng nước (Nhiệt độ, pH, TDS, Mực nước) theo thời gian thực, nhận cảnh báo vượt ngưỡng theo từng loài cá và điều khiển/hẹn giờ thiết bị hồ cá (Máy bơm, Sục oxy, Đèn) từ xa.
+
+## Liên kết chính thức (Official Links)
+
+- Trang chủ: https://aquacare.id.vn/
+- Đăng nhập hệ thống: https://aquacare.id.vn/login
+- Đăng ký tài khoản: https://aquacare.id.vn/signup
+- Giỏ hàng & Đăng ký V3 Demo 0đ: https://aquacare.id.vn/cart
+- Sitemap: https://aquacare.id.vn/sitemap.xml
+- Tải ứng dụng Android (APK): https://aquacare.id.vn/AquaCare.apk
+- Mã nguồn & Tài liệu dự án: https://github.com/DepBo/AquaCare
+
+## Tính năng chính
+
+1. **Giám sát chỉ số nước thời gian thực:**
+   - Theo dõi nhiệt độ (°C), độ pH, tổng chất rắn hòa tan TDS (ppm) và trạng thái mực nước.
+   - Biểu đồ lịch sử biến thiên theo thời gian thực cho từng bể cá.
+2. **Cảnh báo thông minh theo loài cá:**
+   - Hỗ trợ bộ ngưỡng sinh học chuẩn cho Cá Koi, Cá Rồng, Cá Đĩa, Cá Betta, Cá Vàng, Cá Bảy Màu (Guppy).
+   - Gửi thông báo qua Web Push, Ứng dụng di động (FCM) và Email kèm thời gian khóa Cooldown chống spam.
+3. **Điều khiển & Hẹn giờ thiết bị từ xa (Zero-Delay MQTT):**
+   - Bật/tắt trực tiếp 3 kênh relay: Máy bơm nước (`Pump`), Máy sục oxy (`Aerator`), Đèn chiếu sáng (`Light`).
+   - Lập lịch hẹn giờ bật/tắt tự động (một lần hoặc lặp lại hàng ngày).
+   - Cơ chế an toàn phần cứng: tự động ngắt và khóa bật máy bơm khi cảm biến mực nước Y26 báo đầy.
+
+## Hướng dẫn trải nghiệm V3 Demo Simulator (0đ)
+
+Người dùng chưa có phần cứng thực tế có thể trải nghiệm toàn bộ hệ thống qua luồng **AquaCare V3 Demo**:
+1. Đăng ký hoặc đăng nhập tài khoản tại https://aquacare.id.vn/login.
+2. Tại mục Sản phẩm trên trang chủ, thêm **AquaCare V3 Demo (0đ)** vào giỏ hàng và hoàn tất đặt đơn.
+3. Hệ thống tự động cấp phát một mã **MAC Address Simulator** riêng (hiển thị ngay trong danh sách thiết bị và gửi qua email).
+4. Vào Bảng điều khiển (`/dashboard`), tạo bể cá mới và chọn mã MAC V3 Demo vừa nhận.
+5. Theo dõi dữ liệu mô phỏng tự động cập nhật và thực hiện bật/tắt thử các thiết bị relay.
+
+## Kiến trúc phần cứng & Phần mềm
+
+- **Phần cứng (Hardware):** Vi điều khiển STM32 (đọc cảm biến pH, TDS, DS18B20, mực nước Y26 và đóng cắt relay) giao tiếp UART với ESP32 (kết nối Wi-Fi và MQTT over TLS).
+- **Ứng dụng Web & Mobile:** React + TypeScript + Vite (`https://aquacare.id.vn`) và ứng dụng Flutter cho Android.
+- **Hạ tầng đám mây:** Node.js/Express Backend, HiveMQ Cloud (MQTT TLS) và Supabase (PostgreSQL + Realtime + Auth).
