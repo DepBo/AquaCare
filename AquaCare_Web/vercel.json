@@ -7,16 +7,6 @@
       ]
     },
     {
-      "source": "/",
-      "has": [
-        { "type": "header", "key": "accept", "value": ".*text/markdown.*" }
-      ],
-      "headers": [
-        { "key": "Content-Type", "value": "text/markdown; charset=utf-8" },
-        { "key": "Vary", "value": "Accept" }
-      ]
-    },
-    {
       "source": "/llms.txt",
       "headers": [
         { "key": "Content-Type", "value": "text/markdown; charset=utf-8" },
@@ -31,13 +21,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "has": [
-        { "type": "header", "key": "accept", "value": ".*text/markdown.*" }
-      ],
-      "destination": "/llms.txt"
-    },
     { "source": "/login", "destination": "/login/index.html" },
     { "source": "/signup", "destination": "/signup/index.html" },
     { "source": "/forgot-password", "destination": "/index.html" },
