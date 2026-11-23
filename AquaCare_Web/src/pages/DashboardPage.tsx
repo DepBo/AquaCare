@@ -160,7 +160,7 @@ const buildNumericTrend = (
     const chunk = readings.slice(index, index + chunkSize)
     result.push({
       time: trendTimeLabel(chunk.at(-1)!.recordedAt),
-      value: Number((chunk.reduce((sum, reading) => sum + reading.value, 0) / chunk.length).toFixed(2))
+      value: chunk.length === 1 ? chunk[0].value : Number((chunk.reduce((sum, reading) => sum + reading.value, 0) / chunk.length).toFixed(2))
     })
   }
   return result
@@ -1650,8 +1650,8 @@ export default function DashboardPage() {
           value: Number(row[key]),
         }));
         setSensorData({ ph: series('ph'), temp: series('temp'), tds: series('tds'), waterLevel: series('water_level_ok') });
-        setHourlySensorData({ ph: buildNumericTrend(history, 'ph'), temp: buildNumericTrend(history, 'temp'),
-          tds: buildNumericTrend(history, 'tds'), waterLevel: buildWaterTrend(history) });
+        setHourlySensorData({ ph: buildNumericTrend(history, 'ph', 720), temp: buildNumericTrend(history, 'temp', 720),
+          tds: buildNumericTrend(history, 'tds', 720), waterLevel: buildWaterTrend(history, 720) });
         setLoading(false);
       } catch (error) {
         if (!disposed) console.error('Không tải được dữ liệu V3 Demo', error);

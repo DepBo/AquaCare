@@ -507,6 +507,8 @@ class SupabaseService {
           recent.removeLast();
         }
         recent.addAll(rows);
+        final cutoff = DateTime.now().toUtc().subtract(const Duration(hours: 12));
+        recent.removeWhere((row) => DateTime.parse(row['recorded_at'] as String).isBefore(cutoff));
         if (recent.length > demoLimit) recent.removeRange(0, recent.length - demoLimit);
         return recent.reversed.toList();
       }
