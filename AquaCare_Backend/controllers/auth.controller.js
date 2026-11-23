@@ -1,4 +1,17 @@
+const { createClient } = require('@supabase/supabase-js');
 const supabase = require('../config/supabase');
+
+// Client auth dùng 1 lần cho mỗi request đăng ký / đăng nhập để tránh ghi đè
+// in-memory session (user JWT) lên singleton admin client trong config/supabase.js.
+function createEphemeralAuthClient() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
 
 // API Đăng ký
 exports.register = async (req, res) => {
@@ -9,8 +22,9 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Vui lòng cung cấp đầy đủ fullName, email, phone, password' });
     }
 
-    // Bước 1: Tạo tài khoản Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Bước 1: Tạo tài khoản Auth (dùng client tách biệt để không làm bẩn session của admin client)
+    const authClient = createEphemeralAuthClient();
+    const { data: authData, error: authError } = await authClient.auth.signUp({
       email,
       password,
       phone
@@ -64,17 +78,18 @@ exports.login = async (req, res) => {
     }
 
     let authData, authError;
+    const authClient = createEphemeralAuthClient();
 
     // Phân loại Đăng nhập bằng Email hoặc Số điện thoại
     if (identifier.includes('@')) {
-      const result = await supabase.auth.signInWithPassword({
+      const result = await authClient.auth.signInWithPassword({
         email: identifier,
         password: password
       });
       authData = result.data;
       authError = result.error;
     } else {
-      const result = await supabase.auth.signInWithPassword({
+      const result = await authClient.auth.signInWithPassword({
         phone: identifier,
         password: password
       });

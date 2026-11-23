@@ -18,8 +18,15 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   },
   global: {
     fetch: (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
       const headers = new Headers(init.headers);
-      if (supabaseServiceKey.startsWith('sb_secret_') && headers.get('Authorization') === `Bearer ${supabaseServiceKey}`) {
+      if (url.includes('/rest/v1/')) {
+        if (supabaseServiceKey.startsWith('sb_secret_')) {
+          headers.delete('Authorization');
+        } else {
+          headers.set('Authorization', `Bearer ${supabaseServiceKey}`);
+        }
+      } else if (supabaseServiceKey.startsWith('sb_secret_') && headers.get('Authorization') === `Bearer ${supabaseServiceKey}`) {
         headers.delete('Authorization');
       }
       return fetch(input, { ...init, headers });
