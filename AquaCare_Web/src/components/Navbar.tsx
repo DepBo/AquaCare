@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Menu, X, ShoppingCart } from 'lucide-react'
+import { Menu, X, ShoppingCart, LogOut } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { useCart } from '../contexts/CartContext'
 import { clearLocalAuthSession } from '../authRoleCache'
+
+const navSupabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || 'https://nwmeysspxfgqxtvxeuil.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_12KQiSNlKkwu435CF_qXZQ_ZXMlzU87'
+)
 interface NavbarProps {
   scrollY: number
 }
@@ -27,6 +32,21 @@ export default function Navbar({ scrollY }: NavbarProps) {
   const [isAuth, setIsAuth] = useState(false)
   const [userRole, setUserRole] = useState('')
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      clearLocalAuthSession()
+      await navSupabase.auth.signOut()
+    } catch {
+      clearLocalAuthSession()
+    } finally {
+      setLoggingOut(false)
+      setMobileOpen(false)
+    }
+  }
 
   useEffect(() => {
     const syncAuth = () => {
@@ -49,10 +69,6 @@ export default function Navbar({ scrollY }: NavbarProps) {
 
     // 3. Nếu localStorage có cs_auth: kiểm tra xác thực ngầm với Supabase để loại bỏ zombie state
     if (localStorage.getItem('cs_auth')) {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nwmeysspxfgqxtvxeuil.supabase.co'
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_12KQiSNlKkwu435CF_qXZQ_ZXMlzU87'
-      const navSupabase = createClient(supabaseUrl, supabaseAnonKey)
-
       navSupabase.auth.getSession().then(async ({ data: { session }, error }) => {
         if (error || !session) {
           // Thử khôi phục nếu có refresh_token
@@ -139,6 +155,15 @@ export default function Navbar({ scrollY }: NavbarProps) {
           .nav-guide-hint p { margin: 0 0 10px; color: #b9cbd4; font-size: 12px; line-height: 1.45; }
           .nav-guide-hint a { color: #8fddd5; font-size: 12px; font-weight: 700; text-decoration: none; }
           .nav-guide-hint-close { position: absolute; top: 8px; right: 9px; border: 0; padding: 3px; background: transparent; color: #9cb2c0; cursor: pointer; }
+          .nav-auth-pill { position: relative; display: inline-flex; align-items: stretch; gap: 3px; }
+          .nav-auth-main { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 20px 0 0 20px; border: 1px solid rgba(0,229,160,0.4); background: rgba(0,229,160,0.1); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; text-decoration: none; color: #fff; white-space: nowrap; transition: background 180ms ease, border-color 180ms ease; }
+          .nav-auth-main:hover, .nav-auth-main:focus-visible { background: rgba(0,229,160,0.2); border-color: rgba(0,229,160,0.65); outline: none; }
+          .nav-auth-logout { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 0 11px 0 9px; border-radius: 0 20px 20px 0; border: 1px solid rgba(0,229,160,0.4); background: rgba(0,229,160,0.1); color: rgba(255,255,255,0.75); cursor: pointer; transition: background 180ms ease, border-color 180ms ease, color 180ms ease; }
+          .nav-auth-logout:hover, .nav-auth-logout:focus-visible { background: rgba(255,107,107,0.22); border-color: rgba(255,107,107,0.6); color: #FF6B6B; outline: none; }
+          .nav-auth-logout:disabled { opacity: 0.5; cursor: wait; }
+          .nav-auth-tooltip { position: absolute; top: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(-4px); padding: 5px 10px; border-radius: 8px; background: #142236; border: 1px solid rgba(255,107,107,0.35); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.01em; text-transform: none; white-space: nowrap; box-shadow: 0 8px 20px rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 150ms ease, transform 150ms ease; z-index: 120; }
+          .nav-auth-tooltip::before { content: ''; position: absolute; top: -5px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%) rotate(45deg); background: #142236; border-left: 1px solid rgba(255,107,107,0.35); border-top: 1px solid rgba(255,107,107,0.35); }
+          .nav-auth-logout:hover .nav-auth-tooltip, .nav-auth-logout:focus-visible .nav-auth-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
         `}</style>
         <div
           style={{
@@ -272,43 +297,37 @@ export default function Navbar({ scrollY }: NavbarProps) {
             </Link>
 
             {isAuth ? (
-              <Link
-                to={userRole === 'admin' ? '/admin' : userRole.startsWith('staff') ? '/staff' : '/dashboard'}
-                style={{
-                  padding: '5px 14px 5px 6px',
-                  borderRadius: 20,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.06em',
-                  textDecoration: 'none',
-                  color: '#fff',
-                  border: '1px solid rgba(0,229,160,0.4)',
-                  background: 'rgba(0,229,160,0.1)',
-                  transition: 'all 200ms',
-                  whiteSpace: 'nowrap' as const,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.6)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,160,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)' }}
-              >
-                {userInfo?.avatar_url ? (
-                  <img src={userInfo.avatar_url} alt="Avatar" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(0,229,160,0.5)' }} />
-                ) : (
-                  <div style={{
-                    width: 24, height: 24, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #1B4F72, #00A896)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 700, color: '#fff',
-                    border: '1.5px solid rgba(0,229,160,0.5)'
-                  }}>
-                    {getInitialsAvatar(userInfo?.full_name || userInfo?.name || '')}
-                  </div>
-                )}
-                Trang Chủ
-              </Link>
+              <div className="nav-auth-pill">
+                <Link
+                  to={userRole === 'admin' ? '/admin' : userRole.startsWith('staff') ? '/staff' : '/dashboard'}
+                  className="nav-auth-main"
+                >
+                  {userInfo?.avatar_url ? (
+                    <img src={userInfo.avatar_url} alt="Avatar" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(0,229,160,0.5)' }} />
+                  ) : (
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #1B4F72, #00A896)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: 700, color: '#fff',
+                      border: '1.5px solid rgba(0,229,160,0.5)'
+                    }}>
+                      {getInitialsAvatar(userInfo?.full_name || userInfo?.name || '')}
+                    </div>
+                  )}
+                  Trang Chủ
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  aria-label="Đăng xuất"
+                  className="nav-auth-logout"
+                >
+                  <LogOut size={14} strokeWidth={2.2} />
+                  <span className="nav-auth-tooltip" role="tooltip">Đăng xuất</span>
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"
@@ -439,7 +458,26 @@ export default function Navbar({ scrollY }: NavbarProps) {
               {link.label}
             </a>
           ))}
-          {!isAuth && (
+          {isAuth ? (
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <Link
+                to={userRole === 'admin' ? '/admin' : userRole.startsWith('staff') ? '/staff' : '/dashboard'}
+                onClick={() => setMobileOpen(false)}
+                style={{ color: '#fff', padding: '10px 16px', border: '1px solid rgba(0,229,160,0.45)', background: 'rgba(0,229,160,0.12)', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}
+              >
+                Trang chủ
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#FF6B6B', padding: '10px 16px', border: '1px solid rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.12)', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                <LogOut size={15} />
+                Đăng xuất
+              </button>
+            </div>
+          ) : (
             <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
               <Link to="/login" onClick={() => setMobileOpen(false)} style={{ color: '#fff', padding: '10px 16px', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, textDecoration: 'none', fontWeight: 600 }}>Đăng nhập</Link>
               <Link to="/signup" onClick={() => setMobileOpen(false)} style={{ color: '#fff', padding: '10px 16px', background: '#009c91', borderRadius: 10, textDecoration: 'none', fontWeight: 600 }}>Đăng ký</Link>
