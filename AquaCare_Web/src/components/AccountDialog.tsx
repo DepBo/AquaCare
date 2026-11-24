@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import './AccountDialog.css'
 
 interface AccountUser {
+  phone?: string | null
   full_name?: string
   email?: string
   avatar_url?: string
@@ -14,7 +15,7 @@ interface Props {
   supabase: SupabaseClient
   user: AccountUser
   onAvatarChange: () => void
-  onSaved: (name: string) => void
+  onSaved: (name: string, phone: string | null) => void
   onClose: () => void
 }
 
@@ -22,6 +23,7 @@ export default function AccountDialog({ supabase, user, onAvatarChange, onSaved,
   const dialog = useRef<HTMLDialogElement>(null)
   const [tab, setTab] = useState('profile')
   const [name, setName] = useState(user.full_name || '')
+  const [phone, setPhone] = useState(user.phone || '')
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' })
   const [visible, setVisible] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState(false)
@@ -46,6 +48,11 @@ export default function AccountDialog({ supabase, user, onAvatarChange, onSaved,
     setError('')
     setMessage('')
     const trimmed = name.trim()
+    const normalizedPhone = phone.trim().replace(/[\s().-]/g, '').replace(/^\+84/, '0')
+    if (tab === 'profile' && normalizedPhone && !/^0[35789][0-9]{8}$/.test(normalizedPhone)) {
+      setError('Số điện thoại cần 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.')
+      return
+    }
     if (tab === 'profile' && (!trimmed || trimmed.length > 100)) {
       setError('Tên hiển thị cần từ 1 đến 100 ký tự.')
       return
@@ -61,9 +68,11 @@ export default function AccountDialog({ supabase, user, onAvatarChange, onSaved,
       if (authError || !data.user) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
       if (tab === 'profile') {
         const { data: saved, error: saveError } = await supabase.from('users')
-          .update({ full_name: trimmed }).eq('id', data.user.id).select('full_name').single()
+          .update({ full_name: trimmed, phone: normalizedPhone || null }).eq('id', data.user.id).select('full_name, phone').single()
+        if (saveError?.code === '23505') throw new Error('Số điện thoại đã được tài khoản khác sử dụng.')
         if (saveError) throw saveError
-        onSaved(saved.full_name)
+        onSaved(saved.full_name, saved.phone)
+        setPhone(saved.phone || '')
         // public.users is the canonical profile used by login and the dashboard.
         setMessage('Đã cập nhật thông tin')
       } else {
@@ -106,6 +115,9 @@ export default function AccountDialog({ supabase, user, onAvatarChange, onSaved,
             </div>
             <label htmlFor="account-name">Tên hiển thị</label>
             <input id="account-name" value={name} maxLength={100} autoComplete="name" required onChange={event => { setName(event.target.value); setMessage('') }} />
+            <label htmlFor="account-phone">Số điện thoại</label>
+            <input id="account-phone" type="tel" autoComplete="tel" maxLength={25} value={phone} placeholder="Ví dụ 0901234567" onChange={event => { setPhone(event.target.value); setMessage('') }} />
+            <small className="account-hint">Nhập số Việt Nam dạng 0 hoặc +84. Có thể để trống.</small>
             <label htmlFor="account-email">Email</label>
             <input id="account-email" value={user.email || ''} readOnly className="account-readonly" />
           </> : <>

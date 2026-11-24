@@ -131,6 +131,11 @@ test-results/
 /AquaCare_Backend/v3-demo-report-server.js
 /RUN_V3_DEMO_REPORT.cmd
 
+# Local test user seeder tool (internal QA only)
+/RUN_TEST_USER_SEEDER.cmd
+/AquaCare_Backend/tools/test-user-seeder.js
+/AquaCare_Backend/tools/seeded-users-log.json
+
 # Local database migrations, exports and credentials
 /migrations/
 /supabase/migrations/*
@@ -154,3 +159,6 @@ test-results/
 *.lck
 
 !/supabase/migrations/20261123000100_chart_view_days.sql
+
+# Generated synthetic form previews and submission history
+AquaCare_Backend/tools/form-test-output/

@@ -2927,8 +2927,8 @@ export default function DashboardPage() {
 
       {accountOpen && <AccountDialog supabase={supabase} user={currentUserInfo} onAvatarChange={() => document.getElementById("account-avatar-upload")?.click()}
         onClose={() => setAccountOpen(false)}
-        onSaved={name => {
-          const updated = { ...currentUserInfo, full_name: name, name };
+        onSaved={(name, phone) => {
+          const updated = { ...currentUserInfo, full_name: name, name, phone };
           setCurrentUserInfo(updated);
           localStorage.setItem('user_info', JSON.stringify(updated));
           window.dispatchEvent(new Event('aquacare:auth-changed'));
